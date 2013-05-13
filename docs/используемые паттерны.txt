@@ -1,0 +1,32 @@
+Graphical abstractions
+-----------------------
+- node tree
+- surfaces
+- overlay
+- modal dialogs
+- global objects
+- layout managers
+- layout stages
+- preferred size -> do layout
+- dirty flag
+- keyboard input
+- focus manager for each node
+- font cache
+- object context
+- model - viewmodel
+- event propagation
+
+GOF patterns
+---------------
+- properties
+- virtual init
+- subscribtion\callback
+- interfaces
+- static compilation
+- prefer composition to inheritance
+
+
+project composition
+-------------------
+- split libraries
+- junctions
