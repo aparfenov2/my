@@ -7,14 +7,19 @@ Rectangle { // scaler
     height: 480
     transform: Scale { xScale: 2; yScale: 2}
 
-    AppModel {id : appModel }
+    Item {
+        id : appModel
+        property string dme_channel: "50"
+        property string dme_suffixStr: "Y"
 
-    Timer {
-            interval: 1000; running: true; repeat: true;
-            onTriggered: {
-                appModel.refresh();
-            }
     }
+
+//    Timer {
+//            interval: 1000; running: true; repeat: true;
+//            onTriggered: {
+//                appModel.refresh();
+//            }
+//    }
 
     Rectangle { // main
         id : rootView

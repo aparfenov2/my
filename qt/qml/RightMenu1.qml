@@ -28,12 +28,12 @@ Item {
             id : dme_bt
             QtObject {
                 id : dme_vm
-                property string midText: "0X"
-                Component.onCompleted: {
-                    appModel.dmeModelChanged.connect(function() {
-                        midText = appModel.dmeModel.channel + appModel.dmeModel.suffixStr;
-                    });
-                }
+                property string midText: appModel.dme_channel + appModel.dme_suffixStr
+//                Component.onCompleted: {
+//                    appModel.dmeModelChanged.connect(function() {
+//                        midText = appModel.dmeModel.channel + appModel.dmeModel.suffixStr;
+//                    });
+//                }
             }
             anchors.left: parent.left
             anchors.right: parent.right
@@ -45,13 +45,14 @@ Item {
             Keys.onReturnPressed: {
                 var dlg = Qt.createComponent("EditorDlg.qml").createObject(rootView, {"x": 60, "y": 80, "z":1 });
                 dlg.focus = true;
+                dlg.value = dme_vm.midText
                 dlg.suffixes = {0:"x", 1:"y"};
                 dlg.validator = [1,128];
 
                 dlg.accepted.connect(function() {
                     dme_bt.focus = true;
                     rightMenu.focus = true;
-                    //todo: update model
+                    appModel.dme_channel = dlg.value;
                 });
             }
         }

@@ -52,7 +52,7 @@ public:
 			s32 unpacked_sz = unpack(data,size,buf);
 			hdlc_tx_frame(buf,unpacked_sz);
 #else
-			hdlc_tx_frame((const u8 *)data,size);
+			hdlc_tx_frame((const u8 *)data,(u16)size);
 #endif
 		}
 	}

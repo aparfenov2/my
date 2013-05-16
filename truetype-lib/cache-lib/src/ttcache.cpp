@@ -7,7 +7,6 @@ extern "C" {
 #include "assert_impl.h"
 #include "bmp_math.h"
 
-#undef TTCACHE_USE_FT
 
 #ifdef TTCACHE_USE_FT
 #include <ft2build.h>
@@ -159,7 +158,7 @@ font_handle_t * ttcache_t::open_face(char * _fname, u8 * _mem_font, u32 _mem_sz)
 		}
 	}
 	hdl->name = _fname;
-	strncpy_s<FNT_NAME_SIZE>(hdl->name2,_fname,FNT_NAME_SIZE);
+	strncpy(hdl->name2,_fname,FNT_NAME_SIZE);
 
 hdl_lib_init:
 	if (_mem_font && _mem_sz) {

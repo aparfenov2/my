@@ -65,16 +65,16 @@ struct packet_t {
 	pkt_what_t::pkt_what_t what;
 	union {
 		struct {
-			u8 number;
-			u8 lo;
-			u8 hi;
+			u16 number;
+			u16 lo;
+			u16 hi;
 			msg::tSuffix::tSuffix suffix;
 		} ch_dme_changed;
 
 		struct {
-			u8 param_u8;
-			u8 lo_u8;
-			u8 hi_u8;
+			u16 param_u8;
+			u16 lo_u8;
+			u16 hi_u8;
 		} su8;
 
 		struct {
@@ -94,8 +94,8 @@ struct packet_t {
 		msg::OutputMode::OutputMode oMode;
 
 		struct {
-			char code[62];
-			char aeroport[62];
+			u16 code[31];
+			u16 aeroport[31];
 		} co_code;
 
 		struct {
@@ -270,10 +270,10 @@ public:
 
 		switch (pkt->what) {
 		case pkt_what_t::DME:
-			exported->set_dme_channel(pkt->ch_dme_changed.number, pkt->ch_dme_changed.suffix);
+			exported->set_dme_channel((u8)pkt->ch_dme_changed.number, pkt->ch_dme_changed.suffix);
 			break;
 		case pkt_what_t::DME_RANGE:
-			exported->set_dme_channel_range(pkt->ch_dme_changed.lo, pkt->ch_dme_changed.hi);
+			exported->set_dme_channel_range((u8)pkt->ch_dme_changed.lo, (u8)pkt->ch_dme_changed.hi);
 			break;
 
 		case pkt_what_t::REQ_FREQ:
@@ -327,22 +327,22 @@ public:
 			break;
 
 		case pkt_what_t::EFFICIENCY:
-			exported->set_efficiency(pkt->su8.param_u8);
+			exported->set_efficiency((u8)pkt->su8.param_u8);
 			break;
 		case pkt_what_t::RSP_DELAY:
 			exported->set_response_delay(pkt->su32.param_u32);
 			break;
 		case pkt_what_t::BAT_STAT:
-			exported->set_battery_status(pkt->su8.param_u8);
+			exported->set_battery_status((u8)pkt->su8.param_u8);
 			break;
 		case pkt_what_t::DEV_STAT:
-			exported->set_device_status(pkt->su8.param_u8);
+			exported->set_device_status((u8)pkt->su8.param_u8);
 			break;
 		case pkt_what_t::KSVN:
 			exported->set_ksvn(pkt->su32.param_u32);
 			break;
 		case pkt_what_t::CO_CODE:
-			exported->set_co_code(pkt->co_code.code, pkt->co_code.aeroport);
+			exported->set_co_code((const char *)pkt->co_code.code, (const char *)pkt->co_code.aeroport);
 			break;
 		case pkt_what_t::STATISTICS:
 			exported->set_statistics(pkt->statistics.ev_range, pkt->statistics.ev_delay, pkt->statistics.sigma, pkt->statistics.sko);
@@ -568,8 +568,17 @@ public:
 		msg::packet_t pkt;
 		memset(&pkt,0,sizeof(pkt));
 		pkt.what = pkt_what_t::CO_CODE;
-		memcpy(pkt.co_code.code,code,_MY_MIN(strlen(code)+1,sizeof(pkt.co_code.code)));
-		memcpy(pkt.co_code.aeroport,aeroport,_MY_MIN(strlen(aeroport)+1,sizeof(pkt.co_code.aeroport)));
+		for (s32 i=0; 
+			i < (s32)_MY_MIN(strlen(code)+1,sizeof(pkt.co_code.code)/sizeof(pkt.co_code.code[0])); 
+			i++) {
+			pkt.co_code.code[i] = code[i];
+		}
+		for (s32 i=0; 
+			i < (s32)_MY_MIN(strlen(aeroport)+1,sizeof(pkt.co_code.aeroport)/sizeof(pkt.co_code.aeroport[0])); 
+			i++) {
+			pkt.co_code.code[i] = code[i];
+		}
+//		memcpy(pkt.co_code.aeroport,aeroport,_MY_MIN(strlen(aeroport)+1,sizeof(pkt.co_code.aeroport)));
 		ser.send(pkt);
 	}
 	virtual void set_statistics(u32 ev_range, u32 ev_delay, u32 sigma, u32 sko) OVERRIDE {
@@ -661,7 +670,7 @@ public:
 		_MY_ASSERT(host, return);
 		switch (pkt->what) {
 		case pkt_what_t::DME:
-			host->ChannelDMEChanged(pkt->ch_dme_changed.number,pkt->ch_dme_changed.suffix);
+			host->ChannelDMEChanged((u8)pkt->ch_dme_changed.number,pkt->ch_dme_changed.suffix);
 			break;
 		case pkt_what_t::REQ_FREQ:
 			host->RequestFrequency(pkt->su32.param_u32);
