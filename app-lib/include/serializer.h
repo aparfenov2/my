@@ -68,6 +68,7 @@ struct packet_t {
 			u16 number;
 			u16 lo;
 			u16 hi;
+			u16 _pad0;
 			msg::tSuffix::tSuffix suffix;
 		} ch_dme_changed;
 
@@ -75,6 +76,7 @@ struct packet_t {
 			u16 param_u8;
 			u16 lo_u8;
 			u16 hi_u8;
+			u16 _pad1;
 		} su8;
 
 		struct {
@@ -94,8 +96,8 @@ struct packet_t {
 		msg::OutputMode::OutputMode oMode;
 
 		struct {
-			u16 code[31];
-			u16 aeroport[31];
+			u16 code[30];
+			u16 aeroport[32];
 		} co_code;
 
 		struct {
@@ -342,6 +344,23 @@ public:
 			exported->set_ksvn(pkt->su32.param_u32);
 			break;
 		case pkt_what_t::CO_CODE:
+#ifndef PLATFORM_C28
+			{
+				// make 8bit string from 16 bit array
+				u8 *p8 = (u8 *)pkt->co_code.code;
+				for (s32 i=0; i < sizeof(pkt->co_code.code)/sizeof(pkt->co_code.code[0]); i++) {
+					p8[i] = pkt->co_code.code[i];
+					if (!pkt->co_code.code[i])
+						break;
+				}
+				p8 = (u8 *)pkt->co_code.aeroport;
+				for (s32 i=0; i < sizeof(pkt->co_code.aeroport)/sizeof(pkt->co_code.aeroport[0]); i++) {
+					p8[i] = pkt->co_code.aeroport[i];
+					if (!pkt->co_code.aeroport[i])
+						break;
+				}
+			}
+#endif
 			exported->set_co_code((const char *)pkt->co_code.code, (const char *)pkt->co_code.aeroport);
 			break;
 		case pkt_what_t::STATISTICS:
@@ -571,12 +590,12 @@ public:
 		for (s32 i=0; 
 			i < (s32)_MY_MIN(strlen(code)+1,sizeof(pkt.co_code.code)/sizeof(pkt.co_code.code[0])); 
 			i++) {
-			pkt.co_code.code[i] = code[i];
+			pkt.co_code.code[i] = (u8)code[i];
 		}
 		for (s32 i=0; 
 			i < (s32)_MY_MIN(strlen(aeroport)+1,sizeof(pkt.co_code.aeroport)/sizeof(pkt.co_code.aeroport[0])); 
 			i++) {
-			pkt.co_code.code[i] = code[i];
+			pkt.co_code.aeroport[i] = (u8)aeroport[i];
 		}
 //		memcpy(pkt.co_code.aeroport,aeroport,_MY_MIN(strlen(aeroport)+1,sizeof(pkt.co_code.aeroport)));
 		ser.send(pkt);
