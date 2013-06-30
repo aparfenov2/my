@@ -66,7 +66,10 @@ bool focus_manager_t::key_event(key_t::key_t key, iterator_t<gobject_t> *iter) {
 }
 
 void focus_manager_t::select(gobject_t *p) {
-	_MY_ASSERT(p->can_be_selected,return);
+
+	if (p) {
+		_MY_ASSERT(p->can_be_selected,return);
+	}
 
 	if (p == selected)
 		return;

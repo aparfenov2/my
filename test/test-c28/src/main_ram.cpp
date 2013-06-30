@@ -9,20 +9,20 @@
 #include "cpy_tbl.h"
 #include <new.h>
 #include "some_funcs.h"
-#include "pins_def.h"
+#include "c28/pins_def.h"
 
 #include "types.h"
 #include "assert_impl.h"
 
 #include "ssd1963drv.h"
 
-void testPins();
+//void testPins();
 
 extern "C" void SSD1963_InitHW();
-bool isExtRamOK2(u16 *ext_ram_mas, s32 sz);
-bool isExtRamOK();
+//bool isExtRamOK2(u16 *ext_ram_mas, s32 sz);
+//bool isExtRamOK();
 //extern "C" void minit();
-extern "C" void *malloc(size_t size);
+//extern "C" void *malloc(size_t size);
 
 myvi::ssd1963drv_t drv1;
 

@@ -14,8 +14,8 @@ extern resources_t res;
 void screen_1_t::init() {
 
 //	globals::gui_debug = true;
-	w = 320;
-	h = 240;
+	w = 480;
+	h = 272;
 
 	button_context_t bctx1;
 	bctx1.bk_sel_color = 0x292929; // gray
@@ -36,10 +36,10 @@ void screen_1_t::init() {
 	init_children();
 
 // layout buttons
-	right_menu_set.x = 265;
+	right_menu_set.x = 480 - 55;
 	right_menu_set.y = 1;
 	right_menu_set.menu_layout.bh = 42; // высота кнопки
-	right_menu_set.h = 238 - right_menu_set.y;
+	right_menu_set.h = 272 - 2 - right_menu_set.y;
 	right_menu_set.w = 48;
 	right_menu_set.menu_layout.spy = 3; // расстояние между кнопками
 
@@ -49,22 +49,22 @@ void screen_1_t::init() {
 	top_row.y = 1;
 	top_row.menu_layout.bw = 35;
 	top_row.h = 25;
-	top_row.w = 320 - top_row.x;
+	top_row.w = 480 - top_row.x;
 	top_row.menu_layout.spx = 5;
 	top_row.menu_layout.vertical = false;
 
 	bot_row.x = 8;
-	bot_row.y = 213;
+	bot_row.y = 272 - 27;
 	bot_row.menu_layout.bw = 35;
 	bot_row.h = 25;
-	bot_row.w = 320 - top_row.x;
+	bot_row.w = 480 - top_row.x;
 	bot_row.menu_layout.spx = 5;
 	bot_row.menu_layout.vertical = false;
 
 	oscil.x = 8;
 	oscil.y = 30;
-	oscil.w = 250;
-	oscil.h = 180;
+	oscil.w = 480 - 70;
+	oscil.h = 272 - 60;
 
 
 	globals::dialogs::init();
@@ -78,8 +78,8 @@ void globals::dialogs::show(gobject_t *dlg) {
 }
 
 void globals::dialogs::init() {
-	dialog_t::instance.x = 50;
-	dialog_t::instance.y = 100;
+	dialog_t::instance.x = 300;
+	dialog_t::instance.y = 200;
 	//dialog_t::instance.w = 200;
 	//dialog_t::instance.h = 100;
 	dialog_t::instance.init();
@@ -95,8 +95,8 @@ void globals::dialogs::init() {
 	dialog_t::instance.set_preferred_size();
 
 	input_dialog_t::instance.init();
-	input_dialog_t::instance.x = 50;
-	input_dialog_t::instance.y = 100;
+	input_dialog_t::instance.x = 300;
+	input_dialog_t::instance.y = 200;
 
 
 //	modal_dialogs_t::show(&modal_dialogs_t::input_dialog);

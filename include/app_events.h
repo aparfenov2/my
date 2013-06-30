@@ -16,6 +16,7 @@ namespace key_t {
 		K_F2,
 		K_F3,
 		K_F4,
+		K_F5,
 		K_0,
 		K_1,
 		K_2,

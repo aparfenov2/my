@@ -30,8 +30,8 @@ using namespace myvi;
 
 #define _MAX_INT 2147483647
 
-u8 buf0[BMP_GET_SIZE(320,240,24)];
-surface_24bpp_t s1(320,240,BMP_GET_SIZE(320,240,24), buf0);
+u8 buf0[BMP_GET_SIZE(480,272,24)];
+surface_24bpp_t s1(480,272,BMP_GET_SIZE(480,272,24), buf0);
 
 screen_1_t screen1;
 extern resources_t res;
@@ -79,8 +79,8 @@ public:
 	s32 ky;
 public:
 	my_test_drawer_t() {
-		w = 640;
-		h = 480;
+		w = 960;
+		h = 544;
 		kx = 2;
 		ky = 2;
 		cout << "set size to " << w << "x" << h << endl;

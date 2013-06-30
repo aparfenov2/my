@@ -31,6 +31,7 @@ key_t::key_t translate_key(CImgDisplay &dsp) {
 	else if (dsp.is_keyF2()) key = key_t::K_F2;
 	else if (dsp.is_keyF3()) key = key_t::K_F3;
 	else if (dsp.is_keyF4()) key = key_t::K_F4;
+	else if (dsp.is_keyF5()) key = key_t::K_F5;
 	else if (dsp.is_key0() || dsp.is_keyPAD0()) key = key_t::K_0;
 	else if (dsp.is_key1() || dsp.is_keyPAD1()) key = key_t::K_1;
 	else if (dsp.is_key2() || dsp.is_keyPAD2()) key = key_t::K_2;

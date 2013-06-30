@@ -37,8 +37,6 @@ public:
 		selected = 0;
 	}
 	bool key_event(key_t::key_t key, iterator_t<gobject_t> *iter);
-
-private:
 	void select(gobject_t *p);
 };
 
@@ -619,11 +617,12 @@ class text_box_t : public gobject_t {
 public:
 	property_t<string_t , text_box_t> value;
 	label_t lab;
+	bool cursor_visible;
+	u32 cursor_color;
 private:
 	string_impl_t<INPUT_MAX_LEN> _value;
 	s32 cursor_pos[INPUT_MAX_LEN];
 	s32 caret_pos;
-	bool cursor_visible;
 private:
 	void set_value(string_t cvalue) {
 		_value=(cvalue);
@@ -642,6 +641,7 @@ public:
 		caret_pos = 0;
 		cursor_visible = false;
 		can_be_selected = true;
+		cursor_color = 0x000000;
 	}
 
 	void measure_cursor_pos() {
@@ -749,7 +749,7 @@ lab_update_input:
 		}
 		// draw vline
 		if (cursor_visible) {
-			dst.ctx.pen_color = 0x00;
+			dst.ctx.pen_color = cursor_color;
 			s32 acp = 0;
 			_MY_ASSERT(caret_pos <= INPUT_MAX_LEN,return);
 			if (caret_pos) 

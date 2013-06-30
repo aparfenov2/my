@@ -63,18 +63,20 @@ public:
 		dst.ctx.pen_color = 0xffffff;
 		dst.ctx.alfa = 60;
 		dst.fill(ax,ay,w,h); 
-
-//		render_children(dst);
 	}
 
 	virtual void key_event(key_t::key_t key) OVERRIDE {
 		if (key == key_t::K_ESC) {
-			globals::modal_overlay.pop_modal(this);
-			if (handler)
-				handler->dialog_closed(this);
+			close(false);
 			return;
 		}
 		super::key_event(key);
+	}
+
+	virtual void close(bool isOK) {
+		globals::modal_overlay.pop_modal(this);
+		if (handler)
+			handler->dialog_closed(this);
 	}
 
 };
@@ -141,6 +143,8 @@ public:
 		lsfx.lab.ctx.font_size = font_size_t::FS_20;
 		_MY_ASSERT(parent,return);
 		parent->capture_key_events(this);
+//		this->focus_manager.select(&lval);
+//		lval.key_event(key_t::K_ENTER);
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
@@ -159,10 +163,12 @@ public:
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
 		if (!prev) return &lval;
-		else if (prev == &lval) return &lsfx;
+//		else if (prev == &lval) return &lsfx;
 		return 0;
 	}
 };
+
+
 
 class validator_t {
 public:
@@ -187,20 +193,6 @@ public:
 	virtual bool validate(string_t value) = 0;
 };
 
-//class regex_validator_t : public validator_t {
-//private:
-//	TRexpp pp;
-//public:
-//	void init(string_t pattern, string_t _msg) {
-//		_MY_ASSERT(pp.Compile(pattern.c_str()),return);
-//		msg = _msg;
-//	}
-//
-//	virtual bool validate(string_t value) OVERRIDE {
-//		_MY_ASSERT(!pp.is_empty() && value.c_str(),return false);
-//		return pp.Match(value.c_str());
-//	}
-//};
 
 template<typename T>
 class range_validator_t : public validator_t {
@@ -286,79 +278,52 @@ public:
 	}
 };
 
+// menu set interface to interact with input_dialog_t
+class input_dialog_t;
+
+class menu_set_i {
+public:
+	static menu_set_i *instance;
+public:
+	menu_set_i() {
+		instance = this;
+	}
+	virtual void set_sfx_menu(input_dialog_t *dlg, input_dialog_context_t &ctx) = 0;
+	virtual void ret_sfx_menu() = 0;
+	virtual void key_event_fwd(key_t::key_t key) = 0;
+};
+
+
+
+
 
 class input_dialog_t : public abstract_dialog_t {
 	typedef abstract_dialog_t super;
 
-	class string_adapter_t : public iterator_t<string_t> {
-	public:
-		iterator_t<suffix_t> *src;
-	public:
-		string_adapter_t() {
-			src = 0;
-		}
-
-		virtual string_t* next(void* prev) {
-			//_MY_ASSERT(src,return 0);
-			if (!src) return 0;
-			suffix_t *p = src->next(0);
-			if (!p) return 0;
-			if (!prev) return &p->name;
-			while(p) {
-				if (prev == &p->name) {
-					p = src->next(p);
-					if (!p) return 0;
-					return &p->name;
-				}
-				p = src->next(p);
-			}
-			return 0;
-		}
-
-		suffix_t *find_suffix(string_t v) {
-			if (!src) return 0;
-			suffix_t *p = src->next(0);
-			while(p) {
-				if (p->name == v)
-					return p;
-				p = src->next(p);
-			}
-			return 0;
-		}
-	};
 public:
 	property_t<input_dialog_context_t , input_dialog_t> ctx;
+	text_box_t lval;
 private:
-	label_t lab1;
-	inp_dlg_row_t inp_row;
-	label_t lerror;
 	input_dialog_context_t _ctx;
-	string_adapter_t string_adapter;
 private:
 
 	input_dialog_context_t get_ctx() {
-		_ctx.value = inp_row.lval.value;
-		if (_ctx.suffixes) {
-			suffix_t *psfx = string_adapter.find_suffix(inp_row.lsfx.value);
-			_MY_ASSERT(psfx, return _ctx);
-			_ctx.suffix = *psfx;
-		}
+		_ctx.value = lval.value;
 		return _ctx;
 	}
 
 	void set_ctx(input_dialog_context_t actx) {
 		_ctx = actx;
-		inp_row.lval.value = _ctx.value;
-		inp_row.lsfx.visible = !_ctx.suffix.is_empty() || _ctx.suffixes;
+//		lval.value = _ctx.value;
+		lval.value = "";
 
 		if (_ctx.suffix.is_empty() && _ctx.suffixes) {
 			suffix_t *psfx = _ctx.suffixes->next(0);
 			_MY_ASSERT(psfx,return);
 			_ctx.suffix = *psfx;
 		}
-		inp_row.lsfx.value = _ctx.suffix.name;
-		string_adapter.src  = _ctx.suffixes;
-		inp_row.lsfx.values = &string_adapter;
+
+		menu_set_i::instance->set_sfx_menu(this, _ctx);
 	}
 
 	input_dialog_t() {
@@ -369,48 +334,78 @@ public:
 	static input_dialog_t instance;
 
 	virtual void init() {
-		abstract_dialog_t::init();
+		super::init();
 
 		menu_context_t &ctx = menu_context_t::instance;
-		lab1.visible = true;
-		lab1.ctx = ctx.lctx1;
-		lab1.ctx.font_size = font_size_t::FS_20;
-		lab1.text = string_t("Введите знач.:");
-		lerror.visible = false;
-		lerror.ctx = ctx.lctx1;
-		lerror.ctx.sctx.pen_color = 0xFF0000;
-//		lerror.ctx.font_size = FS_20;
-		lerror.text = string_t("Ошибка");
+		lval.visible = true;
+		lval.lab.ctx = ctx.lctx1;
+		lval.lab.ctx.font_size = font_size_t::FS_20;
+		lval.can_be_selected = false;
+		lval.cursor_visible = true;
+		lval.cursor_color = 0xffffff;
+
+		capture_key_events(&lval);
 		this->set_preferred_size();
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		_MY_ASSERT(parent,return);
+		parent->dirty = dirty;
+	}
+
+	virtual void render(surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		translate(ax,ay);
+		dst.ctx.reset();
+		dst.ctx.pen_color = 0x000000;
+		dst.ctx.alfa = 60;
+		dst.fill(ax,ay,w,h); 
 	}
 
 	virtual void child_size_changed(gobject_t *child) OVERRIDE {
 		// input box value changed
-		if (_ctx.validator) {
-			get_ctx();
-			if (!_ctx.suffix.is_empty())
-				_ctx.validator->multiplier = _ctx.suffix.multiplier;
-
-			_ctx.data_valid = _ctx.validator->validate(((string_t)inp_row.lval.value));
-
-			lerror.visible = !_ctx.data_valid;
-			if (!_ctx.validator->msg.is_empty())
-				lerror.text = _ctx.validator->msg;
-		}
 		set_preferred_size();
 		do_layout();
 		dirty = true;
 	}
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &lab1;
-		if (prev == &lab1) return &inp_row;
-		if (prev == &inp_row) return &lerror;
+		if (!prev) return &lval;
 		else return 0;
 	}
 
+	virtual void key_event(key_t::key_t key) OVERRIDE {
+		// redirect menu keys to sfx menu
+		if (key == key_t::K_F1 || key == key_t::K_F2 || 
+			key == key_t::K_F3 || key == key_t::K_F4 || key == key_t::K_F5) {
+			menu_set_i::instance->key_event_fwd(key);
+//HACK: to redraw dialog on top of screen
+			globals::modal_overlay.dirty = true;
+			return;
+		}
+		// filter ENTER key out of a textbox
+		if (key == key_t::K_ENTER)
+			return;
 
+		super::key_event(key);
+	}
+
+	virtual void close(bool isOK) OVERRIDE {
+		_ctx.data_valid = isOK;
+		menu_set_i::instance->ret_sfx_menu();
+		super::close(isOK);
+	}
+
+	// called after sfx btn click
+	void set_suffix(suffix_t sfx) {
+		_ctx.suffix = sfx;
+	}
 };
+
+
+
+
+
 
 
 
@@ -425,6 +420,7 @@ namespace globals {
 	}
 }
 
+
 class menu_item_t :public gobject_t {
 public:
 public:
@@ -432,6 +428,15 @@ public:
 		can_be_selected = true;
 	}
 	virtual void next_state() {
+	}
+
+	virtual void key_event(key_t::key_t key) OVERRIDE {
+		if (key == key_t::K_ENTER) {
+			next_state();
+			dirty = true;
+			return;
+		}
+		gobject_t::key_event(key);
 	}
 
 };
@@ -462,6 +467,10 @@ public:
 	}
 };
 
+
+
+
+
 class menu_t : public gobject_t {
 	typedef gobject_t super;
 public:
@@ -480,25 +489,37 @@ public:
 	}
 
 	virtual void key_event(key_t::key_t key) OVERRIDE {
-		if (key == key_t::K_ENTER) {
-			menu_item_t *mi = next_item(0);
-			while(mi) {
-				if (focus_manager.selected == mi) {
-					_MY_ASSERT(mi->visible,return);
-					mi->next_state();
-					mi->dirty = true;
+		s32 num = -1;
+		switch (key) {
+		case key_t::K_F1 :
+			num = 0;
+			break;
+		case key_t::K_F2 :
+			num = 1;
+			break;
+		case key_t::K_F3 :
+			num = 2;
+			break;
+		case key_t::K_F4 :
+			num = 3;
+			break;
+		case key_t::K_F5 :
+			num = 4;
+			break;
+		}
+		if (num >= 0) {
+			menu_item_t * mi = next_item(0);
+			while (mi) {
+				if (num <= 0 && mi->visible) {
+					this->focus_manager.select(mi);
 					break;
 				}
+				num--;
 				mi = next_item(mi);
 			}
-		} else {
-			// other keys
-			gobject_t::key_event(key);
-			//bool handled = focus_manager.key_event(key,current_menu);
-			//if (!handled || key == key_t::K_LEFT || key == key_t::K_RIGHT) {
-			//	current_menu->key_event(key);
-			//}
+			return;
 		}
+		gobject_t::key_event(key);
 	}
 
 };
@@ -2025,6 +2046,123 @@ public:
 	}
 };
 
+
+// ----------------------------- меню "Ед. измерения\суффиксы" --------------------------------------------
+
+class menu_item_sfx_t : public btn_menu_item_t {
+	typedef btn_menu_item_t super;
+public:
+	input_dialog_t *dlg;
+	suffix_t sfx;
+	bool set_sfx;
+	bool is_cancel;
+public:
+
+	menu_item_sfx_t() {
+		dlg = 0;
+		set_sfx = true;
+		is_cancel = false;
+	}
+
+	virtual void init() OVERRIDE {
+		btn_menu_item_t::init();
+		menu_context_t &ctx = menu_context_t::instance;
+		btn.ctx = ctx.bctx1;
+		btn.l_mid.ctx = ctx.lctx1;
+		btn.l_mid.visible = true;
+	}
+
+	void init2(input_dialog_t *dlg, suffix_t sfx) {
+		this->sfx = sfx;
+		btn.l_mid.text = this->sfx.name;
+		btn.do_layout();
+		this->dlg = dlg;
+	}
+
+	virtual void set_selected(bool selected) OVERRIDE {
+		_MY_ASSERT(dlg, return);
+		super::set_selected(selected);
+		if (selected) {
+			if (set_sfx) {
+				dlg->set_suffix(sfx);
+			}
+			dlg->close(!is_cancel);
+		}
+	}
+};
+
+class sfx_menu_t : public menu_t {
+
+public:
+	menu_item_sfx_t sfx1;
+	menu_item_sfx_t sfx2;
+	menu_item_sfx_t sfx3;
+	menu_item_sfx_t sfx4;
+	menu_item_sfx_t sfx5;
+private:
+	suffix_t sfx_ok;
+	suffix_t sfx_cancel;
+public:
+	sfx_menu_t() {
+		name = string_t("ЕД. ИЗМ.");
+		sfx_ok.name = "OK";
+		sfx_cancel.name = "ОТМЕНА";
+	}
+
+	virtual menu_item_t* next_item(void* prev) OVERRIDE {
+		if (!prev) return &sfx1;
+		if (prev == &sfx1) return &sfx2;
+		if (prev == &sfx2) return &sfx3;
+		if (prev == &sfx3) return &sfx4;
+		if (prev == &sfx4) return &sfx5;
+		return 0;
+	}
+
+	void init2(input_dialog_t *dlg, input_dialog_context_t &ctx) {
+
+		this->focus_manager.select(0);
+
+		menu_item_sfx_t *sfxi = (menu_item_sfx_t *) next_item(0);
+		while (sfxi) {
+			sfxi->visible = false;
+			sfxi->set_sfx = true;
+			sfxi->is_cancel = false;
+			sfxi = (menu_item_sfx_t *) next_item(sfxi);
+		}
+		// init suffixes
+		if (ctx.suffixes) {
+			suffix_t *psfx = ctx.suffixes->next(0);
+			sfxi = 0;
+			while (psfx) {
+				sfxi = (menu_item_sfx_t *) next_item(sfxi);
+				_WEAK_ASSERT(sfxi,break);
+				sfxi->init2(dlg, *psfx);
+				sfxi->visible = true;
+
+				psfx = ctx.suffixes->next(psfx);
+			}
+		} else {
+			sfxi = (menu_item_sfx_t *) next_item(0);
+			_MY_ASSERT(sfxi,return);
+			sfxi->init2(dlg, sfx_ok);
+			sfxi->set_sfx = false;
+			sfxi->visible = true;
+		}
+
+		sfxi = (menu_item_sfx_t *) next_item(0);
+		while (sfxi) {
+			if (!sfxi->visible) {
+				sfxi->init2(dlg, sfx_cancel);
+				sfxi->set_sfx = false;
+				sfxi->visible = true;
+				sfxi->is_cancel = true;
+				break;
+			}
+			sfxi = (menu_item_sfx_t *) next_item(sfxi);
+		}
+	}
+};
+
 // --------------------- top menu -----------------------------
 // double label menu item name-value pair
 class dl_mi_nv_pair_t : public dl_menu_item_t {
@@ -2616,20 +2754,25 @@ public:
 // ----------------------- составные обьекты -----------------------------
 
 // управляет перемещением по меню, отображением соотв. меню
-class menu_set_t : public gobject_t {
+class menu_set_t : public gobject_t, public menu_set_i {
 	typedef gobject_t super;
 public:
 	label_t l_name;
 	menu_t *current_menu;
+	menu_t *last_menu;
+
 	main_menu_t main_menu;
 	param_menu_t param_menu;
 	graphic_menu_t graphic_menu;
 	screen_menu_t screen_menu;
+	sfx_menu_t sfx_menu;
+
 	stack_layout_t menu_layout;
 public:
 
 	menu_set_t() {
 		current_menu = 0;
+		last_menu = 0;
 		l_name.visible = true;
 		l_name.text = string_t("unset");
 	}
@@ -2653,6 +2796,7 @@ public:
 		else if (prev == &main_menu) return &param_menu;
 		else if (prev == &param_menu) return &graphic_menu;
 		else if (prev == &graphic_menu) return &screen_menu;
+		else if (prev == &screen_menu) return &sfx_menu;
 		return 0;
 	}
 
@@ -2699,15 +2843,36 @@ public:
 		set_menu(next_menu(0), false);
 	}
 
+//TODO: change key bindings
+
 	virtual void key_event(key_t::key_t key) OVERRIDE {
+
 		_MY_ASSERT(current_menu,return);
 
-		if (key == key_t::K_F1) set_menu(&main_menu);
-		else if (key == key_t::K_F2) set_menu(&param_menu);
-		else if (key == key_t::K_F3) set_menu(&graphic_menu);
-		else if (key == key_t::K_F4) set_menu(&screen_menu);
+#define _MENUS_LEN 4
+		menu_t* menus[4] = {&main_menu, &param_menu, &graphic_menu, &screen_menu};
 
-		else super::key_event(key);
+		if (key == key_t::K_LEFT || key == key_t::K_RIGHT) {
+			s32 j = 0;
+			for (s32 i=0; i < _MENUS_LEN; i++) {
+
+				if (menus[i] == current_menu) {
+
+					if (key == key_t::K_LEFT) {
+						j = i-1;
+						if (j < 0) j = _MENUS_LEN-1;
+
+					} else if (key == key_t::K_RIGHT) {
+						j = i+1;
+						if (j >= _MENUS_LEN) j = 0;
+					}
+					break;
+				}
+			}
+			set_menu(menus[j]);
+			return;
+		}
+		super::key_event(key);
 
 	}
 
@@ -2715,6 +2880,21 @@ public:
 		if (!prev) return &l_name;
 		else if (prev == &l_name) return next_menu(0);
 		return next_menu(prev);
+	}
+// menu_set_i implementation
+	virtual void key_event_fwd(key_t::key_t key) OVERRIDE {
+		key_event(key);
+	}
+
+	virtual void set_sfx_menu(input_dialog_t *dlg, input_dialog_context_t &ctx) OVERRIDE {
+		last_menu = current_menu;
+		set_menu(&sfx_menu);
+		sfx_menu.init2(dlg, ctx);
+	}
+
+	virtual void ret_sfx_menu() OVERRIDE {
+		if (last_menu)
+			set_menu(last_menu);
 	}
 
 };
