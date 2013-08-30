@@ -27,7 +27,8 @@ namespace img_type_t {
 	enum img_type_t {
 		bpp1 = 1, // 1bit
 		bpp8  = 8, // grey, 8 bit
-		bpp24 = 24,  // bpp24, 8bit/ch
+		bpp16 = 16,  // RGB565, 16 bit/ch
+		bpp24 = 24,  // bpp24, 8 bit/ch
 		bppGeneric = 255  // driver surface
 	};
 }
@@ -39,12 +40,34 @@ namespace bp_return_t {
 	};
 }
 
-typedef struct { // memory layout
+typedef struct { 
 	u8 r;
 	u8 g;
 	u8 b;
 } rgb_t;
 
+#ifdef PLATFORM_C28
+typedef struct { 
+	u8 b : 5;
+	u8 _g : 6;
+	u8 r : 5;
+	inline u8 g() const {return _g;}
+	inline void set_g(u8 ag) {_g = ag;}
+} rgb565_t;
+
+#else
+typedef struct { 
+	u8 b : 5;
+	u8 g0 : 3;
+	u8 g1 : 3;
+	u8 r : 5;
+	inline u8 g() const {return (g0 << 3) | g1;}
+	inline void set_g(u8 ag) {g0 = ag >> 3; g1 = ag & 0x07;}
+} rgb565_t;
+
+#endif
+
+STATIC_ASSERT(sizeof(rgb565_t) == sizeof(u16), sa_rgb565);
 
 #define RGB2U32(r,g,b) ((((u32)(r) << 16) & 0x00ff0000) | (((u32)(g) << 8) & 0x0000ff00) | ((u32)(b) & 0x000000ff))
 #define U32R(v) (((v) >> 16) & 0xff)
@@ -95,15 +118,22 @@ protected:
 	s32 allowed_y1;
 	s32 allowed_w;
 	s32 allowed_h;
-public:
-	surface_t():w(0),h(0),buf_sz(0),buf(0),itype(img_type_t::bppGeneric) {
+private:
+	void _ctor0() {
 		w = h = buf_sz = 0;
 		buf = 0;
 		itype = img_type_t::bppGeneric;
-		allowed_x1 = allowed_y1 = allowed_w = allowed_h = 0;
+		allowed_x1 = allowed_y1 = 0;
+		allowed_w = w;
+		allowed_h = h;
+	}
+public:
+	surface_t():w(0),h(0),buf_sz(0),buf(0),itype(img_type_t::bppGeneric) {
+		_ctor0();
 	}
 
 	surface_t(s32 _w, s32 _h, s32 _buf_sz, u8 *_buf, img_type_t::img_type_t _itype) {
+		_ctor0();
 		w=(_w),h=(_h),buf_sz=(_buf_sz),buf=(_buf),itype=(_itype); 
 		_MY_ASSERT(w > 0 && h > 0,return);
 	}
@@ -206,17 +236,12 @@ public:
 	surface_8bpp_t(s32 _w, s32 _h, s32 _buf_sz, u8 *_buf):surface_t(_w,_h,_buf_sz,_buf,img_type_t::bpp1) {
 		_MY_ASSERT(w > 0 && h > 0 && buf_sz >= BMP_GET_SIZE(w,h,8) && buf, return);
 	}
-	virtual u32  getpx(s32 x1,s32 y1) OVERRIDE {
-		s32 offs = BMP_GET_OFFS(x1,y1,w,8);
-		return buf[offs];
-	}
-	virtual void putpx(s32 x1,s32 y1, u32 c) OVERRIDE {
-		s32 offs = BMP_GET_OFFS(x1,y1,w,8);
-		buf[offs] = (u8)c;
-	}
+	virtual u32  getpx(s32 x1,s32 y1) OVERRIDE;
+	virtual void putpx(s32 x1,s32 y1, u32 c) OVERRIDE;
 	virtual void copy_to(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst) OVERRIDE;
 private:
 	void copy_to_1bpp(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst);
+	void copy_to_16bpp(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst);
 	void copy_to_24bpp(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst);
 };
 
@@ -234,6 +259,21 @@ public:
 	virtual u32  getpx(s32 x1,s32 y1) OVERRIDE;
 	virtual void putpx(s32 x1,s32 y1, u32 c) OVERRIDE;
 };
+
+// rgb 16 bit 565
+
+class surface_16bpp_t : public surface_t {
+public:
+	surface_16bpp_t():surface_t() {
+	}
+	surface_16bpp_t(s32 _w, s32 _h, s32 _buf_sz, u8 *_buf);
+	virtual void copy_to(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst) OVERRIDE;
+	virtual void fill(s32 x1,s32 y1, s32 w, s32 h) OVERRIDE;
+	virtual u32  getpx(s32 x1,s32 y1) OVERRIDE;
+	virtual void putpx(s32 x1,s32 y1, u32 c) OVERRIDE;
+};
+
+
 
 class font_t {
 private:
@@ -255,6 +295,9 @@ public:
 	bool exctract(char c, surface_t &res, s32 dx, s32 dy, s32 &width);
 	bool print_to(s32 x,s32 y, surface_t &surface, string_t &str);
 };
+
+
+
 
 } // ns
 #endif /* SURFACE_H_ */

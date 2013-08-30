@@ -9,6 +9,8 @@
 #define SSD1963DRV_H_
 
 #include "surface.h"
+#include "disp_def.h"
+
 
 namespace myvi {
 class ssd1963drv_t : public surface_t {
@@ -18,7 +20,7 @@ private:
 	s32 bpsw;
 	s32 bpsh;
 public:
-	ssd1963drv_t():surface_t(320,240,-1,(u8*)(-1),img_type_t::bppGeneric),bpsx(-1) {
+	ssd1963drv_t():surface_t(TFT_WIDTH,TFT_HEIGHT,-1,(u8*)(-1),img_type_t::bppGeneric),bpsx(-1) {
 	}
 
 	void init();

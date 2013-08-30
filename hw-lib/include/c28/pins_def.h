@@ -3,35 +3,93 @@
 
 #include "types.h"
 
-// all port B except PIN_RL
-// port B 32 bit GPIO32..GPIO63
 
-#define PIN_DC GPIO57 // bit 25
-#define PIN_WR GPIO58 // 26
-#define PIN_RD GPIO59 // 27
-#define PIN_DB0 GPIO48 // 16
-#define PIN_DB1 GPIO49 // 17
-#define PIN_DB2 GPIO50 // 18
-#define PIN_DB3 GPIO51 // 19
-#define PIN_DB4 GPIO52 // 20
-#define PIN_DB5 GPIO53 // 21
-#define PIN_DB6 GPIO54 // 22
-#define PIN_DB7 GPIO55 // 23
-#define PIN_CS GPIO60  // 28
-#define PIN_RST GPIO61 // 29
-#define PIN_UD GPIO36 // 4
-
-#define PIN_RL GPIO30 // port A
+//typedef union {
+//	u32 all;
+//	struct {          // bits   description
+//	   u16 GPIO0:1;           // 0      GPIO0
+//	   u16 GPIO1:1;           // 1      GPIO1
+//	   u16 GPIO2:1;           // 2      GPIO2
+//	   u16 GPIO3:1;           // 3      GPIO3
+//	   u16 GPIO4:1;           // 4      GPIO4
+//	   u16 GPIO5:1;           // 5      GPIO5
+//	   u16 GPIO6:1;           // 6      GPIO6
+//	   u16 GPIO7:1;           // 7      GPIO7
+//	   u16 GPIO8:1;           // 8      GPIO8
+//	   u16 GPIO9:1;           // 9      GPIO9
+//	   u16 GPIO10:1;           // 10     GPIO10
+//	   u16 GPIO11:1;           // 11     GPIO11
+//	   u16 GPIO12:1;           // 12     GPIO12
+//	   u16 GPIO13:1;           // 13     GPIO13
+//	   u16 GPIO14:1;           // 14     GPIO14
+//	   u16 GPIO15:1;           // 15     GPIO15
+//	   u16 GPIO16:1;           // 16     GPIO16
+//	   u16 GPIO17:1;           // 17     GPIO17
+//	   u16 GPIO18:1;           // 18     GPIO18
+//	   u16 GPIO19:1;           // 19     GPIO19
+//	   u16 GPIO20:1;           // 20     GPIO20
+//	   u16 GPIO21:1;           // 21     GPIO21
+//	   u16 GPIO22:1;           // 22     GPIO22
+//	   u16 GPIO23:1;           // 23     GPIO23
+//	   u16 GPIO24:1;           // 24     GPIO24
+//	   u16 GPIO25:1;           // 25     GPIO25
+//	   u16 GPIO26:1;           // 26     GPIO26
+//	   u16 GPIO27:1;           // 27     GPIO27
+//	   u16 GPIO28:1;           // 28     GPIO28
+//	   u16 GPIO29:1;           // 29     GPIO29
+//	   u16 GPIO30:1;           // 30     GPIO30
+//	   u16 GPIO31:1;           // 31     GPIO31
+//	} bits;
+//} port_a_t;
 
 
 typedef union {
 	u32 all;
 	struct {          // bits   description
-	   u16 GPIO32:1;           // 0      GPIO32
+	   u16 GPIO0:1;           // 0      GPIO0
+	   u16 GPIO1:1;           // 1      GPIO1
+	   u16 GPIO2:1;           // 2      GPIO2
+	   u16 GPIO3:1;           // 3      GPIO3
+	   u16 GPIO4:1;           // 4      GPIO4
+	   u16 BL_E:1;           // 5      GPIO5
+	   u16 GPIO6:1;           // 6      GPIO6
+	   u16 GPIO7:1;           // 7      GPIO7
+	   u16 GPIO8:1;           // 8      GPIO8
+	   u16 GPIO9:1;           // 9      GPIO9
+	   u16 GPIO10:1;           // 10     GPIO10
+	   u16 GPIO11:1;           // 11     GPIO11
+	   u16 GPIO12:1;           // 12     GPIO12
+	   u16 GPIO13:1;           // 13     GPIO13
+	   u16 GPIO14:1;           // 14     GPIO14
+	   u16 CS:1;           // 15     GPIO15
+	   u16 GPIO16:1;           // 16     GPIO16
+	   u16 RST:1;           // 17     GPIO17
+	   u16 DISP:1;           // 18     GPIO18
+	   u16 GPIO19:1;           // 19     GPIO19
+	   u16 GPIO20:1;           // 20     GPIO20
+	   u16 GPIO21:1;           // 21     GPIO21
+	   u16 WR:1;           // 22     GPIO22
+	   u16 GPIO23:1;           // 23     GPIO23
+	   u16 GPIO24:1;           // 24     GPIO24
+	   u16 GPIO25:1;           // 25     GPIO25
+	   u16 GPIO26:1;           // 26     GPIO26
+	   u16 GPIO27:1;           // 27     GPIO27
+	   u16 RD:1;           // 28     GPIO28
+	   u16 GPIO29:1;           // 29     GPIO29
+	   u16 DC:1;           // 30     GPIO30, RS
+	   u16 GPIO31:1;           // 31     GPIO31
+	} bits;
+} port_a_t;
+
+
+typedef union {
+	u32 all;
+	struct {          // bits   description
+	   u16 D0:1;           // 0      GPIO32
 	   u16 GPIO33:1;           // 1      GPIO33
-	   u16 GPIO34:1;           // 2      GPIO34
-	   u16 GPIO35:1;           // 3      GPIO35
-	   u16 GPIO36:1;           // 4      GPIO36
+	   u16 D1_3:3;           // 2      GPIO34
+//	   u16 D2:1;           // 3      GPIO35
+//	   u16 D3:1;           // 4      GPIO36
 	   u16 GPIO37:1;           // 5      GPIO37
 	   u16 GPIO38:1;           // 6      GPIO38
 	   u16 GPIO39:1;           // 7      GPIO39
@@ -43,17 +101,34 @@ typedef union {
 	   u16 GPIO45:1;           // 13     GPIO45
 	   u16 GPIO46:1;           // 14     GPIO46
 	   u16 GPIO47:1;           // 15     GPIO47
-	   u16 dat:8;           // 16     GPIO48
+	   u16 D4_11:8;           // 16     GPIO48
+//	   u16 D5:1;           // 17     GPIO49
+//	   u16 D6:1;           // 18     GPIO50
+//	   u16 D7:1;           // 19     GPIO51
+//	   u16 D8:1;           // 20     GPIO52
+//	   u16 D9:1;           // 21     GPIO53
+//	   u16 D10:1;           // 22     GPIO54
+//	   u16 D11:1;           // 23     GPIO55
 	   u16 GPIO56:1;           // 24     GPIO56
-	   u16 GPIO57:1;           // 25     GPIO57
-	   u16 GPIO58:1;           // 26     GPIO58
-	   u16 GPIO59:1;           // 27     GPIO59
-	   u16 GPIO60:1;           // 28     GPIO60
+	   u16 D12_15:4;           // 25     GPIO57
+//	   u16 D13:1;           // 26     GPIO58
+//	   u16 D14:1;           // 27     GPIO59
+//	   u16 D15:1;           // 28     GPIO60
 	   u16 GPIO61:1;           // 29     GPIO61
 	   u16 GPIO62:1;           // 30     GPIO62
 	   u16 GPIO63:1;           // 31     GPIO63
 	} bits;
 } port_b_t;
+
+typedef union {
+	u16 all;
+	struct {          // bits   description
+	   u16 D0:1;           // 0      GPIO32
+	   u16 D1_3:3;           // 2      GPIO34
+	   u16 D4_11:8;           // 16     GPIO48
+	   u16 D12_15:4;           // 25     GPIO57
+	} bits;
+} bus_data_t;
 
 
 

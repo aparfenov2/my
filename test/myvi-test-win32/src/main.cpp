@@ -24,14 +24,18 @@ extern "C" {
 }
 #include "packetizer.h"
 #include "serializer.h"
+#include "disp_def.h"
 
 using namespace std;
 using namespace myvi;
 
 #define _MAX_INT 2147483647
 
-u8 buf0[BMP_GET_SIZE(480,272,24)];
-surface_24bpp_t s1(480,272,BMP_GET_SIZE(480,272,24), buf0);
+u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
+surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), buf0);
+
+//u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24)];
+//surface_24bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24), buf0);
 
 screen_1_t screen1;
 extern resources_t res;
@@ -79,8 +83,8 @@ public:
 	s32 ky;
 public:
 	my_test_drawer_t() {
-		w = 960;
-		h = 544;
+		w = TFT_WIDTH * 2;
+		h = TFT_HEIGHT * 2;
 		kx = 2;
 		ky = 2;
 		cout << "set size to " << w << "x" << h << endl;
@@ -221,8 +225,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	app_model_t::instance.init();
 //	emu.set_target(&app_model_t::instance);
 
-	globals::modal_overlay.w = 320;
-	globals::modal_overlay.h = 240;
+	globals::modal_overlay.w = TFT_WIDTH;
+	globals::modal_overlay.h = TFT_HEIGHT;
 	globals::modal_overlay.push_modal(&screen1);
 
 

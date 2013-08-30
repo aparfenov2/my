@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    android:id="@+id/vertMain"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bkBlue"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:id="@+id/topMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Button
+            android:id="@+id/button5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Button" />
+
+        <Button
+            android:id="@+id/button7"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Button" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layOsc"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="right"
+        android:layout_weight="1" >
+
+        <my.app.myvi.Oscilloscope
+            android:id="@+id/osc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <ScrollView
+            android:id="@+id/rightMenuScroll"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent" >
+
+            <LinearLayout
+                android:id="@+id/rightMenu"
+                android:layout_width="90dp"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:scrollbars="vertical" >
+
+                <LinearLayout
+                    android:id="@+id/rightMenuWrp"
+                    android:layout_width="match_parent"
+                    android:layout_height="400dp"
+                    android:orientation="vertical" >
+
+<!--                     <my.app.myvi.MenuButton -->
+<!--                         android:id="@+id/mi_izm" -->
+<!--                         style="@style/menu_btn_style" -->
+<!--                         android:layout_width="match_parent" -->
+<!--                         android:layout_height="match_parent" -->
+<!--                         android:layout_weight="1" -->
+<!--                         app:botText="СТАРТ" -->
+<!--                         app:midText="A" -->
+<!--                         app:topText="ИЗМЕРЕНИЕ" /> -->
+
+				    <binding.BindableFrameLayout
+				        android:id="@+id/mi_izm"
+				        android:layout_width="match_parent"
+				        android:layout_height="match_parent"
+				        android:layout_weight="1"
+				        binding:dataSource="startBtnVM"
+				        binding:layoutId="@layout/start_btn_view" />
+                    
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp" />
+
+                    <my.app.myvi.MenuButton
+                        android:id="@+id/mi_dme"
+                        style="@style/menu_btn_style"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        app:botText=""
+                        app:midStyle="@style/lctx1b"
+                        app:midText="50X"
+                        app:topText="КАНАЛ DME" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp" />
+
+                    <my.app.myvi.MenuButton
+                        android:id="@+id/mi_ant"
+                        style="@style/menu_btn_style"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        app:botText="АНТЕННА"
+                        app:midText="B"
+                        app:topText="ВЫХОД" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp" />
+
+                    <my.app.myvi.MenuButton
+                        android:id="@+id/mi_lev"
+                        style="@style/menu_btn_style"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        app:botText="ДБМ"
+                        app:midStyle="@style/lctx1b"
+                        app:midText="+10"
+                        app:topText="УРОВЕНЬ" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp" />
+
+                    <my.app.myvi.MenuButton
+                        android:id="@+id/mi_hip"
+                        style="@style/menu_btn_style"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        app:botStyle="@style/lctxgs"
+                        app:botText="ccccc"
+                        app:midStyle="@style/lctx1b"
+                        app:midText="ХИП"
+                        app:topText="ЗАПУСК" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bottomMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Button
+            android:id="@+id/button1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Button" />
+
+        <Button
+            android:id="@+id/button8"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Button" />
+    </LinearLayout>
+
+</LinearLayout>

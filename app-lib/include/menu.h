@@ -422,12 +422,21 @@ namespace globals {
 
 
 class menu_item_t :public gobject_t {
+	typedef gobject_t super;
 public:
 public:
 	menu_item_t() {
 		can_be_selected = true;
 	}
 	virtual void next_state() {
+	}
+
+	virtual void set_selected(bool selected) OVERRIDE {
+		if (selected) {
+			next_state();
+			dirty = true;
+		}
+		super::set_selected(selected);
 	}
 
 	virtual void key_event(key_t::key_t key) OVERRIDE {
@@ -454,6 +463,7 @@ public:
 
 	virtual void set_selected(bool selected) OVERRIDE {
 		btn.selected = (selected);
+		super::set_selected(selected);
 	}
 
 	virtual void set_enabled(bool enabled) OVERRIDE {
@@ -1675,23 +1685,23 @@ public:
 		}
 	}
 
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		app_model_t::time2_t dpx = app_model_t::instance.osc.cursor.x;
-		u32 sfx = app_model_t::instance.osc.cursor.x_sfx;
-		if (sfx > 1) sfx /= 10;
+	//virtual void key_event(key_t::key_t key) OVERRIDE {
+	//	app_model_t::time2_t dpx = app_model_t::instance.osc.cursor.x;
+	//	u32 sfx = app_model_t::instance.osc.cursor.x_sfx;
+	//	if (sfx > 1) sfx /= 10;
 
-		if (key == key_t::K_LEFT) {
-			if (dpx.value >= sfx)
-				dpx.value -= sfx;
-			app_model_t::instance.cursor_x_changed(dpx,  app_model_t::instance.osc.cursor.x_sfx);
-			dirty = true;
+	//	if (key == key_t::K_LEFT) {
+	//		if (dpx.value >= sfx)
+	//			dpx.value -= sfx;
+	//		app_model_t::instance.cursor_x_changed(dpx,  app_model_t::instance.osc.cursor.x_sfx);
+	//		dirty = true;
 
-		} else if (key == key_t::K_RIGHT) {
-			dpx.value += sfx;
-			app_model_t::instance.cursor_x_changed(dpx, app_model_t::instance.osc.cursor.x_sfx);
-			dirty = true;
-		}
-	}
+	//	} else if (key == key_t::K_RIGHT) {
+	//		dpx.value += sfx;
+	//		app_model_t::instance.cursor_x_changed(dpx, app_model_t::instance.osc.cursor.x_sfx);
+	//		dirty = true;
+	//	}
+	//}
 
 	virtual void data_changed() OVERRIDE {
 		app_model_t::time2_t dpx;
@@ -1758,25 +1768,25 @@ public:
 		}
 	}
 
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		app_model_t::time2_t dpx = app_model_t::instance.osc.offset.x;
-		u32 sfx = app_model_t::instance.osc.offset.x_sfx;
-		if (sfx > 1) sfx /= 10;
+	//virtual void key_event(key_t::key_t key) OVERRIDE {
+	//	app_model_t::time2_t dpx = app_model_t::instance.osc.offset.x;
+	//	u32 sfx = app_model_t::instance.osc.offset.x_sfx;
+	//	if (sfx > 1) sfx /= 10;
 
-		if (key == key_t::K_LEFT) {
-			if (dpx.value > sfx)
-				dpx.value -= sfx;
-			app_model_t::instance.offset_x_changed(dpx,  app_model_t::instance.osc.offset.x_sfx);
-			this->dirty = true;
-			this->do_layout();
+	//	if (key == key_t::K_LEFT) {
+	//		if (dpx.value > sfx)
+	//			dpx.value -= sfx;
+	//		app_model_t::instance.offset_x_changed(dpx,  app_model_t::instance.osc.offset.x_sfx);
+	//		this->dirty = true;
+	//		this->do_layout();
 
-		} else if (key == key_t::K_RIGHT) {
-			dpx.value += sfx;
-			app_model_t::instance.offset_x_changed(dpx, app_model_t::instance.osc.offset.x_sfx);
-			this->dirty = true;
-			this->do_layout();
-		}
-	}
+	//	} else if (key == key_t::K_RIGHT) {
+	//		dpx.value += sfx;
+	//		app_model_t::instance.offset_x_changed(dpx, app_model_t::instance.osc.offset.x_sfx);
+	//		this->dirty = true;
+	//		this->do_layout();
+	//	}
+	//}
 
 	virtual void data_changed() OVERRIDE {
 		app_model_t::time2_t dpx;
@@ -1833,25 +1843,25 @@ public:
 		app_model_t::instance.cursor_y_changed(dpy);
 	} 
 
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		app_model_t::real_t dpx = app_model_t::instance.osc.cursor.y;
+	//virtual void key_event(key_t::key_t key) OVERRIDE {
+	//	app_model_t::real_t dpx = app_model_t::instance.osc.cursor.y;
 
-		if (key == key_t::K_LEFT) {
-			if (dpx.value > 0) 
-				dpx.value -= units::INT;
-			if (dpx.value >= 0) {
-				app_model_t::instance.cursor_y_changed(dpx);
-				this->dirty = true;
-				this->do_layout();
-			}
+	//	if (key == key_t::K_LEFT) {
+	//		if (dpx.value > 0) 
+	//			dpx.value -= units::INT;
+	//		if (dpx.value >= 0) {
+	//			app_model_t::instance.cursor_y_changed(dpx);
+	//			this->dirty = true;
+	//			this->do_layout();
+	//		}
 
-		} else if (key == key_t::K_RIGHT) {
-			dpx.value += units::INT;
-			app_model_t::instance.cursor_y_changed(dpx);
-			this->dirty = true;
-			this->do_layout();
-		}
-	}
+	//	} else if (key == key_t::K_RIGHT) {
+	//		dpx.value += units::INT;
+	//		app_model_t::instance.cursor_y_changed(dpx);
+	//		this->dirty = true;
+	//		this->do_layout();
+	//	}
+	//}
 
 
 };
@@ -2231,6 +2241,11 @@ public:
 private:
 	void set_value(string_t value) {
 		dl.l_bot.text = value;
+		if (value == "√Œ“Œ¬") {
+			dl.l_top.glyph_code = 0x0029;
+		} else {
+			dl.l_top.glyph_code = 0x0028;
+		}
 	}
 public:
 	dl_menu_item_rdy_t() {
@@ -2367,7 +2382,7 @@ public:
 		else if (prev == &dl_fprd) return &dl_12mks1;
 		else if (prev == &dl_12mks1) return &dl_fprm;
 		else if (prev == &dl_fprm) return &dl_12mks2;
-		//else if (prev == &dl_12mks2) return &dl_rdy;
+		else if (prev == &dl_12mks2) return &dl_rdy;
 		return 0;
 	}
 
@@ -2643,9 +2658,12 @@ public:
 	dl_mi_nv_pair_t answ;
 	dl_mi_nv_pair_t ksvn;
 	ip1300_mi_t_composite ip1300;
+	ip1300_mi_t_composite ip1500;
+
 	stack_layout_t menu_layout;
 private:
 	string_impl_t<INPUT_MAX_LEN> req_value;
+	string_impl_t<INPUT_MAX_LEN> otv_value;
 	string_impl_t<INPUT_MAX_LEN> rf_value;
 	string_impl_t<INPUT_MAX_LEN> rsp_lev_value;
 	string_impl_t<INPUT_MAX_LEN> ksvn_value;
@@ -2712,6 +2730,13 @@ public:
 			ip1300.ip1300.value = req_value;
 			break;
 
+		case model_changed_what_t::REQ_FREQ_OTV:
+			dirty = true;
+			if (!conv_utils::ftoa<u32>(app_model_t::instance.req_otv,otv_value,1))
+				return;
+			ip1500.ip1300.value = otv_value;
+			break;
+
 		case model_changed_what_t::REQ_LEVEL:
 			dirty = true;
 			if (!conv_utils::ftoa<s32>(app_model_t::instance.req_lev,rf_value,1))
@@ -2746,6 +2771,7 @@ public:
 		else if (prev == &req) return &answ;
 		else if (prev == &answ) return &ksvn;
 		else if (prev == &ksvn) return &ip1300;
+		else if (prev == &ip1300) return &ip1500;
 		return 0;
 	}
 

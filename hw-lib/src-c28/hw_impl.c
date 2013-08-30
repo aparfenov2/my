@@ -23,93 +23,104 @@
 
 
 
-#define MAKE_CTLW(rstn,dcn,rdn,wrn,csn) ((DIR_RL << PIO_RL)|(DIR_UD << PIO_UD)|(hw_mode << PIO_HW_MODE)|(rstn << PIO_RST_N)|(dcn << PIO_DC_N)|(rdn << PIO_RD_N)|(wrn << PIO_WR_N)|(csn << PIO_CS_N))
-
+port_a_t dat_a;
+port_b_t dat_b;
 
 void SSD1963_InitHW() {
 
     EALLOW;
-    port_b_t dir;
-    dir.all = GpioCtrlRegs.GPBDIR.all;
-    dir.bits.PIN_DC   = 1;
-    dir.bits.PIN_WR   = 1;
-    dir.bits.PIN_RD   = 1;
-    dir.bits.dat   = 0xff;
-    dir.bits.PIN_CS   = 1;
-    dir.bits.PIN_RST   = 1;
-    dir.bits.PIN_UD   = 1;
-    GpioCtrlRegs.GPBDIR.all = dir.all;
+    port_a_t dir_a;
+    dir_a.all = 0;
+    dir_a.bits.BL_E = 1;
+    dir_a.bits.RST = 1;
+    dir_a.bits.DISP = 1;
+    dir_a.bits.WR = 1;
+    dir_a.bits.CS = 1;
+    dir_a.bits.RD = 1;
+    dir_a.bits.DC = 1;
+    GpioCtrlRegs.GPADIR.all = dir_a.all;
 
-    GpioCtrlRegs.GPADIR.bit.PIN_RL   = 1;
-
+    port_b_t dir_b;
+    dir_b.all = 0;
+    dir_b.bits.D0 = 1;
+    dir_b.bits.D1_3 = 0xff;
+    dir_b.bits.D4_11 = 0xff;
+    dir_b.bits.D12_15 = 0xff;
+    GpioCtrlRegs.GPBDIR.all = dir_b.all;
     EDIS;
 
-	GpioDataRegs.GPADAT.bit.PIN_RL = DIR_RL;
 
-	port_b_t dat;
-	dat.all = GpioDataRegs.GPBDAT.all;
-	dat.bits.PIN_DC = 1;
-	dat.bits.PIN_UD = DIR_UD;
-	dat.bits.PIN_CS = 1;
-	dat.bits.PIN_RD = 1;
-	dat.bits.dat   = 0xff;
-	dat.bits.PIN_RST = 1;
-	dat.bits.PIN_WR = 1;
-	GpioDataRegs.GPBDAT.all = dat.all;
+	dat_a.all = 0;
+	dat_a.bits.BL_E = 1;
+	dat_a.bits.RST = 1;
+	dat_a.bits.DISP = 1;
+	dat_a.bits.WR = 1;
+    dir_a.bits.CS = 1;
+	dat_a.bits.RD = 1;
+	dat_a.bits.DC = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
+	dat_b.all = 0;
+	dat_b.bits.D0 = 1;
+	dat_b.bits.D1_3 = 0xff;
+	dat_b.bits.D4_11 = 0xff;
+	dat_b.bits.D12_15 = 0xff;
+	GpioDataRegs.GPBDAT.all = dat_b.all;
 }
 
 
 void SSD1963_WriteCommand(unsigned int commandToWrite) {
-	port_b_t dat;
-	dat.all = GpioDataRegs.GPBDAT.all;
-	dat.bits.PIN_DC = 0;
-	dat.bits.dat = commandToWrite;
-	dat.bits.PIN_CS = dat.bits.PIN_WR = 0;
-	GpioDataRegs.GPBDAT.all = dat.all;
-//	asm(" rpt #2 || nop");
-	dat.bits.PIN_CS = dat.bits.PIN_WR = 1;
-	GpioDataRegs.GPBDAT.all = dat.all;
+	bus_data_t bdata;
+	bdata.all = commandToWrite;
 
+	dat_a.bits.DC = 0;
+	dat_a.bits.WR = 0;
+	dat_a.bits.CS = 0;
 
-//	WR_DAT(commandToWrite);
-//	WR_CTL(MAKE_CTLW(1,0,1,0,0));
-//	asm(" nop");
-//	asm(" nop");
-//	asm(" nop");
-//	asm(" nop");
-//	WR_CTL(MAKE_CTLW(1,0,1,1,1));
+	dat_b.bits.D0 = bdata.bits.D0;
+	dat_b.bits.D1_3 = bdata.bits.D1_3;
+	dat_b.bits.D4_11 = bdata.bits.D4_11;
+	dat_b.bits.D12_15 = bdata.bits.D12_15;
+
+	GpioDataRegs.GPBDAT.all = dat_b.all;
+
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	//	asm(" rpt #2 || nop");
+	dat_a.bits.WR = 1;
+	dat_a.bits.CS = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
 }
 
 void SSD1963_WriteData(unsigned int dataToWrite) {
-	port_b_t dat;
-	dat.all = GpioDataRegs.GPBDAT.all;
-	dat.bits.PIN_DC = 1;
-	dat.bits.dat = dataToWrite;
-	dat.bits.PIN_CS = dat.bits.PIN_WR = 0;
-	GpioDataRegs.GPBDAT.all = dat.all;
-//	asm(" rpt #2 || nop");
-	dat.bits.PIN_CS = dat.bits.PIN_WR = 1;
-	GpioDataRegs.GPBDAT.all = dat.all;
+	bus_data_t bdata;
+	bdata.all = dataToWrite;
 
-//	WR_DAT(dataToWrite);
-//	WR_CTL(MAKE_CTLW(1,1,1,0,0));
-//	asm(" nop");
-//	asm(" nop");
-//	asm(" nop");
-//	asm(" nop");
-//	WR_CTL(MAKE_CTLW(1,1,1,1,1));
+	dat_a.bits.DC = 1;
+	dat_a.bits.WR = 0;
+	dat_a.bits.CS = 0;
+
+	dat_b.bits.D0 = bdata.bits.D0;
+	dat_b.bits.D1_3 = bdata.bits.D1_3;
+	dat_b.bits.D4_11 = bdata.bits.D4_11;
+	dat_b.bits.D12_15 = bdata.bits.D12_15;
+
+	GpioDataRegs.GPBDAT.all = dat_b.all;
+
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	//	asm(" rpt #2 || nop");
+	dat_a.bits.WR = 1;
+	dat_a.bits.CS = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
 }
 
 void SSD1963_Reset() {
 	volatile unsigned int dly;
-	port_b_t dat;
-	dat.all = GpioDataRegs.GPBDAT.all;
-	dat.bits.PIN_RST = 0;
-	GpioDataRegs.GPBDAT.all = dat.all;
-	//WR_CTL(MAKE_CTLW(0,1,1,1,1));
+	dat_a.bits.RST = 0;
+	GpioDataRegs.GPADAT.all = dat_a.all;
 	for(dly = 0; dly < 1000; dly++);
-	dat.bits.PIN_RST = 1;
-	GpioDataRegs.GPBDAT.all = dat.all;
-//	WR_CTL(MAKE_CTLW(1,1,1,1,1));
+	dat_a.bits.RST = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
 	for(dly = 0; dly < 1000; dly++);
 }

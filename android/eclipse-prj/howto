@@ -1,0 +1,26 @@
+
+
+
+Создание диалога
+----------------------
+
+        this.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				new AlertDialog.Builder(context)
+			    .setTitle("Delete entry")
+			    .setMessage("Are you sure you want to delete this entry?")
+			    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+			        public void onClick(DialogInterface dialog, int which) { 
+			            // continue with delete
+			        }
+			     })
+			    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+			        public void onClick(DialogInterface dialog, int which) { 
+			            // do nothing
+			        }
+			     })
+			     .show();
+			}
+		});

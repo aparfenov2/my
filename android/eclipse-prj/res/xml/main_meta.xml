@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<activity xmlns:binding="http://www.gueei.com/android-binding/">
+    <actionBar/>
+    
+	<rootView
+            binding:dataSource="."
+                binding:layoutId="@layout/myvi_main"/>
+
+	<optionsMenu
+            binding:dataSource="."
+            binding:menu="@menu/myvi_main"/>
+	
+</activity>

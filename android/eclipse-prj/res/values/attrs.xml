@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="CustTextView">
+        <attr name="font" format="string" />
+    </declare-styleable>
+    
+    <declare-styleable name="MenuButton">
+        <attr name="topText" format="string" />
+        <attr name="topStyle" format="reference" />
+        <attr name="topSize" format="dimension" />
+        <attr name="midText" format="string" />
+        <attr name="midStyle" format="reference" />
+        <attr name="midSize" format="dimension" />
+        <attr name="botText" format="string" />
+        <attr name="botStyle" format="reference" />
+        <attr name="botSize" format="dimension" />
+    </declare-styleable>
+    
+</resources>

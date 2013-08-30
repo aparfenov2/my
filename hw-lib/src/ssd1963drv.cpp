@@ -27,10 +27,10 @@ extern "C" {
 void ssd1963drv_t::init() {
 	SSD1963_Reset();
 	SSD1963_Init();
-	u32 old_color = ctx.pen_color;
-	ctx.pen_color = 0x000000;
-	fill(0,0,w,h);
-	ctx.pen_color = old_color;
+//	u32 old_color = ctx.pen_color;
+//	ctx.pen_color = 0x000000;
+//	fill(0,0,w,h);
+//	ctx.pen_color = old_color;
 }
 
 bp_return_t::bp_return_t ssd1963drv_t::begin_paint(surface_t &src, s32 sx,s32 sy, s32 sw,s32 sh, s32 dx,s32 dy) {
@@ -45,7 +45,12 @@ bp_return_t::bp_return_t ssd1963drv_t::begin_paint(surface_t &src, s32 sx,s32 sy
 	SSD1963_SetArea(dx,dx+sw-1,dy,dy+sh-1);
 	SSD1963_WriteCommand(SSD1963_WRITE_MEMORY_START);
 
+//WARNING: bpp24 will only work with 8 bit mode
+
 	if (!src.ctx.mode && src.itype == img_type_t::bpp24 && src.w == sw && sx == 0) {
+#ifdef RGB565_MODE
+		_MY_ASSERT(0,return);
+#endif
 		// source is RGB, full width,
 		u8 *p = &src.buf[BMP_GET_OFFS(sx,sy,src.w, 24)];
 		u8 *pend = &src.buf[BMP_GET_OFFS(sx,sy+sh,src.w, 24)];
@@ -54,11 +59,34 @@ bp_return_t::bp_return_t ssd1963drv_t::begin_paint(surface_t &src, s32 sx,s32 sy
 		}
 		return bp_return_t::bpBecomeMaster;
 
+	} else if (!src.ctx.mode && src.itype == img_type_t::bpp16 && src.w == sw && sx == 0) {
+			// source is RGB, full width,
+			u8 *p = &src.buf[BMP_GET_OFFS_16(sx,sy,src.w)];
+			u8 *pend = &src.buf[BMP_GET_OFFS_16(sx,sy+sh,src.w)];
+			for (; p < pend; p += sizeof(u16)) {
+				SSD1963_WriteData(*p);
+			}
+			return bp_return_t::bpBecomeMaster;
+
 	} else if (!src.ctx.mode && src.itype == img_type_t::bpp24) {
+#ifdef RGB565_MODE
+		_MY_ASSERT(0,return);
+#endif
 		// row by row copy
 		for (s32 r=0; r < sh; r++) {
 			u8 *p = &src.buf[BMP_GET_OFFS(sx,sy+r,src.w, 24)];
 			u8 *pend = &src.buf[BMP_GET_OFFS(sx+sw,sy+r,src.w, 24)];
+			for (; p < pend; p++) {
+				SSD1963_WriteData(*p);
+			}
+		}
+		return bp_return_t::bpBecomeMaster;
+
+	} else if (!src.ctx.mode && src.itype == img_type_t::bpp16) {
+		// row by row copy
+		for (s32 r=0; r < sh; r += sizeof(u16)) {
+			u8 *p = &src.buf[BMP_GET_OFFS_16(sx,sy+r,src.w)];
+			u8 *pend = &src.buf[BMP_GET_OFFS_16(sx+sw,sy+r,src.w)];
 			for (; p < pend; p++) {
 				SSD1963_WriteData(*p);
 			}

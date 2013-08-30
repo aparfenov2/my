@@ -5,6 +5,9 @@
 
 using namespace myvi;
 
+#define INTERSTEP 1
+
+
 void ttype_font_t::init(char * _fname, u8 * _mem_font, u32 _mem_sz) {
 
 	_MY_ASSERT(!hdl && _fname, return);
@@ -102,10 +105,11 @@ void ttype_font_t::print_to(s32 x,s32 y, surface_t &surface, string_t str) {
 		int x2 = x + gly->bitmap_left;
 		gly_to(x2,y2,surface,glyph_index);
 
-		x += gly->hadvance >> 6;
+		x += (gly->hadvance >> 6) + INTERSTEP;
 	}
 
 }
+
 
 void ttype_font_t::print_to(s32 x,s32 y, surface_t &surface, string32_t str) {
 
@@ -124,8 +128,8 @@ void ttype_font_t::print_to(s32 x,s32 y, surface_t &surface, string32_t str) {
 		gly_to(x,y,surface,str[n]);
 
 		_MY_ASSERT(gly,return);
-		x += gly->hadvance >> 6;
-		pw += gly->hadvance >> 6;
+		x += (gly->hadvance >> 6);
+		pw += (gly->hadvance >> 6);
 	}
 	_MY_ASSERT(pw == sw,return);
 }
@@ -143,7 +147,7 @@ void ttype_font_t::get_string_size(string_t &str, s32 &sw, s32 &sh) {
 
 		gly = globals::ttcache.load_glyph(hdl,glyph_index,load_mode_t::LM_DEFAULT);
 		if (!gly) continue;
-		x += gly->hadvance >> 6;
+		x += (gly->hadvance >> 6) + INTERSTEP;
 		if (y_max < gly->vadvance) {
 			y_max = gly->vadvance;
 		}

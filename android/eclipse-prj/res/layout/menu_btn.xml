@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:clickable="true"
+    android:orientation="vertical" >
+
+    <my.app.myvi.CustTextView
+        style="@style/lctx1"
+        android:id="@+id/ltop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Medium Text"
+         />
+
+    <my.app.myvi.CustTextView
+        style="@style/lctxg"
+        android:id="@+id/lmid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="G"
+         />
+
+    <my.app.myvi.CustTextView
+        style="@style/lctx1"
+        android:id="@+id/lbot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Medium Text"
+         />
+
+</LinearLayout>

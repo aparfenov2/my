@@ -280,7 +280,7 @@ public:
 
 
 
-		label_distance.x = 150-8;
+		label_distance.x = 250-8;
 		label_distance.y = 25-20;
 		label_distance.center_layout.spy = 1;
 
@@ -303,7 +303,7 @@ public:
 		statistics.x = 20-8;
 		statistics.y = 100-20;
 
-		kod_co.x = 180-8;
+		kod_co.x = label_distance.x;
 		kod_co.y = 100-20;
 
 		set_preferred_size_children();
@@ -325,25 +325,45 @@ public:
 		dst.ctx.reset();
 		dst.ctx.pen_color = 0x292929;
 		dst.fill(ax,ay,w,h); // 8,25,250,200
-// сетка
-		dst.ctx.pen_color = 0xffffff;
-		dst.ctx.alfa = 128;
-		s32 cw = 26;
-		s32 ch = 20;
-		// vert
-		for (int c=1; c*cw < w; c++)
-			dst.line(ax+c*cw,ay,h,true);
-		// hor
-		for (int r=1; r*ch < h; r++)
-			dst.line(ax,ay+r*ch,w,false);
-// данные
-		dst.ctx.pen_color = 0x00ff00;
 
 		u32 dpx = app_model_t::instance.osc.dpx.value;
 		u32 dpy = app_model_t::instance.osc.dpy.value / units::INT;
 		s32 maxy = app_model_t::instance.osc.disp_buf->maxy;
 
-		s32 last_x = 0, last_y = h, cx = 0;
+		s32 last_x = 0, last_y = h, cx = 0, cy = 0;
+// сетка
+		dst.ctx.pen_color = 0xffffff;
+		dst.ctx.alfa = 128;
+		s32 cw = 26;
+		s32 ch = 20;
+
+		while(1) {
+			s32 px = (cx * cw)/dpx; // pixel per dot x
+			cx++;
+			if (px >= w) break;
+			dst.line(ax+px,ay,h,true);
+		};
+
+
+		while(1) {
+			s32 py = cy*h/100;
+			cy += 10;
+			if (py >= h) break;
+			py = h-py;
+			dst.line(ax,ay+py,w,false);
+		};
+
+		// vert
+		//for (int c=1; c*cw < w; c++)
+		//	dst.line(ax+c*cw,ay,h,true);
+
+		// hor
+		//for (int r=1; r*ch < h; r++)
+		//	dst.line(ax,ay+r*ch,w,false);
+// данные
+		dst.ctx.pen_color = 0x00ff00;
+
+
 
 		s32 len = app_model_t::instance.osc.disp_buf->y_data.length();
 

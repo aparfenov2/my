@@ -8,10 +8,14 @@
 // Configuration
 //=============================================================================
 
-#define TFT320240
+#include "disp_def.h"
+
+
+//#define TFT320240
 //#define TFT800480
 //#define TFT640480
-//#define TFTCUSTOM
+#define TFTCUSTOM //480x272
+//#define RGB565_MODE - defined in c28/pins_def.h
 
 //=============================================================================
 // All numeric constants with "ULL" suffix !
@@ -19,15 +23,16 @@
 #define TFT_FPS 60ULL
 
 #ifdef TFTCUSTOM
-	#define TFT_WIDTH				0ULL
-	#define TFT_HSYNC_BACK_PORCH	0ULL
-	#define TFT_HSYNC_FRONT_PORCH	0ULL
-	#define TFT_HSYNC_PULSE			0ULL
+// width and height defined in c28/pins_def.h
+//	#define TFT_WIDTH				480ULL
+	#define TFT_HSYNC_BACK_PORCH	35ULL
+	#define TFT_HSYNC_FRONT_PORCH	2ULL
+	#define TFT_HSYNC_PULSE			7ULL
 	
-	#define TFT_HEIGHT				0ULL
-	#define TFT_VSYNC_BACK_PORCH	0ULL
-	#define TFT_VSYNC_FRONT_PORCH	0ULL
-	#define TFT_VSYNC_PULSE			0ULL
+//	#define TFT_HEIGHT				272ULL
+	#define TFT_VSYNC_BACK_PORCH	2ULL
+	#define TFT_VSYNC_FRONT_PORCH	2ULL
+	#define TFT_VSYNC_PULSE			9ULL
 #endif
 
 #ifdef TFT320240
@@ -68,10 +73,11 @@
 #endif
 
 
-
+//524
 #define	TFT_HSYNC_PERIOD	(TFT_HSYNC_PULSE + TFT_HSYNC_BACK_PORCH + TFT_WIDTH  + TFT_HSYNC_FRONT_PORCH)
+//285
 #define	TFT_VSYNC_PERIOD	(TFT_VSYNC_PULSE + TFT_VSYNC_BACK_PORCH + TFT_HEIGHT + TFT_VSYNC_FRONT_PORCH)
-
+//9MHz
 #define TFT_PCLK	(TFT_HSYNC_PERIOD * TFT_VSYNC_PERIOD * TFT_FPS)
 //#define TFT_PCLK (928 * 525 * 60)
 #define LCD_FPR		((TFT_PCLK * 1048576)/100000000)

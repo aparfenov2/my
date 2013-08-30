@@ -6,7 +6,6 @@
 #include "ssd1963drv.h"
 
 #include "surface.h"
-//#include "truetype.h"
 #include "assert_impl.h"
 #include "bmp_math.h"
 #include "app_events.h"
@@ -30,7 +29,7 @@ extern "C" {
 
 #include <stdio.h>
 
-//#include "DSP28x_Project.h"     // Device Headerfile and Examples Include File
+
 
 
 using namespace myvi;
@@ -171,11 +170,11 @@ void init_pie_table() {
 void my_main() {
 
 
-	s32 buf_sz = BMP_GET_SIZE(320,240,24);
+	s32 buf_sz = BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT);
 
 	u8 *buf0 = new u8[buf_sz];
 
-	surface_24bpp_t s1(320,240,buf_sz, buf0);
+	surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,buf_sz, buf0);
 
 //	IOWR_ALTERA_AVALON_PIO_DIRECTION(PIO_1_BASE,0xFF);
 
@@ -187,8 +186,8 @@ void my_main() {
 	screen1.init();
 	screen1.dirty = true;
 
-	globals::modal_overlay.w = 320;
-	globals::modal_overlay.h = 240;
+	globals::modal_overlay.w = TFT_WIDTH;
+	globals::modal_overlay.h = TFT_HEIGHT;
 	globals::modal_overlay.push_modal(&screen1);
 	globals::modal_overlay.dirty = true;
 

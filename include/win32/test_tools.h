@@ -3,6 +3,8 @@
 
 #include "surface.h"
 #include "app_events.h"
+#include "disp_def.h"
+
 namespace myvi {
 
 class test_drawer_t {
@@ -11,7 +13,7 @@ public:
 	u32 h;
 public:
 	test_drawer_t() {
-		w = 320, h = 240;
+		w = TFT_WIDTH, h = TFT_HEIGHT;
 	}
 	// return : if true - update
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) {

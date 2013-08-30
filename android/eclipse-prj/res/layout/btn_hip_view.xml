@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<my.app.myvi.MenuButton xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    android:id="@+id/mi_izm"
+    style="@style/menu_btn_style"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:botStyle="@style/lctxgs"
+    app:botText="ccccc"
+    app:midStyle="@style/lctx1b"
+    app:midText="ХИП"
+    app:topText="ЗАПУСК"
+    binding:onClick="Click" />

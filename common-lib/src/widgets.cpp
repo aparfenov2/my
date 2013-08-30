@@ -71,8 +71,8 @@ void focus_manager_t::select(gobject_t *p) {
 		_MY_ASSERT(p->can_be_selected,return);
 	}
 
-	if (p == selected)
-		return;
+	//if (p == selected)
+	//	return;
 
 	if (selected) {
 		selected->selected = (false);

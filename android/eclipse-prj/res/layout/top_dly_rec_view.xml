@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>    
+<my.app.myvi.DoubleLabel
+    xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    
+    style="@style/label_style"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:topText="_/\/\_"
+    app:botText="13 МКС"
+    />

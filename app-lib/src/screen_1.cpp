@@ -4,6 +4,7 @@
 
 #include "app_events.h"
 #include "assert_impl.h"
+#include "disp_def.h"
 
 using namespace myvi;
 
@@ -14,8 +15,8 @@ extern resources_t res;
 void screen_1_t::init() {
 
 //	globals::gui_debug = true;
-	w = 480;
-	h = 272;
+	w = TFT_WIDTH;
+	h = TFT_HEIGHT;
 
 	button_context_t bctx1;
 	bctx1.bk_sel_color = 0x292929; // gray
@@ -36,36 +37,36 @@ void screen_1_t::init() {
 	init_children();
 
 // layout buttons
-	right_menu_set.x = 480 - 55;
-	right_menu_set.y = 1;
-	right_menu_set.menu_layout.bh = 42; // высота кнопки
-	right_menu_set.h = 272 - 2 - right_menu_set.y;
-	right_menu_set.w = 48;
+	right_menu_set.w = 75;
+	right_menu_set.x = TFT_WIDTH - right_menu_set.w - 2;
+	right_menu_set.y = 10;
+	right_menu_set.h = TFT_HEIGHT - right_menu_set.y - 1;
+	right_menu_set.menu_layout.bh = 45; // высота кнопки
 	right_menu_set.menu_layout.spy = 3; // расстояние между кнопками
 
 // double_labels
 
 	top_row.x = 8;
 	top_row.y = 1;
+	top_row.h = 30;
+	top_row.w = right_menu_set.x - top_row.x - 5;
 	top_row.menu_layout.bw = 35;
-	top_row.h = 25;
-	top_row.w = 480 - top_row.x;
 	top_row.menu_layout.spx = 5;
 	top_row.menu_layout.vertical = false;
 
+
 	bot_row.x = 8;
-	bot_row.y = 272 - 27;
+	bot_row.h = 30;
+	bot_row.y = TFT_HEIGHT - bot_row.h - 1;
+	bot_row.w = right_menu_set.x - bot_row.x - 5;
 	bot_row.menu_layout.bw = 35;
-	bot_row.h = 25;
-	bot_row.w = 480 - top_row.x;
-	bot_row.menu_layout.spx = 5;
+	bot_row.menu_layout.spx = 15;
 	bot_row.menu_layout.vertical = false;
 
 	oscil.x = 8;
-	oscil.y = 30;
-	oscil.w = 480 - 70;
-	oscil.h = 272 - 60;
-
+	oscil.y = top_row.y + top_row.h + 5;
+	oscil.w = right_menu_set.x - oscil.x - 5;
+	oscil.h = bot_row.y - oscil.y - 5;
 
 	globals::dialogs::init();
 	set_preferred_size_children();

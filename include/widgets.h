@@ -176,7 +176,8 @@ public:
 
 	// размещает детей в пространстве родителя
 	virtual void do_layout() {
-		_WEAK_ASSERT(w && h,return);
+//		_WEAK_ASSERT(w && h,return);
+		if (!(w && h)) return;
 		if (layout)
 			layout->layout(this);
 		layout_children();
@@ -209,7 +210,7 @@ public:
 	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
 
 	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw = false) {
-
+		
 		_MY_ASSERT(p->visible,return false);
 		bool ret = false;
 
@@ -217,6 +218,10 @@ public:
 			s32 x1,y1;
 			p->translate(x1,y1);
 			dst.set_allowed_area(x1,y1,p->w,p->h);
+// DEBUG DRAW:
+			//dst.ctx.pen_color = 0x00ff00;
+			//dst.rect(x1,y1,p->w,p->h);
+
 			p->render(dst);
 			clear_dirty(p);
 			force_redreaw = true;
@@ -246,9 +251,9 @@ private:
 };
 namespace font_size_t {
 	enum font_size_t {
-		FS_8 = 10,
-		FS_15 = 15,
-		FS_20 = 20,
+		FS_8 = 12,
+		FS_15 = 16,
+		FS_20 = 21,
 		FS_30 = 30
 	};
 }
