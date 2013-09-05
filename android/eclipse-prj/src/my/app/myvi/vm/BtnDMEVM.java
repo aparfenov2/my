@@ -1,4 +1,4 @@
-package vm;
+package my.app.myvi.vm;
 
 import gueei.binding.Command;
 

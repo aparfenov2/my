@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:topText="ЗАПРОСЫ"
+        app:midText="1300"
+        app:botText="ИМП.ПАР/C"
+         />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp" />
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botText="МГц"
+        app:midText="1050,20"
+        app:topText="F ПРД"
+         />
+
+
+
+</LinearLayout>

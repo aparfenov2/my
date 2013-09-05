@@ -1,4 +1,4 @@
-package vm;
+package my.app.myvi.vm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

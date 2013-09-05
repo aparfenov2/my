@@ -19,7 +19,7 @@
 		<dependency>
 			<groupId>my.app</groupId>
 			<artifactId>android-binding</artifactId>
-			<version>3.0.52</version>
+			<version>3.0.99</version>
 		</dependency>
 		<dependency>
 			<groupId>de.mindpipe.android</groupId>
@@ -58,22 +58,18 @@
 				<artifactId>android-maven-plugin</artifactId>
 				<version>${android.plugin.version}</version>
 				<extensions>true</extensions>
-			</plugin>
+				<configuration>
+					<sdk>
+						<platform>18</platform>
+					</sdk>
+				</configuration>
+							</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<source>1.6</source>
 					<target>1.6</target>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>com.jayway.maven.plugins.android.generation2</groupId>
-				<artifactId>android-maven-plugin</artifactId>
-				<configuration>
-					<sdk>
-						<platform>17</platform>
-					</sdk>
 				</configuration>
 			</plugin>
 		</plugins>

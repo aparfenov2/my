@@ -1,4 +1,4 @@
-package vm;
+package my.app.myvi.vm;
 
 import gueei.binding.Command;
 import gueei.binding.observables.StringObservable;
@@ -37,11 +37,11 @@ public class BtnStartVM {
 			
 			
 			if (state == State.STOPPED) {
-				midText.set("A");
+				midText.set("C");
 				botText.set("СТАРТ");
 				
 			} else if (state == State.STARTED) {
-				midText.set("B");
+				midText.set("D");
 				botText.set("СТОП");
 				
 			}
@@ -49,6 +49,6 @@ public class BtnStartVM {
 		}
 	};
 	
-	public StringObservable midText = new StringObservable("A");
+	public StringObservable midText = new StringObservable("C");
 	public StringObservable botText = new StringObservable("СТАРТ");
 }

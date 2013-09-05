@@ -4,10 +4,10 @@
     
 	<rootView
             binding:dataSource="."
-                binding:layoutId="@layout/myvi_main"/>
+            binding:layoutId="@layout/myvi_main"/>
 
 	<optionsMenu
             binding:dataSource="."
-            binding:menu="@menu/myvi_main"/>
+            binding:menu="@menu/options_menu"/>
 	
 </activity>

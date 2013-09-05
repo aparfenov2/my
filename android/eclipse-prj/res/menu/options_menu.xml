@@ -1,0 +1,32 @@
+<menu 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    >
+
+    <item 
+	   	android:id="@+id/menu1"
+        android:title="Настройки"
+        binding:onClick="MenuSettingsClick"
+        />
+    <item 
+	   	android:id="@+id/menu2"
+        android:title="Главное"
+        binding:onClick="MenuMainClick"
+        />
+    <item 
+	   	android:id="@+id/menu3"
+        android:title="Параметры"
+        binding:onClick="MenuParamsClick"
+        />
+    <item 
+	   	android:id="@+id/menu4"
+        android:title="График"
+        binding:onClick="MenuGraphicClick"
+        />
+    <item 
+	   	android:id="@+id/menu5"
+        android:title="Экран"
+        binding:onClick="MenuScreenClick"
+        />
+    
+</menu>

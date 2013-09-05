@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:binding="http://www.gueei.com/android-binding/"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botText="СТАРТ"
+        app:midText="C"
+        app:topText="ИЗМЕРЕНИЕ"
+        binding:botText="startBtnVM.botText"
+        binding:midText="startBtnVM.midText"
+        binding:onClick="startBtnVM.Click" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp" />
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botText="_"
+        app:midStyle="@style/lctx1b"
+        app:midText="50X"
+        app:topText="КАНАЛ DME"
+        binding:onClick="dmeBtnVM.Click" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp" />
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botText="АНТЕННА"
+        app:midText="E"
+        app:topText="ВЫХОД"
+        binding:botText="antBtnVM.botText"
+        binding:midText="antBtnVM.midText"
+        binding:onClick="antBtnVM.Click" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp" />
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botText="ДБМ"
+        app:midStyle="@style/lctx1b"
+        app:midText="+10"
+        app:topText="УРОВЕНЬ"
+        binding:onClick="lvlBtnVM.Click" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp" />
+
+    <my.app.myvi.MenuButton
+        style="@style/menu_btn_style"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        app:botStyle="@style/lctxgs"
+        app:botText="FFFF"
+        app:midStyle="@style/lctx1b"
+        app:midText="ХИП"
+        app:topText="ЗАПУСК"
+        binding:botText="hipBtnVM.botText"
+        binding:midText="hipBtnVM.midText"
+        binding:onClick="hipBtnVM.Click" />
+
+</LinearLayout>

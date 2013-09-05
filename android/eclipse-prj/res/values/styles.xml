@@ -17,24 +17,27 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
     </style>
 
+<!-- Text Noraml -->
     <style name="lctx1">
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">15sp</item>
         <item name="font">default</item>
     </style>
 
+<!-- Text Big -->
     <style name="lctx1b">
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">20sp</item>
         <item name="font">default</item>
     </style>
-
+<!-- Glyphs Big -->
     <style name="lctxg">
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">20sp</item>
         <item name="font">gly2.ttf</item>
     </style>
 
+<!-- Glyphs Normal -->
     <style name="lctxgs">
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">15sp</item>
