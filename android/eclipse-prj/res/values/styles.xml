@@ -45,9 +45,10 @@
     </style>
 
     <style name="menu_btn_style">
-        <item name="android:background">@drawable/border</item>
+        <item name="android:background">@drawable/btn_selector</item>
         <item name="android:gravity">center_vertical</item>
-        </style>
+    </style>
+    
     <style name="label_style">
         <item name="android:gravity">center_vertical</item>
         </style>

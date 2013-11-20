@@ -1,13 +1,17 @@
 package my.app.myvi.vm;
 
 public class RightMenuVMBase {
-	private String name;
-	private int layout;
+	
+	public String name;
+	public int layout;
+	
 
 	public RightMenuVMBase(String name, int layout) {
-		this.setName(name);
-		this.setLayout(layout);
+		this.name = name;
+		this.layout = layout;
 	}
+	
+	
 
 	public String getName() {
 		return name;
@@ -24,4 +28,5 @@ public class RightMenuVMBase {
 	public void setLayout(int layout) {
 		this.layout = layout;
 	}
+
 }

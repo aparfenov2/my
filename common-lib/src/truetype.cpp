@@ -8,11 +8,11 @@ using namespace myvi;
 #define INTERSTEP 1
 
 
-void ttype_font_t::init(char * _fname, u8 * _mem_font, u32 _mem_sz) {
+void ttype_font_t::init(char * folder, char * _fname, u8 * _mem_font, u32 _mem_sz) {
 
-	_MY_ASSERT(!hdl && _fname, return);
+	_MY_ASSERT(!hdl && folder && _fname, return);
 
-	hdl = globals::ttcache.open_face(_fname,_mem_font,_mem_sz);
+	hdl = globals::ttcache.open_face(folder, _fname,_mem_font,_mem_sz);
 	_MY_ASSERT(hdl, return);
 	set_char_size_px(0,8);
 }
@@ -44,9 +44,9 @@ typedef struct {
 // from http://jrgraphix.net/r/Unicode/0400-04FF
 
 utf8_range_t win1251_ucode_map[] = {
-	{'¿',0x0410,'ˇ',0x044f},
-	{'®',0x0401,0x00,0x0000},
-	{'∏',0x0451,0x00,0x0000},
+	{0xc0,0x0410,0xff,0x044f}, // –ê-—è
+	{0xa8,0x0401,0x00,0x0000}, // –Å
+	{0xb8,0x0451,0x00,0x0000}, // —ë
 };
 
 u16 get_unicode(u8 ansi_c, utf8_range_t* charmap, u32 map_sz) {

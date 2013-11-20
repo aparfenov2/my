@@ -2,19 +2,22 @@ package my.app.myvi;
 
 import gueei.binding.IBindableView;
 import gueei.binding.ViewAttribute;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.drawable.Drawable;
-import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 public class MenuButton extends StyleableWidget implements
 		IBindableView<MenuButton> {
+	
+	private final Logger log = LoggerFactory.getLogger(MenuButton.class);
 
 	public MenuButton(final Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -44,30 +47,14 @@ public class MenuButton extends StyleableWidget implements
 				R.styleable.MenuButton_botStyle, R.styleable.MenuButton_botSize);
 
 		a.recycle();
+		
+		this.setFocusable(true);
+		this.setFocusableInTouchMode(true);
+		this.setClickable(true);
+		
 
 	}
-
-	@Override
-	public boolean dispatchTouchEvent(MotionEvent ev) {
-		if (ev.getAction() == MotionEvent.ACTION_DOWN) {
-
-			final Drawable lastBkColor = this.getBackground();
-
-			this.setBackgroundColor(getResources().getColor(R.color.bkGray));
-			this.performClick();
-
-			new Handler().postDelayed(new Runnable() {
-
-				@Override
-				public void run() {
-					MenuButton.this.setBackgroundDrawable(lastBkColor);
-				}
-
-			}, 100);
-
-		}
-		return false;
-	}
+	
 
 	private ViewAttribute<MenuButton, CharSequence> topTextAttribute = new ViewAttribute<MenuButton, CharSequence>(
 			CharSequence.class, MenuButton.this, "topText") {
@@ -115,16 +102,16 @@ public class MenuButton extends StyleableWidget implements
 		}
 	};
 	
+	
+	
 	@Override
 	public ViewAttribute<? extends View, ?> createViewAttribute(
 			String attributeName) {
 
 		if (attributeName.equals("topText")) {
 			return topTextAttribute;
-			
 		} else if (attributeName.equals("midText")) {
 			return midTextAttribute;
-			
 		} else if (attributeName.equals("botText")) {
 			return botTextAttribute;
 		}

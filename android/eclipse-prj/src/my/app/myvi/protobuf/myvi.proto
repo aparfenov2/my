@@ -1,0 +1,23 @@
+package my.app.myvi.protobuf;
+
+option java_package = "my.app.myvi.protobuf.gen";
+option java_outer_classname = "MyviProtos";
+
+enum tSuffix {
+	X = 1;
+	Y = 2;
+}
+
+message HostInterface {
+
+	message ChannelDMEChanged {
+		required int32 number = 1;
+		required tSuffix sfx = 2;
+	}
+	optional ChannelDMEChanged channelDMEChanged = 1;
+	
+	message RequestFrequency {
+		required uint32 frequency = 1;
+	}
+	optional RequestFrequency requestFrequency = 2;
+}

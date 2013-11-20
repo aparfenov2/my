@@ -2,53 +2,49 @@ package my.app.myvi.vm;
 
 import gueei.binding.Command;
 import gueei.binding.observables.StringObservable;
+import my.app.myvi.appmodel.DevState;
+import my.app.myvi.events.DevStateChangedEvent;
+import my.app.myvi.events.DevStateToggleEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.view.View;
+import de.greenrobot.event.EventBus;
 
 public class BtnStartVM {	
 
 	private final Logger log = LoggerFactory.getLogger(BtnStartVM.class);
 	
 	public BtnStartVM() {
+		EventBus.getDefault().register(this, DevStateChangedEvent.class);
+	}
+	
+	
+	
+	
+	public void onEvent(DevStateChangedEvent event) {
 		
+		if (event.getState() == DevState.STOPPED) {
+			midText.set("C");
+			botText.set("СТАРТ");
+			
+		} else if (event.getState() == DevState.STARTED) {
+			midText.set("D");
+			botText.set("СТОП");
+		}
 	}
 	
-	private enum State {
-		STARTED,
-		STOPPED
-	}
-	
-	private State state = State.STOPPED;	
 	
 	public Command Click = new Command(){
 		@Override
 		public void Invoke(View arg0, Object... arg1) {
 			log.debug("start btn clicked !");
-
-			if (state == State.STOPPED) {
-				state = State.STARTED;
-				
-			} else if (state == State.STARTED) {
-				state = State.STOPPED;
-			}
+			EventBus.getDefault().post(new DevStateToggleEvent());
 			
-			
-			if (state == State.STOPPED) {
-				midText.set("C");
-				botText.set("СТАРТ");
-				
-			} else if (state == State.STARTED) {
-				midText.set("D");
-				botText.set("СТОП");
-				
-			}
-
 		}
 	};
 	
-	public StringObservable midText = new StringObservable("C");
-	public StringObservable botText = new StringObservable("СТАРТ");
+	public StringObservable midText = new StringObservable("!C");
+	public StringObservable botText = new StringObservable("!СТАРТ");
 }

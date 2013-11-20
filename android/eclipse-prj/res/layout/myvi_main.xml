@@ -44,10 +44,10 @@
                 android:layout_weight="1" >
 
                 <binding.BindableFrameLayout
-                    android:layout_width="95dp"
+                    android:layout_width="110dp"
                     android:layout_height="400dp"
                     binding:dataSource="rightMenuVM"
-                    binding:layoutId="rightMenuId" />
+                    binding:layoutId="rightMenuVM.layout" />
             </ScrollView>
 
             <TextView
@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                binding:text="rightMenuName" />
+                binding:text="rightMenuVM.name" />
         </LinearLayout>
     </LinearLayout>
     <!-- Нижнее меню -->

@@ -97,7 +97,7 @@ public:
 	charmap_pair_t *charmap;
 	char *name;
 	char name2[FNT_NAME_SIZE];
-	s32	curr_height; // текущий размер шрифта
+	s32	curr_height; // С‚РµРєСѓС‰РёР№ СЂР°Р·РјРµСЂ С€СЂРёС„С‚Р°
 public:
 	font_handle_t() {
 		magic = CACHE_FNT_MAGIC;
@@ -139,9 +139,9 @@ public:
 	}
 	static void init_lib();
 	void init(u8 *memdata, u32 data_sz);
-	font_handle_t * open_face(char * _fname, u8 * _mem_font, u32 _mem_sz);
-	void set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy); // высота в пикселях
-//	void set_char_size_pt(font_handle_t *hdl, s32 ptx, s32 pty); // высота в поинтах
+	font_handle_t * open_face(char * folder, char * _fname, u8 * _mem_font, u32 _mem_sz);
+	void set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy); // РІС‹СЃРѕС‚Р° РІ РїРёРєСЃРµР»СЏС…
+//	void set_char_size_pt(font_handle_t *hdl, s32 ptx, s32 pty); // РІС‹СЃРѕС‚Р° РІ РїРѕРёРЅС‚Р°С…
 	glyph_t* load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t::load_mode_t mode);
 	u32  get_char_index(font_handle_t *hdl, u32 ucode);
 

@@ -3,6 +3,7 @@
 
     <declare-styleable name="CustTextView">
         <attr name="font" format="string" />
+        <attr name="text" format="string" />
     </declare-styleable>
     
     <declare-styleable name="MenuButton">
@@ -16,5 +17,5 @@
         <attr name="botStyle" format="reference" />
         <attr name="botSize" format="dimension" />
     </declare-styleable>
-    
+
 </resources>

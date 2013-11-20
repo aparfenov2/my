@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import android.view.View;
 
-public class BtnHipVM {
+public class BtnHipVM  {
 
 	private final Logger log = LoggerFactory.getLogger(BtnHipVM.class);
 	

@@ -4,6 +4,8 @@
     xmlns:binding="http://www.gueei.com/android-binding/"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:divider="@drawable/divider_horizontal"
+    android:showDividers="middle"
     android:orientation="vertical" >
 
     <my.app.myvi.MenuButton
@@ -18,24 +20,19 @@
         binding:midText="startBtnVM.midText"
         binding:onClick="startBtnVM.Click" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp" />
 
     <my.app.myvi.MenuButton
         style="@style/menu_btn_style"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        app:botText="_"
+        app:botText=" "
         app:midStyle="@style/lctx1b"
         app:midText="50X"
         app:topText="КАНАЛ DME"
+        binding:midText="dmeBtnVM.midText"
         binding:onClick="dmeBtnVM.Click" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp" />
 
     <my.app.myvi.MenuButton
         style="@style/menu_btn_style"
@@ -49,9 +46,6 @@
         binding:midText="antBtnVM.midText"
         binding:onClick="antBtnVM.Click" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp" />
 
     <my.app.myvi.MenuButton
         style="@style/menu_btn_style"
@@ -64,9 +58,6 @@
         app:topText="УРОВЕНЬ"
         binding:onClick="lvlBtnVM.Click" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp" />
 
     <my.app.myvi.MenuButton
         style="@style/menu_btn_style"

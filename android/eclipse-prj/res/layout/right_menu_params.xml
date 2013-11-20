@@ -4,6 +4,8 @@
     xmlns:binding="http://www.gueei.com/android-binding/"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:divider="@drawable/divider_horizontal"
+    android:showDividers="middle"
     android:orientation="vertical" >
 
     <my.app.myvi.MenuButton
@@ -14,11 +16,8 @@
         app:topText="ЗАПРОСЫ"
         app:midText="1300"
         app:botText="ИМП.ПАР/C"
+        binding:onClick="fzaprBtnVM.Click"
          />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="2dp" />
 
     <my.app.myvi.MenuButton
         style="@style/menu_btn_style"
@@ -28,6 +27,7 @@
         app:botText="МГц"
         app:midText="1050,20"
         app:topText="F ПРД"
+        binding:onClick="fprdBtnVM.Click"
          />
 
 

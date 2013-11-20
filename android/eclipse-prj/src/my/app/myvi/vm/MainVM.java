@@ -1,65 +1,53 @@
 package my.app.myvi.vm;
 
-import java.util.Collection;
+import gueei.binding.Command;
+import gueei.binding.Observable;
+import my.app.myvi.appmodel.AppModel;
 
+import org.nnsoft.guice.lifegycle.AfterInjection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import gueei.binding.Command;
-import gueei.binding.IObservable;
-import gueei.binding.Observable;
-import gueei.binding.Observer;
-import gueei.binding.observables.IntegerObservable;
-import gueei.binding.observables.StringObservable;
-import my.app.myvi.MenuButton;
-import my.app.myvi.R;
-import android.app.Activity;
-import android.os.Handler;
 import android.view.View;
+
+import com.google.inject.Inject;
 
 public class MainVM {
 	
 	private final Logger log = LoggerFactory.getLogger(MainVM.class);
 	
-	private Activity mContext;
+	@Inject
+	public RightMenuVMMain rightMenuVMMain;
+	@Inject
+	public RightMenuVMParams rightMenuVMParams;
 	
-	public MainVM(Activity mContext) {
-		this.mContext = mContext;
-		
-		rightMenuVM.subscribe(new Observer() {
-
-			@Override
-			public void onPropertyChanged(IObservable<?> arg0,
-					Collection<Object> arg1) {
-				
-				new Handler().postDelayed(new Runnable() {
-
-					@Override
-					public void run() {
-						rightMenuName.set(rightMenuVM.get().getName());
-						rightMenuId.set(rightMenuVM.get().getLayout());
-						
-					}
-
-				}, 1);
-			}
-			
-		});
+	@AfterInjection
+	public void init() {	
 		rightMenuVM.set(rightMenuVMMain);
 	}
+	
+	@Inject
+	public AppModel appModel;
+	
 // Right Menu	
 	public Observable<RightMenuVMBase> rightMenuVM = new Observable<RightMenuVMBase>(RightMenuVMBase.class);
-	public IntegerObservable rightMenuId = new IntegerObservable(R.layout.right_menu_main);
-	public StringObservable rightMenuName = new StringObservable("xxx");
+//	public RightMenuVMBase rightMenuVM;
+//	public IntegerObservable rightMenuId = new IntegerObservable(R.layout.right_menu_main);
+//	public StringObservable rightMenuName = new StringObservable("xxx");
 	
-	public RightMenuVMMain rightMenuVMMain = new RightMenuVMMain();
-	public RightMenuVMParams rightMenuVMParams = new RightMenuVMParams();
-// Top Menu	
-	public TopCh50VM topCh50VM = new TopCh50VM();
-	public TopFSendVM topFSendVM = new TopFSendVM();
-	public TopFRecVM topFRecVM = new TopFRecVM();
-	public TopDlySendVM topDlySendVM = new TopDlySendVM();
-	public TopDlyRecVM topDlyRecVM = new TopDlyRecVM();
+// Top Menu
+	@Inject
+	public TopCh50VM topCh50VM;
+	@Inject
+	public TopFSendVM topFSendVM;
+	@Inject
+	public TopFRecVM topFRecVM;
+	@Inject
+	public TopDlySendVM topDlySendVM;
+	@Inject
+	public TopDlyRecVM topDlyRecVM;
+	@Inject
+	public TopRdyVM topRdyVM;
 	
 // Bot Menu	
 // Context Menu

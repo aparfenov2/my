@@ -115,7 +115,7 @@ void ttcache_t::init_lib() {
 
 
 #ifndef TTCACHE_USE_FT
-font_handle_t * ttcache_t::open_face(char * _fname, u8 * _mem_font, u32 _mem_sz) {
+font_handle_t * ttcache_t::open_face(char * folder, char * _fname, u8 * _mem_font, u32 _mem_sz) {
 	_MY_ASSERT(_fname || _mem_font,return 0);
 // search handle
 	font_handle_t *hdl = handles;
@@ -132,9 +132,9 @@ font_handle_t * ttcache_t::open_face(char * _fname, u8 * _mem_font, u32 _mem_sz)
 
 
 #ifdef TTCACHE_USE_FT
-font_handle_t * ttcache_t::open_face(char * _fname, u8 * _mem_font, u32 _mem_sz) {
+font_handle_t * ttcache_t::open_face(char * folder, char * _fname, u8 * _mem_font, u32 _mem_sz) {
 	FT_Error error;
-	_MY_ASSERT(_fname || _mem_font,return 0);
+	_MY_ASSERT((folder && _fname) || _mem_font,return 0);
 // search handle
 	font_handle_t *hdl = handles;
 	while (hdl) {
@@ -164,7 +164,11 @@ hdl_lib_init:
 	if (_mem_font && _mem_sz) {
 		error = FT_New_Memory_Face(library, (FT_Byte *) _mem_font, _mem_sz, 0, (FT_Face*) &hdl->face);
 	} else {
+
 		error = FT_New_Face( library, _fname, 0, (FT_Face*) &hdl->face );
+	}
+	if (error) {
+		_LOG2("can't open font ",_fname);
 	}
 	_MY_ASSERT(!error,return 0);
 	_MY_ASSERT(hdl,return 0);

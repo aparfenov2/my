@@ -36,11 +36,11 @@ public:
 	//	return gly->hadvance >> 6;
 	//}
 
-	void init(char * _fname, u8 * _mem_font, u32 _mem_sz);
-	void set_char_size_px(s32 pxx, s32 pxy) { // высота в пикселях
+	void init(char *folder, char * _fname, u8 * _mem_font, u32 _mem_sz);
+	void set_char_size_px(s32 pxx, s32 pxy) { // РІС‹СЃРѕС‚Р° РІ РїРёРєСЃРµР»СЏС…
 		globals::ttcache.set_char_size_px(hdl,pxx,pxy);
 	}
-	//void set_char_size_pt(s32 ptx, s32 pty) { // высота в поинтах
+	//void set_char_size_pt(s32 ptx, s32 pty) { // РІС‹СЃРѕС‚Р° РІ РїРѕРёРЅС‚Р°С…
 	//	ttcache.set_char_size_pt(hdl,ptx,pty);
 	//}
 	void print_to(s32 x,s32 y, surface_t &surface, string_t str);

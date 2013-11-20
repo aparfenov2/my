@@ -2,6 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:binding="http://www.gueei.com/android-binding/"
     xmlns:app="http://schemas.android.com/apk/res/my.app.myvi"
+    android:divider="@drawable/divider_vertical"
+    android:showDividers="middle"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
@@ -15,15 +17,14 @@
         app:botText=""
         app:topText="! 10%" />
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <!-- resx -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+	    android:divider="@drawable/divider_vertical_small"
+	    android:showDividers="middle"
         android:layout_weight="1" >
 
         <my.app.myvi.DoubleLabel
@@ -35,9 +36,6 @@
             app:topStyle="@style/lctxgs"
             app:topText="O" />
 
-        <View
-            android:layout_width="2dp"
-            android:layout_height="match_parent" />
 
         <my.app.myvi.DoubleLabel
             style="@style/label_style"
@@ -46,9 +44,6 @@
             app:botText="100 М"
             app:topText="10.5 МКС" />
 
-        <View
-            android:layout_width="@dimen/top_space"
-            android:layout_height="match_parent" />
 
         <my.app.myvi.DoubleLabel
             style="@style/label_style"
@@ -58,9 +53,6 @@
             app:topText="->" />
     </LinearLayout>
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <my.app.myvi.DoubleLabel
         style="@style/label_style"
@@ -70,9 +62,6 @@
         app:botText="+10 ДБМ"
         app:topText="ЗАПРОС" />
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <my.app.myvi.DoubleLabel
         style="@style/label_style"
@@ -82,9 +71,6 @@
         app:botText="-76 ДБМ"
         app:topText="ОТВЕТ" />
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <my.app.myvi.DoubleLabel
         style="@style/label_style"
@@ -94,15 +80,14 @@
         app:botText="1,63"
         app:topText="КСВН" />
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <!-- bot_req_fzapr_view -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+	    android:divider="@drawable/divider_vertical_small"
+	    android:showDividers="middle"
         android:layout_weight="1" >
 
         <my.app.myvi.DoubleLabel
@@ -113,9 +98,6 @@
             app:topStyle="@style/lctxgs"
             app:topText="F" />
 
-        <View
-            android:layout_width="2dp"
-            android:layout_height="match_parent" />
 
         <my.app.myvi.DoubleLabel
             style="@style/label_style"
@@ -125,15 +107,14 @@
             app:topText="ХИП" />
     </LinearLayout>
 
-    <View
-        android:layout_width="@dimen/top_space"
-        android:layout_height="match_parent" />
 
     <!-- bot_req_fotv_view -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+	    android:divider="@drawable/divider_vertical_small"
+	    android:showDividers="middle"
         android:layout_weight="1" >
 
         <my.app.myvi.DoubleLabel
@@ -143,10 +124,6 @@
             app:botText="1200"
             app:topStyle="@style/lctxgs"
             app:topText="F" />
-
-        <View
-            android:layout_width="2dp"
-            android:layout_height="match_parent" />
 
         <my.app.myvi.DoubleLabel
             style="@style/label_style"
