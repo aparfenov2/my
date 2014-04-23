@@ -18,6 +18,19 @@
 #include "surface.h"
 #include "bmp_math.h"
 
+#include "app_events.h"
+
+#include "devices.h"
+#include "Spi.h"
+#include "uart_drv.h"
+
+#include "ttcache.h"
+#include "resources.h"
+
+#include "file_map.h"
+
+#include "widgets.h"
+
 //void testPins();
 
 extern "C" void SSD1963_InitHW();
@@ -30,41 +43,136 @@ using namespace myvi;
 
 ssd1963drv_t drv1;
 
-extern "C" {
-	void SSD1963_WriteCommand(u8 commandToWrite);
-	void SSD1963_WriteData(u8 dataToWrite);
+Spi spi;
+FRAM fram;
+FlashDev flash;
+uart_drv_t	uart;
+
+extern resources_t res;
+
+extern interrupt void Scib_Rx_Int (void);
+extern interrupt void Scic_Rx_Int (void);
+
+void init_pie_table() {
+    EALLOW;
+    PieVectTable.SCIRXINTB = (PINT) &Scib_Rx_Int;
+//    PieVectTable.SCITXINTB = (PINT) &Scib_Tx_Int;
+    PieVectTable.SCIRXINTC = (PINT) &Scic_Rx_Int;
+//    PieVectTable.SCITXINTC = (PINT) &Scic_Tx_Int;
+    EDIS;
+
+    PieCtrlRegs.PIEIER9.bit.INTx3 = 1;	// RXBINT
+//    PieCtrlRegs.PIEIER9.bit.INTx4 = 1;	// TXBINT
+    PieCtrlRegs.PIEIER8.bit.INTx5 = 1;	// RXCINT
+//    PieCtrlRegs.PIEIER8.bit.INTx6 = 1;	// TXCINT
+
+    IER = M_INT8 | M_INT9;
+
+    EINT;
+    // Enable the PIE
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
+    // Enables PIE to drive a pulse into the CPU
+    PieCtrlRegs.PIEACK.all = 0xFFFF;
 }
 
+
+
+
 int main(void)
-{	
+{
     InitSysCtrl();
 
     init_zone7();
 
+// ram bug test
+//    u8 *p1 = (u8*)0x002026B8;
+//    u8 *p2 = (u8*)0x002426B8;
+//    *p1 = 0xabba;
+//    *p2 = 0xcafe;
+//    _MY_ASSERT(*p1 != *p2,);
+//    while(1) asm(" ESTOP0");
+
+
     SSD1963_InitHW();
 
-//    testPins();
-//    if(!isExtRamOK())
-//    	asm(" ESTOP0");
-//    minit();
-//#define ALLOC_SZ 5
-//    u16 *buf = new u16[ALLOC_SZ];
-//    u16 *buf = (u16 *)malloc(ALLOC_SZ);
-//    if(!isExtRamOK2(buf,ALLOC_SZ))
-//    	asm(" ESTOP0");
+    spi.Init();
+
+    u32 ft_magic = 0;
+
+    for (u32 ofs = 0; ofs < sizeof(ft_magic); ofs++) {
+    	((u16*)&ft_magic)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
+    }
+
+    if (ft_magic == FILE_TABLE_MAGIC) {
+        for (u32 ofs = 0; ofs < sizeof(file_table); ofs++) {
+        	((u16*)&file_table)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
+        }
+    }
+
+	file_rec_t *fr = find_file(TTCACHE_FILE_ID);
+	_MY_ASSERT(fr,);
+	u32 ttcache_sz = fr->cur_len;
+	_MY_ASSERT(ttcache_sz,);
+
+	u8 *ttcache_dat = new u8[ttcache_sz + 0x0f];
+
+#define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
+	while (!ALIGNED(ttcache_dat)) {
+		ttcache_dat++;
+	}
+
+	flash.ReadData2(fr->offset,(u16 *)ttcache_dat, ttcache_sz);
+
+	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
+
+	res.init();
+
+// uart echo test
+//    uart.init(&ScibRegs);
+//	init_pie_table();
+//
+//	while (1) {
+//		while (!uart.is_empty()) {
+//
+//			u8 byte = uart.read();
+//			uart.write(byte);
+//		}
+//	}
+
+
+// display palete test
 #define W 20
 #define H 20
 
-//	s32 buf_sz = BMP_GET_SIZE_16(W,H);
-//	u8 *buf0 = new u8[buf_sz];
-//	surface_16bpp_t sa16(W,H,buf_sz, buf0);
 
     drv1.init();
+
+    u8 *buf0 = new u8[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
+    surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), buf0);
+
+    drv1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
+    s1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
 
 //0x203E95;
 //	sa16.ctx.pen_color = 0x292929;
 //	sa16.fill(0,0,W,H);
 //	sa16.copy_to(0,0,-1,-1,0,0,drv1);
+
+
+//    while(1) asm(" ESTOP0");
+
+	while(1) {
+		s1.ctx.pen_color = 0;
+		s1.fill(0,0,TFT_WIDTH,TFT_HEIGHT);
+
+		s1.ctx.pen_color = 0x00ff00;
+		res.ttf.set_char_size_px(0,font_size_t::FS_20);
+		res.ttf.print_to(20,20,s1,"›‘‘≈ “»¬ÕŒ—“‹");
+
+		s1.copy_to(0,0,-1,-1,0,0,drv1);
+
+		asm(" ESTOP0");
+	}
 
 
 	while(1)

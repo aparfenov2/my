@@ -71,8 +71,8 @@ void init_zone7(void)
     GpioCtrlRegs.GPCMUX2.bit.GPIO87 = 3;  // XA15
     GpioCtrlRegs.GPBMUX1.bit.GPIO39 = 3;  // XA16
     GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 3;  // XA17
-    //GpioCtrlRegs.GPAMUX2.bit.GPIO30 = 3;  // XA18
-    //GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 3;  // XA19
+    GpioCtrlRegs.GPAMUX2.bit.GPIO30 = 3;  // XA18
+    GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 3;  // XA19
 
     //GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 3;  // XREADY
     //GpioCtrlRegs.GPBMUX1.bit.GPIO35 = 3;  // XRNW

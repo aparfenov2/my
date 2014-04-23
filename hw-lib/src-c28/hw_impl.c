@@ -42,10 +42,7 @@ void SSD1963_InitHW() {
 
     port_b_t dir_b;
     dir_b.all = 0;
-    dir_b.bits.D0 = 1;
-    dir_b.bits.D1_3 = 0xff;
-    dir_b.bits.D4_11 = 0xff;
-    dir_b.bits.D12_15 = 0xff;
+    dir_b.bits.D0_15 = 0xffff;
     GpioCtrlRegs.GPBDIR.all = dir_b.all;
     EDIS;
 
@@ -61,26 +58,18 @@ void SSD1963_InitHW() {
 	GpioDataRegs.GPADAT.all = dat_a.all;
 
 	dat_b.all = 0;
-	dat_b.bits.D0 = 1;
-	dat_b.bits.D1_3 = 0xff;
-	dat_b.bits.D4_11 = 0xff;
-	dat_b.bits.D12_15 = 0xff;
+	dat_b.bits.D0_15 = 0xffff;
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 }
 
 
 void SSD1963_WriteCommand(unsigned int commandToWrite) {
-	bus_data_t bdata;
-	bdata.all = commandToWrite;
 
 	dat_a.bits.DC = 0;
 	dat_a.bits.WR = 0;
 	dat_a.bits.CS = 0;
 
-	dat_b.bits.D0 = bdata.bits.D0;
-	dat_b.bits.D1_3 = bdata.bits.D1_3;
-	dat_b.bits.D4_11 = bdata.bits.D4_11;
-	dat_b.bits.D12_15 = bdata.bits.D12_15;
+	dat_b.bits.D0_15 = commandToWrite;
 
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 
@@ -93,17 +82,12 @@ void SSD1963_WriteCommand(unsigned int commandToWrite) {
 }
 
 void SSD1963_WriteData(unsigned int dataToWrite) {
-	bus_data_t bdata;
-	bdata.all = dataToWrite;
 
 	dat_a.bits.DC = 1;
 	dat_a.bits.WR = 0;
 	dat_a.bits.CS = 0;
 
-	dat_b.bits.D0 = bdata.bits.D0;
-	dat_b.bits.D1_3 = bdata.bits.D1_3;
-	dat_b.bits.D4_11 = bdata.bits.D4_11;
-	dat_b.bits.D12_15 = bdata.bits.D12_15;
+	dat_b.bits.D0_15 = dataToWrite;
 
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 

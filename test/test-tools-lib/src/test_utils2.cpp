@@ -1,5 +1,5 @@
 #include "CImg.h"
-#include "test_tools.h"
+#include "win32/test_tools.h"
 #include "app_events.h"
 #include <iostream>
 

@@ -15,8 +15,8 @@ typedef		signed short int	s16;
 typedef		unsigned short int	u16;
 typedef		signed long int		s32;
 typedef		unsigned long int	u32;
-//typedef		signed long long int		s64;
-//typedef		unsigned long long	u64;
+typedef		signed long long int		s64;
+typedef		unsigned long long	u64;
 
 
 #define null 0
@@ -29,7 +29,7 @@ typedef		unsigned long int	u32;
 #define PLATFORM_C28
 
 #define STATIC_ASSERT( condition, name )\
-    typedef char assert_failed_ ## name [ (condition) ? 1 : -1 ]
+    typedef char assert_failed_ ## name [ (condition) ? 1 : -1 ];
 
 #define _MY_MIN(a,b) (((a)<(b))?(a):(b))
 

@@ -1,0 +1,182 @@
+package myvi.proto;
+
+option java_package = "my.app.myvi.protobuf.gen";
+option java_outer_classname = "MyviProtos";
+option optimize_for = LITE_RUNTIME;
+
+enum tSuffix {
+	X = 1;
+	Y = 2;
+}
+
+enum tRequestForm {
+	fRandom = 0;
+	fDetermine = 1;
+	fExternal = 2;
+	fReqOff = 3;
+}
+
+enum UserMode {
+	umInterrogator = 0;
+	umTransmitter = 1;
+}
+
+enum OutputMode {
+	omAntenna  = 0;
+	omBeacon  = 1;
+	omCalibration   = 2;
+}
+
+enum key_t {
+	K_LEFT = 1;
+	K_RIGHT = 2;
+	K_UP = 3;
+	K_DOWN = 4;
+	K_ESC = 5;
+	K_ENTER = 6;
+	K_BKSP = 7;
+	K_F1 = 8;
+	K_F2 = 9;
+	K_F3 = 10;
+	K_F4 = 11;
+	K_F5 = 12;
+	K_0 = 13;
+	K_1 = 14;
+	K_2 = 15;
+	K_3 = 16;
+	K_4 = 17;
+	K_5 = 18;
+	K_6 = 19;
+	K_7 = 20;
+	K_8 = 21;
+	K_9 = 22;
+	K_SAVE = 23;
+	K_EXIT = 24;
+	K_DOT = 25;
+	K_DELETE = 26;
+}
+
+message ChannelDMEChanged {
+	required sint32 number = 1;
+	required tSuffix sfx = 2;
+}
+
+message file_data_t {
+	required uint32 file_id = 1;
+	required uint32 offset = 2;
+	optional uint32 crc = 3;
+	required bool first = 4;
+	required bytes data = 5;
+}
+
+message download_request_t {
+	required uint32 file_id = 1;
+	required uint32 offset = 2;
+	required uint32 length = 3;
+}
+
+message file_info_t {
+	required uint32 file_id = 1;
+	required uint32 cur_len = 2;
+	optional uint32 max_len = 3;
+	optional uint32 crc = 4;
+}
+
+message host_interface_t {
+
+	optional ChannelDMEChanged channelDMEChanged = 1;
+	optional uint32 requestFrequency = 2;
+	optional uint32 requestFrequencyZapr = 3;
+	optional uint32 requestFrequencyOtv = 4;
+	optional uint32 requestSpanChanged = 5;
+	optional uint32 replySpanChanged = 6;
+	optional sint32 rfLevelChanged = 7;
+	optional tRequestForm requestFormChanged = 8;
+	optional UserMode userModeChanged = 9;
+	optional OutputMode outputModeChanged = 10;
+	optional uint32 resolution_x_changed = 11;
+	optional uint32 resolution_y_changed = 12;
+	
+	optional file_data_t download_response = 13;
+	optional file_info_t file_info_response = 14;
+	optional uint32 error = 15;
+}
+
+
+
+message exported_interface_t {
+	message range_u32_t {
+		required uint32 lo = 1;
+		required uint32 hi = 2;
+	}
+	message range_s32_t {
+		required sint32 lo = 1;
+		required sint32 hi = 2;
+	}
+	optional ChannelDMEChanged set_dme_channel = 1;
+	optional range_u32_t set_dme_channel_range = 2;
+	
+	optional uint32 set_request_frequency = 3;
+	optional range_u32_t set_request_frequency_range = 4;
+	
+	optional uint32 set_response_frequency = 5;
+	
+	optional uint32 set_request_span = 6;
+	optional range_u32_t set_request_span_range = 7;
+	
+	optional uint32 set_response_span = 8;
+	optional range_u32_t set_response_span_range = 9;
+	
+	optional uint32 set_request_frequency_zapr = 10;
+	optional range_u32_t set_request_frequency_zapr_range = 11;
+	
+	optional uint32 set_request_frequency_otv = 12;
+	optional range_u32_t set_request_frequency_otv_range = 13;
+	
+	
+	optional sint32 set_request_level = 14;
+	optional range_s32_t set_request_level_range = 15;
+	optional sint32 set_response_level = 16;
+
+	optional uint32 set_efficiency = 17;
+	optional uint32 set_response_delay = 18;
+	optional uint32 set_range = 19;
+	optional uint32 set_battery_status = 20;
+	optional uint32 set_device_status = 21;
+	optional uint32 set_ksvn = 22;
+	
+	message co_code_t {
+		required string code = 1;
+		required string aeroport = 2;
+	}
+	optional co_code_t set_co_code = 23;
+
+	message statistics_t {
+		required uint32 ev_range = 1;
+		required uint32 ev_delay = 2;
+		required uint32 sigma = 3;
+		required uint32 sko = 4;
+	}
+	optional statistics_t set_statistics = 24;
+
+	message chart_data_t {
+		required sint32 maxy = 1;
+		required sint32 length = 2;
+		required sint32 remain = 3;
+		repeated sint32 yvalues = 4;
+	}
+	optional chart_data_t update_chart = 25;
+	
+	optional UserMode set_user_mode = 26;
+	optional tRequestForm set_request_form = 27;
+	optional OutputMode set_output_mode = 28;
+	optional uint32 set_offset_x = 29;
+	
+	optional key_t key_event = 30;
+
+	optional file_data_t upload_file = 31;
+	optional download_request_t download_file = 32;
+	
+	optional file_info_t update_file_info = 33;
+	optional uint32 read_file_info = 34;
+}

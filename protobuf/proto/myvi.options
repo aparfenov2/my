@@ -1,0 +1,4 @@
+myvi.proto.file_data_t.data							max_size:128
+myvi.proto.exported_interface_t.co_code_t.code			max_size:64
+myvi.proto.exported_interface_t.co_code_t.aeroport		max_size:64
+myvi.proto.exported_interface_t.chart_data_t.yvalues	max_count:60

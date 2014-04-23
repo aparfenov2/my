@@ -75,7 +75,20 @@ void my_hdlc_tx_frame(const u8 *buffer, u16 bytes_to_send) {
 	hdlc_tx_frame((const u8_t*)buffer, bytes_to_send);
 }
 
+void save_ttcache() {
+	u32 sz = 1024 * 200; 
+	u8 *buf = new u8[sz];
+	u32 dsz = globals::ttcache.save(buf,sz);
 
+	ofstream outfile ("bmp\\ttcache.dat",ofstream::binary);
+	outfile.write((char *)buf, dsz);
+	outfile.close();
+
+	_LOG2("font cache saved, size: " ,dsz );
+
+//	globals::ttcache.init(buf,dsz);
+	delete[] buf;
+}
 
 class my_test_drawer_t : public test_drawer_t {
 public:
@@ -92,18 +105,7 @@ public:
 
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) OVERRIDE {
 		if (key == key_t::K_SAVE) {
-			u32 sz = 1024 * 200; 
-			u8 *buf = new u8[sz];
-			u32 dsz = globals::ttcache.save(buf,sz);
-
-			ofstream outfile ("bmp\\ttcache.dat",ofstream::binary);
-			outfile.write((char *)buf, dsz);
-			outfile.close();
-
-			_LOG2("font cache saved, size: " ,dsz );
-
-//			globals::ttcache.init(buf,dsz);
-			delete[] buf;
+			save_ttcache();
 		}
 		if (key) {
 			globals::modal_overlay.key_event((key_t::key_t)key);
@@ -145,24 +147,34 @@ public:
 
 class logger_impl_t : public logger_t {
 public:
+	std::ofstream log;
 public:
+
+	logger_impl_t(std::string path):log(path) {
+	}
 
     virtual logger_t& operator << (s32 v) OVERRIDE {
 		cout << v;
+		log << v;
+//		log.flush();
         return *this;
     }
 
     virtual logger_t& operator << (const char *v) OVERRIDE {
-		if (v == _endl)
+		if (v == _endl) {
 			cout << endl;
-		else
+			log << endl;
+		} else {
 			cout << v;
+			log << v;
+		}
+//		log.flush();
         return *this;
     }
 
 };
 
-logger_impl_t logger_impl; 
+logger_impl_t logger_impl("log.log"); 
 logger_t *logger_t::instance = &logger_impl;
 my_test_drawer_t test_drawer;
 
@@ -184,17 +196,19 @@ void print_chars_gly(ttype_font_t &fnt, surface_t &s1, u32 *str) {
 }
 
 int _tmain(int argc, _TCHAR* argv[]) {
-	//test_ftoa();
-	//test_atof();
-	//return 0;
-	if (argc < 1) {
-		cout << "arg0 : COM port name" << endl;
+
+	if (argc < 2) {
+		cout << "arg0 : COM port name, arg2: --nottf" << endl;
 		return -1;
 	}
 	_LOG1("log started");
 
 // init ttcache
-	ttcache_t::init_lib();
+	if (argc < 3) {
+		ttcache_t::init_lib();
+	} else {
+		cout << "skipped ttcache_t::init_lib() " << endl;
+	}
 
 	ifstream infile ("bmp\\ttcache.dat",ofstream::binary);
 	if (!infile) {

@@ -9,6 +9,7 @@ extern "C" {
 
 
 #ifdef TTCACHE_USE_FT
+#include <string>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #endif
@@ -17,11 +18,8 @@ using namespace myvi;
 //#include <stdio.h>
 ttcache_t globals::ttcache;
 
-//#define STREAM_READ_SAFE
-
-#ifdef PLATFORM_C28
 #define STREAM_READ_SAFE
-#endif
+
 #define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
 
 stream_t::stream_t(u8 *_buf, u32 _buf_sz) {
@@ -38,28 +36,33 @@ void stream_t::read(u8 *dst, u32 sz) {
 	ptr += sz;
 }
 
-#ifdef PLATFORM_C28
 u8 stream_t::read_u8() {
 	_MY_ASSERT((ptr + 1 <= end),return 0);
-	u8 ret = *ptr;
-	ptr ++;
+	u8 ret = *ptr++;
 	return ret;
 }
 
 u32 stream_t::read_u32() {
 	_MY_ASSERT(ALIGNED(ptr) && (ptr + 4 <= end),return 0);
-	u32 ret = *ptr;
-	ptr++;
-	ret |= (u32)((u32)(*ptr) << 8);
-	ptr++;
-	ret |= (u32)((u32)(*ptr) << 16);
-	ptr++;
-	ret |= (u32)((u32)(*ptr) << 24);
-	ptr++;
+	u32 ret = *ptr++;
+	ret |= (u32)((u32)(*ptr++) << 8);
+	ret |= (u32)((u32)(*ptr++) << 16);
+	ret |= (u32)((u32)(*ptr++) << 24);
 	return ret;
 }
-#endif
 
+void stream_t::write_u8(u8 v) {
+	_MY_ASSERT((ptr + 1 <= end),return);
+	*ptr++ = v;
+}
+
+void stream_t::write_u32(u32 v) {
+	_MY_ASSERT(ALIGNED(ptr) && (ptr + 4 <= end),return);
+	*ptr++ = (u8)v;
+	*ptr++ = (u8)(v >> 8);
+	*ptr++ = (u8)(v >> 16);
+	*ptr++ = (u8)(v >> 24);
+}
 
 u8 * stream_t::advance(u32 sz) {
 	_MY_ASSERT(sz && ALIGNED(sz),return 0);
@@ -139,7 +142,11 @@ font_handle_t * ttcache_t::open_face(char * folder, char * _fname, u8 * _mem_fon
 	font_handle_t *hdl = handles;
 	while (hdl) {
 		if (!strncmp(hdl->name2, _fname, FNT_NAME_SIZE)) {
-			goto hdl_lib_init;
+			if (ft_lib_initialied) {
+				goto hdl_lib_init;
+			} else {
+				return hdl;
+			}
 		}
 		hdl = hdl->next;
 	}
@@ -165,7 +172,18 @@ hdl_lib_init:
 		error = FT_New_Memory_Face(library, (FT_Byte *) _mem_font, _mem_sz, 0, (FT_Face*) &hdl->face);
 	} else {
 
-		error = FT_New_Face( library, _fname, 0, (FT_Face*) &hdl->face );
+		std::string fn1;
+#ifndef __gnu_linux__
+		fn1.append(folder);
+		fn1.append("\\");
+#else
+//		fn1.append("./");
+		fn1.append(folder);
+		fn1.append("/");
+#endif
+		fn1.append(_fname);
+		_LOG2("try open font ",fn1.c_str());
+		error = FT_New_Face( library, fn1.c_str(), 0, (FT_Face*) &hdl->face );
 	}
 	if (error) {
 		_LOG2("can't open font ",_fname);
@@ -181,11 +199,13 @@ void ttcache_t::set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy) {
 #ifdef TTCACHE_USE_FT
 	FT_Error error;
 #endif
-	_MY_ASSERT(ft_lib_initialied && hdl && hdl->face,return);
+	_MY_ASSERT(hdl && hdl->face,return);
 	_MY_ASSERT(!pxx,return);
 #ifdef TTCACHE_USE_FT
-	error = FT_Set_Pixel_Sizes((FT_Face)hdl->face,pxx,pxy);
-	_MY_ASSERT(!error,return);
+	if (ft_lib_initialied) {
+		error = FT_Set_Pixel_Sizes((FT_Face)hdl->face,pxx,pxy);
+		_MY_ASSERT(!error,return);
+	}
 #endif
 	hdl->curr_height = pxy;
 }
@@ -205,7 +225,7 @@ void ttcache_t::set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy) {
 //}
 
 glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t::load_mode_t mode) {
-	_MY_ASSERT(ft_lib_initialied && hdl && hdl->face,return 0);
+	_MY_ASSERT(hdl && hdl->face,return 0);
 
 
 	// lookup in cache
@@ -222,37 +242,39 @@ glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t
 	}
 
 #ifdef TTCACHE_USE_FT
-	u32 mde = (mode == load_mode_t::LM_DEFAULT) ? FT_LOAD_DEFAULT : FT_LOAD_RENDER;
-	FT_Error error = FT_Load_Glyph( (FT_Face)hdl->face, glyph_index, mde );
-	_MY_ASSERT(!error,return 0);
-	if (!gly) {
-		gly = new glyph_t();
-		total_size += sizeof(glyph_t);
-		if (!pp) hdl->root = gly;
-		else pp->next = gly;
+	if (ft_lib_initialied) {
+		u32 mde = (mode == load_mode_t::LM_DEFAULT) ? FT_LOAD_DEFAULT : FT_LOAD_RENDER;
+		FT_Error error = FT_Load_Glyph( (FT_Face)hdl->face, glyph_index, mde );
+		_MY_ASSERT(!error,return 0);
+		if (!gly) {
+			gly = new glyph_t();
+			total_size += sizeof(glyph_t);
+			if (!pp) hdl->root = gly;
+			else pp->next = gly;
+		}
+
+		gly->font_height = hdl->curr_height;
+		gly->glyph_index = glyph_index;
+
+		gly->bh = ((FT_Face)hdl->face)->glyph->bitmap.rows;
+		gly->bw = ((FT_Face)hdl->face)->glyph->bitmap.width;
+
+		if (!gly->buf && mode == load_mode_t::LM_RENDER && ((FT_Face)hdl->face)->glyph->bitmap.buffer) {
+
+			gly->buf_sz = BMP_GET_SIZE(gly->bw,gly->bh,8);
+			total_size += gly->buf_sz;
+
+			gly->buf = (u8 *)malloc(gly->buf_sz);
+			memcpy(gly->buf,((FT_Face)hdl->face)->glyph->bitmap.buffer,gly->buf_sz);
+
+			gly->bitmap_top = ((FT_Face)hdl->face)->glyph->bitmap_top;
+			gly->bitmap_left = ((FT_Face)hdl->face)->glyph->bitmap_left;
+		}
+		gly->vadvance = ((FT_Face)hdl->face)->glyph->metrics.vertAdvance;
+		gly->hadvance = ((FT_Face)hdl->face)->glyph->metrics.horiAdvance;
+		gly->mw = ((FT_Face)hdl->face)->glyph->metrics.width;
+		gly->mh = ((FT_Face)hdl->face)->glyph->metrics.height;
 	}
-
-	gly->font_height = hdl->curr_height;
-	gly->glyph_index = glyph_index;
-
-	gly->bh = ((FT_Face)hdl->face)->glyph->bitmap.rows;
-	gly->bw = ((FT_Face)hdl->face)->glyph->bitmap.width;
-
-	if (!gly->buf && mode == load_mode_t::LM_RENDER && ((FT_Face)hdl->face)->glyph->bitmap.buffer) {
-
-		gly->buf_sz = BMP_GET_SIZE(gly->bw,gly->bh,8);
-		total_size += gly->buf_sz;
-
-		gly->buf = (u8 *)malloc(gly->buf_sz);
-		memcpy(gly->buf,((FT_Face)hdl->face)->glyph->bitmap.buffer,gly->buf_sz);
-
-		gly->bitmap_top = ((FT_Face)hdl->face)->glyph->bitmap_top;
-		gly->bitmap_left = ((FT_Face)hdl->face)->glyph->bitmap_left;
-	}
-	gly->vadvance = ((FT_Face)hdl->face)->glyph->metrics.vertAdvance;
-	gly->hadvance = ((FT_Face)hdl->face)->glyph->metrics.horiAdvance;
-	gly->mw = ((FT_Face)hdl->face)->glyph->metrics.width;
-	gly->mh = ((FT_Face)hdl->face)->glyph->metrics.height;
 #endif
 	_WEAK_ASSERT(gly,return 0);
 	return gly;
@@ -262,7 +284,7 @@ glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t
 
 u32  ttcache_t::get_char_index(font_handle_t *hdl, u32 ucode) {
 
-	_MY_ASSERT(ft_lib_initialied && hdl && hdl->face,return 0);
+	_MY_ASSERT(hdl && hdl->face,return 0);
 
 // lookup in cache
 	charmap_pair_t *p = hdl->charmap;
@@ -273,34 +295,35 @@ u32  ttcache_t::get_char_index(font_handle_t *hdl, u32 ucode) {
 		p = p->next;
 	}
 #ifdef TTCACHE_USE_FT
+	if (ft_lib_initialied) {
+		u32 glyph_index = FT_Get_Char_Index( (FT_Face)hdl->face, ucode );
 
-	u32 glyph_index = FT_Get_Char_Index( (FT_Face)hdl->face, ucode );
-
-	p = hdl->charmap;
-	charmap_pair_t *pp = 0;
-	while (p) {
-		if (p->glyph_index == glyph_index) {
-			p->ucode = ucode;
-			break;
+		p = hdl->charmap;
+		charmap_pair_t *pp = 0;
+		while (p) {
+			if (p->glyph_index == glyph_index) {
+				p->ucode = ucode;
+				break;
+			}
+			pp = p;
+			p = p->next;
 		}
-		pp = p;
-		p = p->next;
-	}
-	if (!p) {
-		p = new charmap_pair_t();
-		if (pp)	pp->next = p;
-		else hdl->charmap = p;
-		hdl->charmap_count++;
+		if (!p) {
+			p = new charmap_pair_t();
+			if (pp)	pp->next = p;
+			else hdl->charmap = p;
+			hdl->charmap_count++;
 
-		p->glyph_index = glyph_index;
-		p->ucode = ucode;
+			p->glyph_index = glyph_index;
+			p->ucode = ucode;
+		}
+		_WEAK_ASSERT(glyph_index, return 0);
+		return glyph_index;
 	}
-	_WEAK_ASSERT(glyph_index, return 0);
-	return glyph_index;
 #else
 	_WEAK_ASSERT(0, return 0);
-	return 0;
 #endif
+	return 0;
 }
 
 // ================================= stream IO =================================
@@ -357,7 +380,8 @@ cache_header_t *cache_header_t::read(stream_t &stream) {
 
 
 void cache_header_t::write(stream_t &stream) {
-	stream.write((u8*)this,sizeof(*this));
+	stream.write_u32(this->magic);
+	stream.write_u32(this->obj_size);
 }
 
 
@@ -381,13 +405,27 @@ charmap_pair_t *charmap_pair_t::read(stream_t &stream) {
 }
 
 void charmap_pair_t::write(stream_t &stream) {
-	stream.write((u8*)this,sizeof(*this));
+	stream.write_u32(this->magic);
+	stream.write_u32(this->obj_size);
+	stream.write_u32((u32)this->next);
+	stream.write_u32(this->glyph_index);
+	stream.write_u32(this->ucode);
 }
 
 
 void font_handle_t::write(stream_t &stream) {
 	_MY_ASSERT(root,return);
-	stream.write((u8*)this,sizeof(*this));
+
+	stream.write_u32(this->magic);
+	stream.write_u32(this->obj_size);
+	stream.write_u32((u32)this->next);
+	stream.write_u32((u32)this->face);
+	stream.write_u32((u32)this->root);
+	stream.write_u32(this->charmap_count);
+	stream.write_u32((u32)this->charmap);
+	stream.write_u32((u32)this->name);
+	stream.write((u8*)this->name2, sizeof(this->name2));
+	stream.write_u32(this->curr_height);
 
 	s32 cp_cnt = 0;
 	charmap_pair_t *cp = charmap;
@@ -461,11 +499,31 @@ void glyph_t::write(stream_t &stream) {
 		aligned_sz = buf_sz;
 		for(;!ALIGNED(aligned_sz); aligned_sz++);
 	}
-	stream.write((u8*)this,sizeof(*this));
+//	stream.write((u8*)this,sizeof(*this));
+
+	stream.write_u32(this->magic);
+	stream.write_u32(this->obj_size);
+	stream.write_u32(this->glyph_index);
+	stream.write_u32(this->font_height);
+	stream.write_u32((u32)this->next);
+	stream.write_u32(this->bw);
+	stream.write_u32(this->bh);
+	stream.write_u32((u32)this->buf);
+	stream.write_u32(this->buf_sz);
+	stream.write_u32(this->aligned_sz);
+	stream.write_u32(this->bitmap_top);
+	stream.write_u32(this->bitmap_left);
+	stream.write_u32(this->mw);
+	stream.write_u32(this->mh);
+	stream.write_u32(this->hadvance);
+	stream.write_u32(this->vadvance);
+//	_LOG2("w:",this->vadvance);
+
 	if (buf && buf_sz) {
 		stream.write_no_check((u8*)buf,buf_sz);
-		if (aligned_sz - buf_sz)
+		if (aligned_sz - buf_sz) {
 			stream.advance_no_check(aligned_sz - buf_sz);
+		}
 	}
 }
 
@@ -489,6 +547,7 @@ glyph_t* glyph_t::read(stream_t &stream) {
 	_this->mh = stream.read_u32();
 	_this->hadvance = stream.read_u32();
 	_this->vadvance = stream.read_u32();
+//	_LOG2("r:",_this->vadvance);
 
 #else
 	glyph_t *_this = (glyph_t *)stream.advance(sizeof(*_this));

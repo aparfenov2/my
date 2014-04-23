@@ -25,10 +25,11 @@ public:
 	void write(u8 *src, u32 sz);
 	void write_no_check(u8 *src, u32 sz);
 	u8 * advance_no_check(u32 sz);
-#ifdef PLATFORM_C28
+
 	u8 read_u8();
 	u32 read_u32();
-#endif
+	void write_u8(u8 v);
+	void write_u32(u32 v);
 
 };
 

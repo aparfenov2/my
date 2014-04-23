@@ -17,7 +17,7 @@
 //#include "ARIALNI.h"
 
 #include "ttcache.h"
-#include "ttcache_dat.h"
+//#include "ttcache_dat.h"
 
 //#include "host_emu.h"
 extern "C" {
@@ -25,7 +25,10 @@ extern "C" {
 }
 #include "packetizer.h"
 #include "serializer.h"
+
 #include "uart_drv.h"
+#include "devices.h"
+#include "Spi.h"
 
 #include <stdio.h>
 
@@ -115,6 +118,9 @@ screen_1_t screen1;
 myvi::packetizer_impl_t pkz;
 myvi::serializer_t ser;
 uart_drv_t	uart;
+Spi spi;
+FRAM fram;
+FlashDev flash;
 
 
 void drawScene(surface_t &s1) {
@@ -166,6 +172,7 @@ void init_pie_table() {
     PieCtrlRegs.PIEACK.all = 0xFFFF;
 }
 
+#include "file_map.h"
 
 void my_main() {
 
@@ -180,7 +187,29 @@ void my_main() {
 
 //	alt_putstr("Hello from Nios II!\n");
 
-	globals::ttcache.init((u8 *)ttcache_dat,sizeof(ttcache_dat));
+    spi.Init();
+
+    u32 ft_magic = 0;
+
+    for (u32 ofs = 0; ofs < sizeof(ft_magic); ofs++) {
+    	((u16*)&ft_magic)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
+    }
+
+    if (ft_magic == FILE_TABLE_MAGIC) {
+        for (u32 ofs = 0; ofs < sizeof(file_table); ofs++) {
+        	((u16*)&file_table)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
+        }
+    }
+
+	file_rec_t *fr = find_file(TTCACHE_FILE_ID);
+	_MY_ASSERT(fr,);
+	u32 ttcache_sz = fr->cur_len;
+	_MY_ASSERT(ttcache_sz,);
+
+	u8 *ttcache_dat = new u8[ttcache_sz];
+	flash.ReadData2(fr->offset,(u16 *)ttcache_dat, ttcache_sz);
+
+	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
 
 	res.init();
 	screen1.init();
@@ -196,7 +225,7 @@ void my_main() {
 //	emu.set_target(&app_model_t::instance);
 //	app_model_t::instance.subscribe_host(&emu);
 
-    uart.init(&ScicRegs);
+    uart.init(&ScibRegs);
 	init_pie_table();
     hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
     pkz.init(&my_hdlc_tx_frame);

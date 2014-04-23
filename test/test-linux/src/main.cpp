@@ -20,16 +20,18 @@ extern "C" {
 #include "packetizer.h"
 #include "serializer.h"
 
-#include <errno.h>
-#include <X11/Xlib.h>
+#include "win32/test_tools.h"
+
+//#include <errno.h>
+//#include <X11/Xlib.h>
 
 using namespace std;
 using namespace myvi;
 
 #define _MAX_INT 2147483647
 
-u8 buf0[BMP_GET_SIZE(320,240,24)];
-surface_24bpp_t s1(320, 240, BMP_GET_SIZE(320,240,24), buf0);
+u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
+surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), buf0);
 
 screen_1_t screen1;
 extern resources_t res;
@@ -49,17 +51,17 @@ void my_hdlc_tx_frame(const u8 *buffer, u16 bytes_to_send) {
 	hdlc_tx_frame((const u8_t*) buffer, bytes_to_send);
 }
 
-class my_test_drawer_t {
+class my_test_drawer_t : public test_drawer_t {
 public:
 	s32 kx;
 	s32 ky;
 public:
 	my_test_drawer_t() {
-//		w = 640;
-//		h = 480;
-//		kx = 2;
-//		ky = 2;
-//		cout << "set size to " << w << "x" << h << endl;
+		w = 640;
+		h = 480;
+		kx = 2;
+		ky = 2;
+		cout << "set size to " << w << "x" << h << endl;
 	}
 
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey)
@@ -125,8 +127,8 @@ int main() {
 	app_model_t::instance.init();
 //	emu.set_target(&app_model_t::instance);
 
-	globals::modal_overlay.w = 320;
-	globals::modal_overlay.h = 240;
+	globals::modal_overlay.w = TFT_WIDTH;
+	globals::modal_overlay.h = TFT_HEIGHT;
 	globals::modal_overlay.push_modal(&screen1);
 
 	hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
@@ -134,32 +136,34 @@ int main() {
 	ser.init(&pkz, &app_model_t::instance);
 	app_model_t::instance.subscribe_host(&ser);
 
-//	test_drawer.plot_surface(s1);
+	test_drawer.plot_surface(s1);
 
-	Display *d;
-	Window w;
-	XEvent e;
-	int s;
 
-	if ((d = XOpenDisplay(getenv("DISPLAY"))) == NULL) { // Соединиться с X сервером,
-		_LOG2("Can't connect X server: %s\n", strerror(errno));
-		exit(1);
-	}
-	s = DefaultScreen( d );
-	w = XCreateSimpleWindow(d, RootWindow( d, s ), // Создать окно
-			10, 10, 200, 200, 1, BlackPixel( d, s ), WhitePixel( d, s ));
-	XSelectInput(d, w, ExposureMask | KeyPressMask); // На какие события будем реагировать?
-	XMapWindow(d, w); // Вывести окно на экран
-	while (1) { // Бесконечный цикл обработки событий
-		XNextEvent(d, &e);
-		if (e.type == Expose) { // Перерисовать окно
-//			XFillRectangle(d, w, DefaultGC( d, s ), 20, 20, 10, 10);
-//			XDrawString(d, w, DefaultGC( d, s ), 50, 50, msg, strlen(msg));
-		}
-		if (e.type == KeyPress) // При нажатии кнопки - выход
-			break;
-	}
-	XCloseDisplay(d); // Закрыть соединение с X сервером
+
+//	Display *d;
+//	Window w;
+//	XEvent e;
+//	int s;
+//
+//	if ((d = XOpenDisplay(getenv("DISPLAY"))) == NULL) {
+//		_LOG2("Can't connect X server: %s\n", strerror(errno));
+//		exit(1);
+//	}
+//	s = DefaultScreen( d );
+//	w = XCreateSimpleWindow(d, RootWindow( d, s ),
+//			10, 10, globals::modal_overlay.w, globals::modal_overlay.h, 1, BlackPixel( d, s ), WhitePixel( d, s ));
+//	XSelectInput(d, w, ExposureMask | KeyPressMask);
+//	XMapWindow(d, w);
+//	while (1) {
+//		XNextEvent(d, &e);
+//		if (e.type == Expose) {
+////			XFillRectangle(d, w, DefaultGC( d, s ), 20, 20, 10, 10);
+////			XDrawString(d, w, DefaultGC( d, s ), 50, 50, msg, strlen(msg));
+//		}
+//		if (e.type == KeyPress)
+//			break;
+//	}
+//	XCloseDisplay(d);
 
 	return 0;
 }

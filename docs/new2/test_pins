@@ -1,0 +1,52 @@
+extern "C" {
+	extern port_a_t dat_a;
+	extern port_b_t dat_b;
+
+	void SSD1963_WriteCommand(u8 commandToWrite);
+	void SSD1963_WriteData(u8 dataToWrite);
+}
+
+void test_disp_pins(void) {
+
+	dat_a.all = 0;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_b.all = 0;
+	GpioDataRegs.GPBDAT.all = dat_b.all;
+
+	dat_a.all = 0;
+	dat_a.bits.BL_E = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_a.all = 0;
+	dat_a.bits.DC = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_a.all = 0;
+	dat_a.bits.WR = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_a.all = 0;
+	dat_a.bits.RD = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
+	dat_a.all = 0;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
+	for (u8 i=0; i < 15; i++) {
+		dat_b.all = 0;
+		dat_b.bits.D0_15 = (1 << i);
+		GpioDataRegs.GPBDAT.all = dat_b.all;
+	}
+
+	dat_b.all = 0;
+	GpioDataRegs.GPBDAT.all = dat_b.all;
+
+
+	dat_a.all = 0;
+	dat_a.bits.CS = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_a.all = 0;
+	dat_a.bits.RST = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+	dat_a.all = 0;
+	dat_a.bits.DISP = 1;
+	GpioDataRegs.GPADAT.all = dat_a.all;
+
+}

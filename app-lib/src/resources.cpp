@@ -12,13 +12,8 @@
 using namespace myvi;
 
 void resources_t::init() {
-#ifndef __gnu_linux__
-	ttf.init("fonts","fonts\\ARIALNB.ttf", 0,0);
+	ttf.init("fonts","ARIALNB.TTF", 0,0);
 	gly.init("fonts","glyphs.ttf", 0,0);
-#else
-	ttf.init("fonts","fonts\\ARIALNB.ttf", 0,0);
-	gly.init("fonts","glyphs.ttf", 0,0);
-#endif
 }
 
 resources_t res;
