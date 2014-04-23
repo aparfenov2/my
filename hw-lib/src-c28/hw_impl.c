@@ -23,14 +23,17 @@
 
 
 
-port_a_t dat_a;
-port_b_t dat_b;
 
 void SSD1963_InitHW() {
 
+	port_a_t dat_a;
+	port_b_t dat_b;
+	dat_a.all = GpioDataRegs.GPADAT.all;
+	dat_b.all = GpioDataRegs.GPBDAT.all;
+
     EALLOW;
     port_a_t dir_a;
-    dir_a.all = 0;
+    dir_a.all = GpioCtrlRegs.GPADIR.all;
     dir_a.bits.BL_E = 1;
     dir_a.bits.RST = 1;
     dir_a.bits.DISP = 1;
@@ -41,13 +44,12 @@ void SSD1963_InitHW() {
     GpioCtrlRegs.GPADIR.all = dir_a.all;
 
     port_b_t dir_b;
-    dir_b.all = 0;
+    dir_b.all = GpioCtrlRegs.GPBDIR.all;
     dir_b.bits.D0_15 = 0xffff;
     GpioCtrlRegs.GPBDIR.all = dir_b.all;
     EDIS;
 
 
-	dat_a.all = 0;
 	dat_a.bits.BL_E = 1;
 	dat_a.bits.RST = 1;
 	dat_a.bits.DISP = 1;
@@ -57,7 +59,6 @@ void SSD1963_InitHW() {
 	dat_a.bits.DC = 1;
 	GpioDataRegs.GPADAT.all = dat_a.all;
 
-	dat_b.all = 0;
 	dat_b.bits.D0_15 = 0xffff;
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 }
@@ -65,12 +66,17 @@ void SSD1963_InitHW() {
 
 void SSD1963_WriteCommand(unsigned int commandToWrite) {
 
+	port_a_t dat_a;
+	port_b_t dat_b;
+
+	dat_a.all = GpioDataRegs.GPADAT.all;
+	dat_b.all = GpioDataRegs.GPBDAT.all;
+
 	dat_a.bits.DC = 0;
 	dat_a.bits.WR = 0;
 	dat_a.bits.CS = 0;
 
 	dat_b.bits.D0_15 = commandToWrite;
-
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 
 	GpioDataRegs.GPADAT.all = dat_a.all;
@@ -82,6 +88,11 @@ void SSD1963_WriteCommand(unsigned int commandToWrite) {
 }
 
 void SSD1963_WriteData(unsigned int dataToWrite) {
+
+	port_a_t dat_a;
+	port_b_t dat_b;
+	dat_a.all = GpioDataRegs.GPADAT.all;
+	dat_b.all = GpioDataRegs.GPBDAT.all;
 
 	dat_a.bits.DC = 1;
 	dat_a.bits.WR = 0;
@@ -100,6 +111,8 @@ void SSD1963_WriteData(unsigned int dataToWrite) {
 }
 
 void SSD1963_Reset() {
+	port_a_t dat_a;
+	dat_a.all = GpioDataRegs.GPADAT.all;
 	volatile unsigned int dly;
 	dat_a.bits.RST = 0;
 	GpioDataRegs.GPADAT.all = dat_a.all;

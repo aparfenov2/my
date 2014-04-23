@@ -1,0 +1,654 @@
+#include "link.h"
+#include "assert_impl.h"
+#include <string.h>
+#include "myvi.pb.h"
+extern "C" {
+#include "hdlc.h"
+#include "ring_buffer.h"
+}
+#include <pb_encode.h>
+#include <pb_decode.h>
+
+extern "C" u16_t crc16_ccitt_calc_data(u16_t crc, u8_t* data, u16_t data_length);
+
+using namespace myvi;
+
+
+static serial_interface_t *current_serial_interface = 0;
+extern "C" void rs485_put_char(char data) {
+	_MY_ASSERT(current_serial_interface,return);
+	current_serial_interface->send((u8*)&data,1);
+}
+
+static _internal_frame_receiver_t *current_frame_receiver = 0;
+
+extern "C" void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
+	_MY_ASSERT(current_frame_receiver,return);
+	current_frame_receiver->receive_frame((u8*)buffer, bytes_received);
+}
+
+
+static void send_message(myvi_proto_host_interface_t &message, serial_interface_t *sintf) {
+
+	u8 hdlc_buf[512];
+	pb_ostream_t ostream = pb_ostream_from_buffer(hdlc_buf, sizeof(hdlc_buf));
+	_WEAK_ASSERT(pb_encode(&ostream, myvi_proto_host_interface_t_fields, &message),return);
+
+	current_serial_interface = sintf;
+	hdlc_tx_frame((const u8_t*)hdlc_buf, ostream.bytes_written);
+
+}
+
+static void send_message(myvi_proto_exported_interface_t &message, serial_interface_t *sintf) {
+
+	u8 hdlc_buf[512];
+	pb_ostream_t ostream = pb_ostream_from_buffer(hdlc_buf, sizeof(hdlc_buf));
+	_WEAK_ASSERT(pb_encode(&ostream, myvi_proto_exported_interface_t_fields, &message),return);
+
+	current_serial_interface = sintf;
+	hdlc_tx_frame((const u8_t*)hdlc_buf, ostream.bytes_written);
+
+}
+
+
+void serializer_t::init(msg::exported_interface_t *aexported, serial_interface_t *asintf ) {
+	exported = aexported;
+	sintf = asintf;
+	sintf->subscribe(this);
+
+	hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
+}
+
+void serializer_t::ChannelDMEChanged(u8 number, msg::tSuffix::tSuffix suffix) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_channelDMEChanged = true;
+	h.channelDMEChanged.number = number;
+	h.channelDMEChanged.sfx = (myvi_proto_tSuffix)suffix;
+	send_message(h, sintf);
+}
+
+void serializer_t::RequestFrequency(u32 frequency) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_requestFrequency = true;
+	h.requestFrequency = frequency;
+	send_message(h, sintf);
+}
+void serializer_t::RequestFrequencyZapr(u32 frequency) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_requestFrequencyZapr = true;
+	h.requestFrequencyZapr = frequency;
+	send_message(h, sintf);
+}
+void serializer_t::RequestFrequencyOtv(u32 frequency) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_requestFrequencyOtv = true;
+	h.requestFrequencyOtv = frequency;
+	send_message(h, sintf);
+}
+void serializer_t::RequestSpanChanged(u32 requestSpan) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_requestSpanChanged = true;
+	h.requestSpanChanged = requestSpan;
+	send_message(h, sintf);
+}
+void serializer_t::ReplySpanChanged(u32 replySpan) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_replySpanChanged = true;
+	h.replySpanChanged = replySpan;
+	send_message(h, sintf);
+}
+void serializer_t::RFLevelChanged(s32 RFLevel) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_rfLevelChanged = true;
+	h.rfLevelChanged = RFLevel;
+	send_message(h, sintf);
+}
+void serializer_t::RequestFormChanged(msg::tRequestForm::tRequestForm requestForm) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_requestFormChanged = true;
+	h.requestFormChanged = (myvi_proto_tRequestForm)requestForm;
+	send_message(h, sintf);
+}
+void serializer_t::UserModeChanged(msg::UserMode::UserMode uMode) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_userModeChanged = true;
+	h.userModeChanged = (myvi_proto_UserMode)uMode;
+	send_message(h, sintf);
+}
+void serializer_t::OutputModeChanged(msg::OutputMode::OutputMode uMode) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_outputModeChanged = true;
+	h.outputModeChanged = (myvi_proto_OutputMode)uMode;
+	send_message(h, sintf);
+}
+void serializer_t::resolution_x_changed(u32 v) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_resolution_x_changed = true;
+	h.resolution_x_changed = v;
+	send_message(h, sintf);
+}
+void serializer_t::resolution_y_changed(u32 v) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_resolution_y_changed = true;
+	h.resolution_y_changed = v;
+	send_message(h, sintf);
+}
+void serializer_t::offset_x_changed(u32 v) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_offset_x_changed = true;
+	h.offset_x_changed = v;
+	send_message(h, sintf);
+}
+void serializer_t::download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_download_response = true;
+	h.download_response.file_id = file_id;
+	h.download_response.offset = offset;
+	h.download_response.crc = crc;
+	h.download_response.first = first;
+	h.download_response.data.size = len;
+	_MY_ASSERT(len < sizeof(h.download_response.data.bytes), return);
+	memcpy(h.download_response.data.bytes,data,len);
+
+	send_message(h, sintf);
+}
+void serializer_t::file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc)  {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_file_info_response = true;
+	h.file_info_response.file_id = file_id;
+	h.file_info_response.cur_len = cur_len;
+	h.file_info_response.max_len = max_len;
+	h.file_info_response.crc = crc;
+	send_message(h, sintf);
+}
+void serializer_t::error(u32 code) {
+	myvi_proto_host_interface_t h;
+	memset(&h,0,sizeof(h));
+	h.has_error = true;
+	h.error = code;
+	send_message(h, sintf);
+}
+
+// ------------------- public msg::exported_interface_t --------------------
+
+void serializer_t::receive(u8 *data, u32 len) {
+	u32 ofs = 0;
+	current_frame_receiver = this;
+	while (len--) {
+		hdlc_on_rx_byte(data[ofs++]);
+	}
+}
+
+void serializer_t::receive_frame(u8 *data, u32 len) {
+	_MY_ASSERT(exported, return);
+
+	myvi_proto_exported_interface_t ei;
+	memset(&ei,0, sizeof(ei));
+
+    pb_istream_t istream = pb_istream_from_buffer((uint8_t*)data, len);
+    _WEAK_ASSERT(pb_decode(&istream, myvi_proto_exported_interface_t_fields, &ei), return);
+
+	if (ei.has_set_dme_channel) {
+		exported->set_dme_channel(ei.set_dme_channel.number, (msg::tSuffix::tSuffix)ei.set_dme_channel.sfx);
+	}
+	if (ei.has_set_dme_channel_range) {
+		exported->set_dme_channel_range(ei.set_dme_channel_range.lo,ei.set_dme_channel_range.hi);
+	}
+	if (ei.has_set_request_frequency) {
+		exported->set_request_frequency(ei.set_request_frequency);
+	}
+	if (ei.has_set_request_frequency_range) {
+		exported->set_request_frequency_range(ei.set_request_frequency_range.lo,ei.set_request_frequency_range.hi);
+	}
+	if (ei.has_set_response_frequency) {
+		exported->set_response_frequency(ei.set_response_frequency);
+	}
+	if (ei.has_set_request_span) {
+		exported->set_request_span(ei.set_request_span);
+	}
+	if (ei.has_set_request_span_range) {
+		exported->set_request_span_range(ei.set_request_span_range.lo,ei.set_request_span_range.hi);
+	}
+	if (ei.has_set_response_span) {
+		exported->set_response_span(ei.set_response_span);
+	}
+	if (ei.has_set_response_span_range) {
+		exported->set_response_span_range(ei.set_response_span_range.lo,ei.set_response_span_range.hi);
+	}
+	if (ei.has_set_request_frequency_zapr) {
+		exported->set_request_frequency_zapr(ei.set_request_frequency_zapr);
+	}
+	if (ei.has_set_request_frequency_zapr_range) {
+		exported->set_request_frequency_zapr_range(ei.set_request_frequency_zapr_range.lo,ei.set_request_frequency_zapr_range.hi);
+	}
+	if (ei.has_set_request_frequency_otv) {
+		exported->set_request_frequency_otv(ei.set_request_frequency_otv);
+	}
+	if (ei.has_set_request_frequency_otv_range) {
+		exported->set_request_frequency_otv_range(ei.set_request_frequency_otv_range.lo,ei.set_request_frequency_otv_range.hi);
+	}
+	if (ei.has_set_request_level) {
+		exported->set_request_level(ei.set_request_level);
+	}
+	if (ei.has_set_request_level_range) {
+		exported->set_request_level_range(ei.set_request_level_range.lo,ei.set_request_level_range.hi);
+	}
+	if (ei.has_set_response_level) {
+		exported->set_response_level(ei.set_response_level);
+	}
+	if (ei.has_set_efficiency) {
+		exported->set_efficiency(ei.set_efficiency);
+	}
+	if (ei.has_set_response_delay) {
+		exported->set_response_delay(ei.set_response_delay);
+	}
+	if (ei.has_set_range) {
+		exported->set_range(ei.set_range);
+	}
+	if (ei.has_set_battery_status) {
+		exported->set_battery_status(ei.set_battery_status);
+	}
+	if (ei.has_set_device_status) {
+		exported->set_device_status(ei.set_device_status);
+	}
+	if (ei.has_set_ksvn) {
+		exported->set_ksvn(ei.set_ksvn);
+	}
+	if (ei.has_set_co_code) {
+		exported->set_co_code(
+			ei.set_co_code.code,
+			ei.set_co_code.aeroport
+			);
+	}
+	if (ei.has_set_statistics) {
+		exported->set_statistics(
+			ei.set_statistics.ev_range,
+			ei.set_statistics.ev_delay,
+			ei.set_statistics.sigma,
+			ei.set_statistics.sko
+			);
+	}
+	if (ei.has_update_chart) {
+		exported->update_chart(
+			ei.update_chart.maxy,
+			(s32*)ei.update_chart.yvalues,
+			ei.update_chart.yvalues_count,
+			ei.update_chart.remain
+			);
+	}
+	if (ei.has_set_user_mode) {
+		exported->set_user_mode((msg::UserMode::UserMode)ei.set_user_mode);
+	}
+	if (ei.has_set_request_form) {
+		exported->set_request_form((msg::tRequestForm::tRequestForm)ei.set_request_form);
+	}
+	if (ei.has_set_output_mode) {
+		exported->set_output_mode((msg::OutputMode::OutputMode)ei.set_output_mode);
+	}
+	if (ei.has_set_offset_x) {
+		exported->set_offset_x(ei.set_offset_x);
+	}
+	if (ei.has_key_event) {
+		exported->key_event((myvi::key_t::key_t)ei.key_event);
+	}
+	if (ei.has_upload_file) {
+		exported->upload_file(
+			ei.upload_file.file_id,
+			ei.upload_file.offset,
+			ei.upload_file.crc,
+			ei.upload_file.first,
+			(u8*)ei.upload_file.data.bytes,
+			ei.upload_file.data.size
+			);
+	}
+	if (ei.has_download_file) {
+		exported->download_file(
+			ei.download_file.file_id,
+			ei.download_file.offset,
+			ei.download_file.length
+			);
+	}
+	if (ei.has_update_file_info) {
+		exported->update_file_info(
+			ei.update_file_info.file_id,
+			ei.update_file_info.cur_len,
+			ei.update_file_info.max_len,
+			ei.update_file_info.crc
+			);
+	}
+	if (ei.has_read_file_info) {
+		exported->read_file_info(ei.read_file_info);
+	}
+}
+
+// ---------------------------------------
+//сериализер на стороне хоста
+// ---------------------------------------
+
+void host_serializer_t::init(msg::host_interface_t *ahost, serial_interface_t *asintf ) {
+	host = ahost;
+	sintf = asintf;
+	sintf->subscribe(this);
+
+	hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
+}
+
+
+void host_serializer_t::set_dme_channel(u8 number, msg::tSuffix::tSuffix suffix) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_ChannelDMEChanged *dmech = ei.mutable_set_dme_channel();
+	dmech->set_number(number);
+	dmech->set_sfx((myvi_proto_tSuffix)suffix);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_dme_channel_range(u8 lo, u8 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_dme_channel_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_request_frequency(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_frequency(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_frequency_range(u32 lo, u32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_request_frequency_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_response_frequency(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_response_frequency(value);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_request_span(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_span(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_span_range(u32 lo, u32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_request_span_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_response_span(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_response_span(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_response_span_range(u32 lo, u32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_response_span_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_request_frequency_zapr(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_frequency_zapr(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_frequency_zapr_range(u32 lo, u32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_request_frequency_zapr_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_request_frequency_otv(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_frequency_otv(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_frequency_otv_range(u32 lo, u32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_u32_t *range = ei.mutable_set_request_frequency_otv_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_request_level(s32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_level(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_level_range(s32 lo, s32 hi) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_range_s32_t *range = ei.mutable_set_request_level_range();
+	range->set_lo(lo);
+	range->set_hi(hi);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_response_level(s32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_response_level(value);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_efficiency(u8 percent) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_efficiency(percent);
+	send_message(ei, sintf);
+}
+//	void set_code_reception_interval(u32 value);
+void host_serializer_t::set_response_delay(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_response_delay(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_range(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_range(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_battery_status(u8 charge) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_battery_status(charge);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_device_status(u8 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_device_status(value);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_ksvn(u32 value) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_ksvn(value);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_co_code(const char * code, const char * aeroport) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_co_code_t *co = ei.mutable_set_co_code();
+	co->set_code(code);
+	co->set_aeroport(aeroport);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_statistics(u32 ev_range, u32 ev_delay, u32 sigma, u32 sko) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_statistics_t *stat = ei.mutable_set_statistics();
+	stat->set_ev_range(ev_range);
+	stat->set_ev_delay(ev_delay);
+	stat->set_sigma(sigma);
+	stat->set_sko(sko);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::update_chart(s32 maxy, s32 *yvalues, s32 length, s32 remain) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_exported_interface_t_chart_data_t *cdata = ei.mutable_update_chart();
+	cdata->set_maxy(maxy);
+	for (int i=0; i < length; i++) {
+		cdata->set_yvalues(i, yvalues[i]);
+	}
+	cdata->set_length(length);
+	cdata->set_remain(remain);
+	send_message(ei, sintf);
+}
+// n
+void host_serializer_t::set_user_mode(msg::UserMode::UserMode uMode) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_user_mode((myvi_proto_UserMode)uMode);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_request_form(msg::tRequestForm::tRequestForm requestForm) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_request_form((myvi_proto_tRequestForm)requestForm);
+	send_message(ei, sintf);
+}
+void host_serializer_t::set_output_mode(msg::OutputMode::OutputMode uMode) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_output_mode((myvi_proto_OutputMode)uMode);
+	send_message(ei, sintf);
+}
+
+void host_serializer_t::set_offset_x(u32 v) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_set_offset_x(v);
+	send_message(ei, sintf);
+}
+//	void set_time_sweep(u32 timeSweep);
+//	void set_screen_saver(u8 screenSaver);
+void host_serializer_t::key_event(key_t::key_t key) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_key_event((myvi_proto_key_t)key);
+	send_message(ei, sintf);
+}
+void host_serializer_t::upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_file_data_t *fd = ei.mutable_upload_file();
+	fd->set_file_id(file_id);
+	fd->set_offset(offset);
+	fd->set_crc(crc);
+	fd->set_first(first);
+	fd->set_data(data,len);
+	send_message(ei, sintf);
+}
+void host_serializer_t::download_file(u32 file_id, u32 offset, u32 length) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_download_request_t *dr = ei.mutable_download_file();
+	dr->set_file_id(file_id);
+	dr->set_offset(offset);
+	dr->set_length(length);
+	send_message(ei, sintf);
+}
+void host_serializer_t::update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) {
+	myvi_proto_exported_interface_t ei;
+	myvi_proto_file_info_t *fi = ei.mutable_update_file_info();
+	fi->set_file_id(file_id);
+	fi->set_cur_len(cur_len);
+	fi->set_max_len(max_len);
+	fi->set_crc(crc);
+	send_message(ei, sintf);
+}
+void host_serializer_t::read_file_info(u32 file_id) {
+	myvi_proto_exported_interface_t ei;
+	ei.set_read_file_info(file_id);
+	send_message(ei, sintf);
+}
+
+
+// ------------------------ public pkt_serdes_t::serdes_receiver_t ----------------------
+void host_serializer_t::receive(u8 *data, u32 len) {
+	u32 ofs = 0;
+	current_frame_receiver = this;
+	while (len--) {
+		hdlc_on_rx_byte(data[ofs++]);
+	}
+}
+
+void host_serializer_t::receive_frame(u8 *data, u32 len) {
+	_MY_ASSERT(host, return);
+
+	myvi_proto_host_interface_t h;
+	_WEAK_ASSERT(h.ParseFromArray(data,len), return);
+
+	if (h.has_channeldmechanged()) {
+		host->ChannelDMEChanged(h.channeldmechanged().number(),(msg::tSuffix::tSuffix)h.channeldmechanged().sfx());
+	}
+	if (h.has_requestfrequency()) {
+		host->RequestFrequency(h.requestfrequency());
+	}
+	if (h.has_requestfrequencyzapr()) {
+		host->RequestFrequencyZapr(h.requestfrequencyzapr());
+	}
+	if (h.has_requestfrequencyotv()) {
+		host->RequestFrequencyOtv(h.requestfrequencyotv());
+	}
+	if (h.has_requestspanchanged()) {
+		host->RequestSpanChanged(h.requestspanchanged());
+	}
+	if (h.has_replyspanchanged()) {
+		host->ReplySpanChanged(h.replyspanchanged());
+	}
+	if (h.has_rflevelchanged()) {
+		host->RFLevelChanged(h.rflevelchanged());
+	}
+	if (h.has_requestformchanged()) {
+		host->RequestFormChanged((msg::tRequestForm::tRequestForm)h.requestformchanged());
+	}
+	if (h.has_usermodechanged()) {
+		host->UserModeChanged((msg::UserMode::UserMode)h.usermodechanged());
+	}
+	if (h.has_outputmodechanged()) {
+		host->OutputModeChanged((msg::OutputMode::OutputMode)h.outputmodechanged());
+	}
+	if (h.has_resolution_x_changed()) {
+		host->resolution_x_changed(h.resolution_x_changed());
+	}
+	if (h.has_resolution_y_changed()) {
+		host->resolution_y_changed(h.resolution_y_changed());
+	}
+	if (h.has_offset_x_changed()) {
+		host->offset_x_changed(h.offset_x_changed());
+	}
+	if (h.has_download_response()) {
+		host->download_response(
+			h.download_response().file_id(),
+			h.download_response().offset(),
+
+			h.download_response().crc(),
+			h.download_response().first(),
+
+			(u8*)h.download_response().data().data(),
+			h.download_response().data().size()
+			);
+	}
+	if (h.has_file_info_response()) {
+		host->file_info_response(
+			h.file_info_response().file_id(),
+			h.file_info_response().cur_len(),
+			h.file_info_response().max_len(),
+			h.file_info_response().crc()
+			);
+	}
+	if (h.has_error()) {
+		host->error(h.error());
+	}
+}

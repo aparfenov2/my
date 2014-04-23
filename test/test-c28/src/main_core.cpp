@@ -67,42 +67,42 @@ logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
 
 
-#define COL_a 0
-#define COL_b 1
-#define COL_c 2
-#define COL_d 3
-#define COL_e 4
+//#define COL_a 0
+//#define COL_b 1
+//#define COL_c 2
+//#define COL_d 3
+//#define COL_e 4
 
-key_t::key_t getAppKey() {
-	key_t::key_t ret = (key_t::key_t)0;
-	for (int row=0; row<4; row++) {
-		// write row
-		u32 led = 0; //IORD_ALTERA_AVALON_PIO_DATA(PIO_LED_BASE);
-		u8 row_msk = (1 << row);
-		// clear other rows
-		u32 led_msk = (((row_msk) & 0x0f) << 8);
-		led &= ~led_msk;
-		// set selected row
-		led_msk = (((~row_msk) & 0x0f) << 8);
-		led |= led_msk;
-//		IOWR_ALTERA_AVALON_PIO_DATA(PIO_LED_BASE, led);
-		// read col
-		u32 key = 0; //~IORD_ALTERA_AVALON_PIO_DATA(PIO_KEY_BASE);
-		u8 col_res = (key >> 4);
-		int rowi = row+1;
-		if (rowi == 1 && (col_res & (1 << COL_a))) ret = key_t::K_F1;
-		if (rowi == 1 && (col_res & (1 << COL_b))) ret = key_t::K_F2;
-		if (rowi == 1 && (col_res & (1 << COL_c))) ret = key_t::K_F3;
-		if (rowi == 1 && (col_res & (1 << COL_d))) ret = key_t::K_F4;
-		if (rowi == 3 && (col_res & (1 << COL_b))) ret = key_t::K_LEFT;
-		if (rowi == 3 && (col_res & (1 << COL_c))) ret = key_t::K_DOWN;
-		if (rowi == 3 && (col_res & (1 << COL_d))) ret = key_t::K_RIGHT;
-		if (rowi == 4 && (col_res & (1 << COL_c))) ret = key_t::K_UP;
-		if (rowi == 4 && (col_res & (1 << COL_e))) ret = key_t::K_ENTER;
-		if (rowi == 4 && (col_res & (1 << COL_a))) ret = key_t::K_ESC;
-	}
-	return ret;
-}
+//key_t::key_t getAppKey() {
+//	key_t::key_t ret = (key_t::key_t)0;
+//	for (int row=0; row<4; row++) {
+//		// write row
+//		u32 led = 0; //IORD_ALTERA_AVALON_PIO_DATA(PIO_LED_BASE);
+//		u8 row_msk = (1 << row);
+//		// clear other rows
+//		u32 led_msk = (((row_msk) & 0x0f) << 8);
+//		led &= ~led_msk;
+//		// set selected row
+//		led_msk = (((~row_msk) & 0x0f) << 8);
+//		led |= led_msk;
+////		IOWR_ALTERA_AVALON_PIO_DATA(PIO_LED_BASE, led);
+//		// read col
+//		u32 key = 0; //~IORD_ALTERA_AVALON_PIO_DATA(PIO_KEY_BASE);
+//		u8 col_res = (key >> 4);
+//		int rowi = row+1;
+//		if (rowi == 1 && (col_res & (1 << COL_a))) ret = key_t::K_F1;
+//		if (rowi == 1 && (col_res & (1 << COL_b))) ret = key_t::K_F2;
+//		if (rowi == 1 && (col_res & (1 << COL_c))) ret = key_t::K_F3;
+//		if (rowi == 1 && (col_res & (1 << COL_d))) ret = key_t::K_F4;
+//		if (rowi == 3 && (col_res & (1 << COL_b))) ret = key_t::K_LEFT;
+//		if (rowi == 3 && (col_res & (1 << COL_c))) ret = key_t::K_DOWN;
+//		if (rowi == 3 && (col_res & (1 << COL_d))) ret = key_t::K_RIGHT;
+//		if (rowi == 4 && (col_res & (1 << COL_c))) ret = key_t::K_UP;
+//		if (rowi == 4 && (col_res & (1 << COL_e))) ret = key_t::K_ENTER;
+//		if (rowi == 4 && (col_res & (1 << COL_a))) ret = key_t::K_ESC;
+//	}
+//	return ret;
+//}
 
 //#define BW 320
 //#define BH 240

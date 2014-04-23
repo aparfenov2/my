@@ -24,21 +24,24 @@ public:
 	virtual void subscribe(serial_data_receiver_t *receiver) = 0;
 };
 
+class _internal_frame_receiver_t {
+public:
+	virtual void receive_frame(u8 *data, u32 len) = 0;
+};
+
 // 
-class serializer_t : public msg::host_interface_t, public serial_data_receiver_t {
+class serializer_t : public msg::host_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
 
 private:
 	msg::exported_interface_t *exported;
 	serial_interface_t *sintf;
 public:
 	serializer_t() {
+		exported = 0;
+		sintf = 0;
 	}
 
-	void init(msg::exported_interface_t *aexported, serial_interface_t *asintf ) {
-		exported = aexported;
-		sintf = asintf;
-		sintf->subscribe(this);
-	}
+	void init(msg::exported_interface_t *aexported, serial_interface_t *asintf );
 
 // ----------------------- public msg::host_interface_t (туда)------------------------------------
 
@@ -61,27 +64,27 @@ public:
 	void error(u32 code) OVERRIDE;
 
 // ------------------- public msg::serial_data_receiver_t --------------------
+	// прием блока данных из интерфеса UART
 	void receive(u8 *data, u32 len) OVERRIDE;
-
+	// прием фрейма данных
+	void receive_frame(u8 *data, u32 len) OVERRIDE;
 
 }; // class
 
 
 //сериализер на стороне хоста
-class host_serializer_t : public msg::exported_interface_t, public serial_data_receiver_t {
+class host_serializer_t : public msg::exported_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
 
 private:
 	msg::host_interface_t *host;
 	serial_interface_t *sintf;
 public:
 	host_serializer_t() {
+		host = 0;
+		sintf = 0;
 	}
 
-	void init(msg::host_interface_t *ahost, serial_interface_t *asintf ) {
-		host = ahost;
-		sintf = asintf;
-		sintf->subscribe(this);
-	}
+	void init(msg::host_interface_t *ahost, serial_interface_t *asintf );
 // ------------------------ public msg::exported_interface_t ----------------------------
 
 	void set_dme_channel(u8 number, msg::tSuffix::tSuffix suffix) OVERRIDE;
@@ -135,7 +138,10 @@ public:
 
 
 // ------------------------ public serial_data_receiver_t ----------------------
-	void receive(u8 *data, u32 len);
+	// прием блока данных из интерфеса UART
+	void receive(u8 *data, u32 len) OVERRIDE;
+	// прием фрейма данных
+	void receive_frame(u8 *data, u32 len) OVERRIDE;
 }; // host_serializer_t
 
 } // ns myvi

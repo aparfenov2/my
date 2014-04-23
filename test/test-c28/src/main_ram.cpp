@@ -50,31 +50,6 @@ uart_drv_t	uart;
 
 extern resources_t res;
 
-extern interrupt void Scib_Rx_Int (void);
-extern interrupt void Scic_Rx_Int (void);
-
-void init_pie_table() {
-    EALLOW;
-    PieVectTable.SCIRXINTB = (PINT) &Scib_Rx_Int;
-//    PieVectTable.SCITXINTB = (PINT) &Scib_Tx_Int;
-    PieVectTable.SCIRXINTC = (PINT) &Scic_Rx_Int;
-//    PieVectTable.SCITXINTC = (PINT) &Scic_Tx_Int;
-    EDIS;
-
-    PieCtrlRegs.PIEIER9.bit.INTx3 = 1;	// RXBINT
-//    PieCtrlRegs.PIEIER9.bit.INTx4 = 1;	// TXBINT
-    PieCtrlRegs.PIEIER8.bit.INTx5 = 1;	// RXCINT
-//    PieCtrlRegs.PIEIER8.bit.INTx6 = 1;	// TXCINT
-
-    IER = M_INT8 | M_INT9;
-
-    EINT;
-    // Enable the PIE
-    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
-    // Enables PIE to drive a pulse into the CPU
-    PieCtrlRegs.PIEACK.all = 0xFFFF;
-}
-
 
 
 
@@ -83,6 +58,15 @@ int main(void)
     InitSysCtrl();
 
     init_zone7();
+
+    kbd_init();
+
+//    while(1) {
+//    	key_t::key_t k = kbd_get_key();
+//    	if (k) {
+//    		asm(" ESTOP0");
+//    	}
+//    }
 
 // ram bug test
 //    u8 *p1 = (u8*)0x002026B8;

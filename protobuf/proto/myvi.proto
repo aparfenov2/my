@@ -96,10 +96,11 @@ message host_interface_t {
 	optional OutputMode outputModeChanged = 10;
 	optional uint32 resolution_x_changed = 11;
 	optional uint32 resolution_y_changed = 12;
+	optional uint32 offset_x_changed = 13;
 	
-	optional file_data_t download_response = 13;
-	optional file_info_t file_info_response = 14;
-	optional uint32 error = 15;
+	optional file_data_t download_response = 14;
+	optional file_info_t file_info_response = 15;
+	optional uint32 error = 16;
 }
 
 

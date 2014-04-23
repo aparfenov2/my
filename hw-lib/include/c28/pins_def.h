@@ -119,44 +119,44 @@ typedef union {
 
 // -------------------- ILS inherited -----------------
 
-#define PIN_CMTR_CLK_O  GPIO0 // IOU_DDS
-#define PIN_CMTR_DATA_O GPIO1 // Out1
-#define PIN_CMTR_WR_O   GPIO2 // Out2
-#define PIN_CMTR_DIR    GPIO3 // Out3
-#define PIN_INP_CMTR    GPIO4 // Out5
-
-//#define PIN_A0          GPIO5
-//#define PIN_A1          GPIO6
-//#define PIN_A2          GPIO7
-
-#define PIN_LG          GPIO6
-#define PIN__LG         GPIO8
-#define PIN_REC_SYNC    GPIO10 // GPIOA15
-#define PIN__DAC_LD     GPIO12 // GPIOB2
-#define PIN_HET_STATE   GPIO13 // Het_OK
-#define PIN_DDS_RST     GPIO14
-#define PIN_M25_MOUT    GPIO24
-#define PIN_M25_MIN     GPIO25
-#define PIN_M25_CLK     GPIO26
-#define PIN__M25_CS     GPIO27
-#define PIN_GREEN       GPIO32
-#define PIN_RED         GPIO33
-#define PIN_PIN_NARR    GPIO49
-#define PIN_PIN_WIDE    GPIO51
-#define PIN_SPI_MO      GPIO16
-#define PIN_SPI_MI      GPIO17
-#define PIN_SPI_CLK     GPIO18
+//#define PIN_CMTR_CLK_O  GPIO0 // IOU_DDS
+//#define PIN_CMTR_DATA_O GPIO1 // Out1
+//#define PIN_CMTR_WR_O   GPIO2 // Out2
+//#define PIN_CMTR_DIR    GPIO3 // Out3
+//#define PIN_INP_CMTR    GPIO4 // Out5
+//
+////#define PIN_A0          GPIO5
+////#define PIN_A1          GPIO6
+////#define PIN_A2          GPIO7
+//
+//#define PIN_LG          GPIO6
+//#define PIN__LG         GPIO8
+//#define PIN_REC_SYNC    GPIO10 // GPIOA15
+//#define PIN__DAC_LD     GPIO12 // GPIOB2
+//#define PIN_HET_STATE   GPIO13 // Het_OK
+//#define PIN_DDS_RST     GPIO14
+//#define PIN_M25_MOUT    GPIO24
+//#define PIN_M25_MIN     GPIO25
+//#define PIN_M25_CLK     GPIO26
+//#define PIN__M25_CS     GPIO27
+//#define PIN_GREEN       GPIO32
+//#define PIN_RED         GPIO33
+//#define PIN_PIN_NARR    GPIO49
+//#define PIN_PIN_WIDE    GPIO51
+//#define PIN_SPI_MO      GPIO16
+//#define PIN_SPI_MI      GPIO17
+//#define PIN_SPI_CLK     GPIO18
 #define PIN_SPI_CS      GPIO19 // SPI_CS
-#define PIN_SCIA_TX     GPIO11
-#define PIN_SCIA_RX     GPIO9
-#define PIN_SCIB_TX     GPIO62
-#define PIN_SCIB_RX     GPIO63
-#define PIN_MCLK        GPIO7
-#define PIN_MFSR        GPIO5
-#define PIN_MDR         GPIO21
+//#define PIN_SCIA_TX     GPIO11
+//#define PIN_SCIA_RX     GPIO9
+//#define PIN_SCIB_TX     GPIO62
+//#define PIN_SCIB_RX     GPIO63
+//#define PIN_MCLK        GPIO7
+//#define PIN_MFSR        GPIO5
+//#define PIN_MDR         GPIO21
 #define PIN_SPI_D0      GPIO15
 #define PIN_SPI_D1      GPIO14
-//#define PIN_SPI_D2      GPIO20
+////#define PIN_SPI_D2      GPIO20
 
 
 #endif
