@@ -9,6 +9,7 @@
 #include "DSP2833x_device.h"
 #include "c28/pins_def.h"
 #include "DSP2833x_Examples.h"
+#include "DSP2833x_XIntrupt.h"
 //#include "macro.h"
 #include <stdio.h>
 #include <string.h>
@@ -25,6 +26,67 @@ using namespace myvi;
 
 // В данном файле находится весь мусор из main
 
+s16 enc_counter = 0;
+
+void enc_init() {
+	enc_counter = 0;
+
+    EALLOW;
+	GpioCtrlRegs.GPBDIR.bit.GPIO32 = 1; // ENC_C
+
+	GpioCtrlRegs.GPADIR.bit.GPIO27 = 0; // ENC_A input
+	GpioCtrlRegs.GPAPUD.bit.GPIO27 = 0; // ENC_A pud = 0
+	GpioCtrlRegs.GPAQSEL2.bit.GPIO27 = 2; // 6 samples window
+	GpioCtrlRegs.GPACTRL.bit.QUALPRD3 = 0xff; // qual period
+
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 27; // ENC_A
+	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
+	XIntruptRegs.XINT1CR.bit.POLARITY = 3; // both
+
+	GpioCtrlRegs.GPBDIR.bit.GPIO33 = 0; // ENC_B input
+	GpioCtrlRegs.GPBPUD.bit.GPIO33 = 0; // ENC_B pud = 0
+//	GpioCtrlRegs.GPBQSEL1.bit.GPIO33 = 2; // 6 samples window
+//	GpioCtrlRegs.GPBCTRL.bit.QUALPRD0 = 0xff; // qual period
+
+//	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 33; // ENC_B
+//	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
+//	XIntruptRegs.XINT2CR.bit.POLARITY = 3; // both edges
+    EDIS;
+
+	GpioDataRegs.GPBDAT.bit.GPIO32 = 0; // ENC_C
+
+}
+
+s16  enc_reset_counter() {
+	DINT;
+	s16 v = enc_counter;
+	enc_counter = 0;
+	EINT;
+	return v;
+}
+
+
+#pragma CODE_SECTION ("ramfuncs")
+interrupt void enc_a_interrupt (void) {
+	EINT;
+
+	if (GpioDataRegs.GPADAT.bit.GPIO27) {
+		if (GpioDataRegs.GPBDAT.bit.GPIO33) {
+			enc_counter--;
+		} else {
+			enc_counter++;
+		}
+	} else {
+		if (GpioDataRegs.GPBDAT.bit.GPIO33) {
+			enc_counter++;
+		} else {
+			enc_counter--;
+		}
+	}
+	PieCtrlRegs.PIEACK.all |= PIEACK_GROUP1;		// Issue PIE ack
+}
+
+
 extern interrupt void Scib_Rx_Int (void);
 extern interrupt void Scic_Rx_Int (void);
 
@@ -34,14 +96,18 @@ void init_pie_table() {
 //    PieVectTable.SCITXINTB = (PINT) &Scib_Tx_Int;
     PieVectTable.SCIRXINTC = (PINT) &Scic_Rx_Int;
 //    PieVectTable.SCITXINTC = (PINT) &Scic_Tx_Int;
+    PieVectTable.XINT1 = (PINT) &enc_a_interrupt;
+//    PieVectTable.XINT2 = (PINT) &enc_a_interrupt;
     EDIS;
 
     PieCtrlRegs.PIEIER9.bit.INTx3 = 1;	// RXBINT
 //    PieCtrlRegs.PIEIER9.bit.INTx4 = 1;	// TXBINT
     PieCtrlRegs.PIEIER8.bit.INTx5 = 1;	// RXCINT
 //    PieCtrlRegs.PIEIER8.bit.INTx6 = 1;	// TXCINT
+    PieCtrlRegs.PIEIER1.bit.INTx4 = 1; // XINT1 = enc_a_interrupt
+//    PieCtrlRegs.PIEIER1.bit.INTx5 = 1; // XINT2 = enc_b_interrupt
 
-    IER = M_INT8 | M_INT9;
+    IER = M_INT1 | M_INT8 | M_INT9;
 
     EINT;
     // Enable the PIE
@@ -71,11 +137,12 @@ void kbd_init() {
 	kbd_set_rows(0);
     EALLOW;
 
+// set up rows as outputs
 	GpioCtrlRegs.GPADIR.bit.GPIO6 = 1; // KEYB_1
 	GpioCtrlRegs.GPADIR.bit.GPIO3 = 1; // KEYB_2
 	GpioCtrlRegs.GPADIR.bit.GPIO8 = 1; // KEYB_3
 	GpioCtrlRegs.GPADIR.bit.GPIO2 = 1; // KEYB_4
-
+// set up columns as inputs
 	GpioCtrlRegs.GPBDIR.bit.GPIO36 = 0; // KEYB_A
 	GpioCtrlRegs.GPADIR.bit.GPIO4 = 0; // KEYB_B
 	GpioCtrlRegs.GPADIR.bit.GPIO0 = 0; // KEYB_C

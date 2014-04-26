@@ -6,14 +6,14 @@
 //#include <iostream>
 #include "basic.h"
 #include <cstdlib>
-#include "serializer.h"
+//#include "serializer.h"
 
 namespace myvi {
 
 //	using namespace msg;
 //	using namespace std;
 
-
+#define _SER_MAX_CHART_LEN 100
 
 class host_emu_t : public msg::host_interface_t {
 

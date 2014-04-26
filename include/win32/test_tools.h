@@ -11,6 +11,7 @@ class test_drawer_t {
 public:
 	u32 w;
 	u32 h;
+
 public:
 	test_drawer_t() {
 		w = TFT_WIDTH, h = TFT_HEIGHT;
@@ -19,11 +20,8 @@ public:
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) {
 		return false;
 	}
-	virtual void tick() {
-	}
-	virtual void cycle() {
-	}
-	void plot_surface(surface_t &s);
+	bool cycle(surface_t &s);
+	void create_window(surface_t &s);
 };
 
 } // ns

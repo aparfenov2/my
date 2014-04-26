@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#include "c28/assert_impl.h"
+#include "assert_impl.h"
 
 #include <iostream>
 #include <fstream>
@@ -52,13 +52,12 @@ void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
 
 	myvi::proto::host_interface_t host_interface;
 
-	host_interface.ParseFromArray(buffer,bytes_received);
+	_WEAK_ASSERT(host_interface.ParseFromArray(buffer,bytes_received), return);
 
 	response_frame_received = true;
+	_WEAK_ASSERT(host_interface.has_file_info_response(), return);
 
-	if (host_interface.has_file_info_response()) {
-		max_len = host_interface.file_info_response().max_len();
-	}
+	max_len = host_interface.file_info_response().max_len();
 
 }
 

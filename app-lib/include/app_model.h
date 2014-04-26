@@ -696,9 +696,10 @@ public:
 		notify(msg);
 	}
 
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		globals::modal_overlay.key_event(key);
-	}
+	//virtual void key_event(key_t::key_t key) OVERRIDE {
+	//	globals::modal_overlay.key_event(key);
+	//}
+
 };
 
 } // ns myvi

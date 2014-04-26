@@ -78,6 +78,13 @@ public:
 	virtual void resolution_y_changed(u32 v) = 0;
 	// смещение по оси x, мс
 	virtual void offset_x_changed(u32 v) = 0;
+};
+
+
+// технологические расширения интрефейса связи
+
+class host_interface2_t {
+public:
 	// принимаемые данные файла (ответ запроса на скачивание)
 	// file_id - дескриптор
 	// offset - смещение от начала файла, байт
@@ -98,7 +105,6 @@ public:
 
 // интерфейс "себя" для удаленной системы
 class exported_interface_t {
-public:
 public:
 
 //	virtual void subscribe_host(host_interface_t *host) = 0;
@@ -171,6 +177,10 @@ public:
 	virtual void set_offset_x(u32 v) = 0;
 //	virtual void set_time_sweep(u32 timeSweep) = 0;
 //	virtual void set_screen_saver(u8 screenSaver) = 0;
+};
+
+class exported_interface2_t {
+public:
 	// событие клавиатуры
 	virtual void key_event(key_t::key_t key) = 0;
 	// записать данные файла
@@ -196,8 +206,6 @@ public:
 	// file_id - дескриптор
 	virtual void read_file_info(u32 file_id) = 0;
 };
-
-//extern exported_interface_t * exported_interface;
 
 } // ns msg
 } // ns

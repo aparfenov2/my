@@ -30,6 +30,7 @@
 #include "file_map.h"
 
 #include "widgets.h"
+#include "exported2_impl.h"
 
 //void testPins();
 
@@ -52,7 +53,6 @@ extern resources_t res;
 
 
 
-
 int main(void)
 {
     InitSysCtrl();
@@ -60,7 +60,23 @@ int main(void)
     init_zone7();
 
     kbd_init();
+    enc_init();
+    init_pie_table();
 
+
+
+//	while(1) {
+//		s16 enc_cnt = enc_reset_counter();
+//		while(enc_cnt) {
+//			if (enc_cnt > 0) {
+//				enc_cnt--;
+//				asm(" ESTOP0");
+//			} else if (enc_cnt < 0) {
+//				enc_cnt++;
+//				asm(" ESTOP0");
+//			}
+//		}
+//	}
 //    while(1) {
 //    	key_t::key_t k = kbd_get_key();
 //    	if (k) {
@@ -81,35 +97,16 @@ int main(void)
 
     spi.Init();
 
-    u32 ft_magic = 0;
 
-    for (u32 ofs = 0; ofs < sizeof(ft_magic); ofs++) {
-    	((u16*)&ft_magic)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
-    }
+    u8 *ttcache_dat;
+    u32 ttcache_sz;
 
-    if (ft_magic == FILE_TABLE_MAGIC) {
-        for (u32 ofs = 0; ofs < sizeof(file_table); ofs++) {
-        	((u16*)&file_table)[ofs] = flash.ReadData(FILE_TABLE_ADDR + (ofs*2));
-        }
-    }
+    _MY_ASSERT(read_file_table(),);
+//    _MY_ASSERT(allocate_and_read_font_cache(ttcache_dat,ttcache_sz),);
 
-	file_rec_t *fr = find_file(TTCACHE_FILE_ID);
-	_MY_ASSERT(fr,);
-	u32 ttcache_sz = fr->cur_len;
-	_MY_ASSERT(ttcache_sz,);
+//	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
 
-	u8 *ttcache_dat = new u8[ttcache_sz + 0x0f];
-
-#define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
-	while (!ALIGNED(ttcache_dat)) {
-		ttcache_dat++;
-	}
-
-	flash.ReadData2(fr->offset,(u16 *)ttcache_dat, ttcache_sz);
-
-	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
-
-	res.init();
+//	res.init();
 
 // uart echo test
 //    uart.init(&ScibRegs);
@@ -131,31 +128,49 @@ int main(void)
 
     drv1.init();
 
-    u8 *buf0 = new u8[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
-    surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), buf0);
+    u32 picbuf_sz = BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24);
+    u8 *picbuf = new u8[picbuf_sz];
+    surface_24bpp_t spic(TFT_WIDTH,TFT_HEIGHT,picbuf_sz, picbuf);
+
+//    u8 *buf0 = new u8[BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT)];
+//    surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT), buf0);
 
     drv1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
-    s1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
-
-//0x203E95;
-//	sa16.ctx.pen_color = 0x292929;
-//	sa16.fill(0,0,W,H);
-//	sa16.copy_to(0,0,-1,-1,0,0,drv1);
+//    s1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
+    spic.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
 
 
-//    while(1) asm(" ESTOP0");
+	file_rec_t *fr = find_file(LOGO_FILE_ID);
+	_MY_ASSERT(fr, return false);
+	u32 pic_sz = fr->cur_len;
+	_MY_ASSERT(pic_sz && pic_sz <= picbuf_sz, return false);
 
+	flash.ReadData2(fr->offset,(u16 *)picbuf, picbuf_sz);
+
+
+	spic.copy_to(0,0,-1,-1,0,0,drv1);
+    while(1) asm(" ESTOP0");
+
+}
+
+/*
 	while(1) {
 		s1.ctx.pen_color = 0;
 		s1.fill(0,0,TFT_WIDTH,TFT_HEIGHT);
 
 		s1.ctx.pen_color = 0x00ff00;
 		res.ttf.set_char_size_px(0,font_size_t::FS_20);
-		res.ttf.print_to(20,20,s1,"›‘‘≈ “»¬ÕŒ—“‹");
+
+		s16 enc_cnt = enc_reset_counter();
+
+		char sbuf[255];
+		snprintf(sbuf, 255, "%d", enc_cnt);
+
+		res.ttf.print_to(20,20,s1,sbuf);
 
 		s1.copy_to(0,0,-1,-1,0,0,drv1);
 
-		asm(" ESTOP0");
+//		asm(" ESTOP0");
 	}
 
 
@@ -195,3 +210,5 @@ int main(void)
 //
 //    while(1) asm(" ESTOP0");
 }
+
+*/

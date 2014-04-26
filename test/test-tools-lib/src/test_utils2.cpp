@@ -50,68 +50,74 @@ key_t::key_t translate_key(CImgDisplay &dsp) {
 	return key;
 };
 
-void test_drawer_t::plot_surface (surface_t &s) {
-	CImg<unsigned char> img(s.w,s.h,1,3);
-	draw_img(s, img);
-	CImgDisplay dsp(img,"Surface Viewer");
+key_t::key_t last_key = (key_t::key_t)0;
+mkey_t::mkey_t last_mkey = mkey_t::MK_NONE;
+s32 last_x = -1, last_y = -1;
+time_t last_time = 0;
 
-	dsp.resize(w,h);
+CImg<unsigned char> *img = 0;
+CImgDisplay *dsp = 0;
 
-	key_t::key_t last_key = (key_t::key_t)0;
-	mkey_t::mkey_t last_mkey = mkey_t::MK_NONE;
-	s32 last_x = -1, last_y = -1;
-	time_t last_time = 0;
+void test_drawer_t::create_window(surface_t &s) {
+	img = new CImg<unsigned char>(s.w,s.h,1,3);
+	draw_img(s, *img);
+	dsp = new CImgDisplay(*img,"Surface Viewer");
 
-	while (1) {
-		bool update = false;
+	dsp->resize(w,h);
 
-		key_t::key_t key = translate_key(dsp);
-		update = key != last_key;
-		last_key = key;
-		if (!update) 
-			key = (key_t::key_t)0;
 
-		bool exit = dsp.is_closed() || key == key_t::K_EXIT;
-		if (exit) return;
+}
 
-		mkey_t::mkey_t mkey = mkey_t::MK_NONE;
-		if (dsp.button() & 0x01) 
-			mkey = mkey_t::MK_1;
-		else if (dsp.button() & 0x02) mkey = mkey_t::MK_2;
-		else if (dsp.button() & 0x04) mkey = mkey_t::MK_3;
 
-		if (!update) 
-			update = mkey != last_mkey;
-		last_mkey = mkey;
+bool test_drawer_t::cycle(surface_t &s) {
+	bool update = false;
 
-		s32 mx = dsp.mouse_x(), my = dsp.mouse_y();
-		if (!update)
-			update = mx != last_x || my != last_y;
-		last_x = mx;
-		last_y = my;
+	key_t::key_t key = translate_key(*dsp);
+	update = key != last_key;
+	last_key = key;
+	if (!update) 
+		key = (key_t::key_t)0;
+
+	bool exit = dsp->is_closed() || key == key_t::K_EXIT;
+	if (exit) return true;
+
+	mkey_t::mkey_t mkey = mkey_t::MK_NONE;
+	if (dsp->button() & 0x01) 
+		mkey = mkey_t::MK_1;
+	else if (dsp->button() & 0x02) mkey = mkey_t::MK_2;
+	else if (dsp->button() & 0x04) mkey = mkey_t::MK_3;
+
+	if (!update) 
+		update = mkey != last_mkey;
+	last_mkey = mkey;
+
+	s32 mx = dsp->mouse_x(), my = dsp->mouse_y();
+	if (!update)
+		update = mx != last_x || my != last_y;
+	last_x = mx;
+	last_y = my;
 
 //		cout << mx << "," << my << endl;
 
-		static u32 tic = 0;
-		tic++;
-		u32 tim = tic / 10;
+	static u32 tic = 0;
+	tic++;
+	u32 tim = tic / 10;
 //		time(&tim);
-		bool tik = tim != last_time;
-		if (!update) 
-			update = tik;
-		last_time = tim;
-		if (tik)
-			tick();
+	bool tik = tim != last_time;
+	if (!update) 
+		update = tik;
+	last_time = tim;
+	//if (tik)
+	//	tick();
 
-		if (update)
-			update = callback(key, mx, my, mkey);
+	if (update)
+		update = callback(key, mx, my, mkey);
 
-		if (update) {
-			draw_img(s, img);
-			img.display(dsp);
-		}
-		cycle();
-		dsp.wait(1);
+	if (update) {
+		draw_img(s, *img);
+		img->display(*dsp);
 	}
+	dsp->wait(1);
+	return false;
 }
 

@@ -49,8 +49,9 @@ template void send_message<>(proto::host_interface_t &, serial_interface_t * );
 template void send_message<>(proto::exported_interface_t &, serial_interface_t * );
 
 
-void serializer_t::init(msg::exported_interface_t *aexported, serial_interface_t *asintf ) {
+void serializer_t::init(msg::exported_interface_t *aexported, msg::exported_interface2_t *aexported2, serial_interface_t *asintf ) {
 	exported = aexported;
+	exported2 = aexported2;
 	sintf = asintf;
 	sintf->subscribe(this);
 
@@ -268,10 +269,10 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 		exported->set_offset_x(ei.set_offset_x());
 	}
 	if (ei.has_key_event()) {
-		exported->key_event((myvi::key_t::key_t)ei.key_event());
+		exported2->key_event((myvi::key_t::key_t)ei.key_event());
 	}
 	if (ei.has_upload_file()) {
-		exported->upload_file(
+		exported2->upload_file(
 			ei.upload_file().file_id(),
 			ei.upload_file().offset(),
 			ei.upload_file().crc(),
@@ -281,14 +282,14 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_download_file()) {
-		exported->download_file(
+		exported2->download_file(
 			ei.download_file().file_id(),
 			ei.download_file().offset(),
 			ei.download_file().length()
 			);
 	}
 	if (ei.has_update_file_info()) {
-		exported->update_file_info(
+		exported2->update_file_info(
 			ei.update_file_info().file_id(),
 			ei.update_file_info().cur_len(),
 			ei.update_file_info().max_len(),
@@ -296,7 +297,7 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_read_file_info()) {
-		exported->read_file_info(ei.read_file_info());
+		exported2->read_file_info(ei.read_file_info());
 	}
 }
 
@@ -304,8 +305,9 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 //сериализер на стороне хоста
 // ---------------------------------------
 
-void host_serializer_t::init(msg::host_interface_t *ahost, serial_interface_t *asintf ) {
+void host_serializer_t::init(msg::host_interface_t *ahost,msg::host_interface2_t *ahost2, serial_interface_t *asintf ) {
 	host = ahost;
+	host2 = ahost2;
 	sintf = asintf;
 	sintf->subscribe(this);
 
@@ -594,7 +596,7 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
 		host->offset_x_changed(h.offset_x_changed());
 	}
 	if (h.has_download_response()) {
-		host->download_response(
+		host2->download_response(
 			h.download_response().file_id(),
 			h.download_response().offset(),
 
@@ -606,7 +608,7 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (h.has_file_info_response()) {
-		host->file_info_response(
+		host2->file_info_response(
 			h.file_info_response().file_id(),
 			h.file_info_response().cur_len(),
 			h.file_info_response().max_len(),
@@ -614,6 +616,6 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (h.has_error()) {
-		host->error(h.error());
+		host2->error(h.error());
 	}
 }

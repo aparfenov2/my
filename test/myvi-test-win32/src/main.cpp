@@ -19,11 +19,7 @@
 #include <windows.h>
 #include "Serial.h"
 
-extern "C" {
-#include "hdlc.h"
-}
-#include "packetizer.h"
-#include "serializer.h"
+#include "link.h"
 #include "disp_def.h"
 
 using namespace std;
@@ -40,9 +36,6 @@ surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), b
 screen_1_t screen1;
 extern resources_t res;
 //host_emu_t emu;
-CSerial serial;
-myvi::packetizer_impl_t pkz;
-myvi::serializer_t ser;
 
 
 int ShowError (LONG lError, LPCTSTR lptszMessage)
@@ -56,24 +49,6 @@ int ShowError (LONG lError, LPCTSTR lptszMessage)
 	return 1;
 }
 
-void rs485_put_char(char data) {
-	LONG    lLastError = ERROR_SUCCESS;
-
-	lLastError = serial.Write(&data, 1);
-
-	if (lLastError != ERROR_SUCCESS) {
-		ShowError(serial.GetLastError(), _T("Unable to send data"));
-	}
-}
-
-// к нам пришел пакет от удаленной системы
-void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
-	pkz.receive((const u8*)buffer,bytes_received);
-}
-
-void my_hdlc_tx_frame(const u8 *buffer, u16 bytes_to_send) {
-	hdlc_tx_frame((const u8_t*)buffer, bytes_to_send);
-}
 
 void save_ttcache() {
 	u32 sz = 1024 * 200; 
@@ -112,37 +87,57 @@ public:
 		}
 		screen1.mouse_event((s32)(mx / kx),(s32) (my / ky), (mkey_t::mkey_t)mkey);
 		return rasterizer_t::render(&globals::modal_overlay, s1);
-//		screen1.render(0,s1);
-//		return true;
 	}
 
-	virtual void tick() OVERRIDE {
-//		emu.update();
+};
+
+class exported_interface2_impl_t : public msg::exported_interface2_t {
+public:
+	void key_event(key_t::key_t key) OVERRIDE {
+		globals::modal_overlay.key_event(key);
 	}
 
-	virtual void cycle() OVERRIDE {
-		char byte;
-		u32 read = 0;
-		LONG    lLastError = ERROR_SUCCESS;
+	void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
+	}
+	void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE {
+	}
+	void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
+	}
+	void read_file_info(u32 file_id) OVERRIDE {
+	}
+};
 
-		lLastError = serial.Read(&byte,1,&read);
+class serial_interface_impl_t : public serial_interface_t {
+public:
+	serial_data_receiver_t *receiver;
+	CSerial *serial;
+public:
+	serial_interface_impl_t(CSerial *aserial) {
+		receiver = 0;
+		serial = aserial;
+	}
 
+	virtual void send(u8 *data, u32 len) OVERRIDE {
+		LONG  lLastError = serial->Write(data,len);
 		if (lLastError != ERROR_SUCCESS) {
-			ShowError(serial.GetLastError(), _T("Unable to send data"));
+			ShowError(serial->GetLastError(), _T("Unable to send data"));
 		}
-
-		while (read) {
-			hdlc_on_rx_byte(byte);
-
-			lLastError = serial.Read(&byte,1,&read);
-
-			if (lLastError != ERROR_SUCCESS) {
-				ShowError(serial.GetLastError(), _T("Unable to send data"));
-			}
-		}
-
 	}
 
+	virtual void subscribe(serial_data_receiver_t *areceiver) OVERRIDE {
+		receiver = areceiver;
+	}
+
+	void cycle() {
+		u8 buf[1024];
+		u32 read;
+		LONG  lLastError = serial->Read(buf, 1024, &read);
+		if (lLastError != ERROR_SUCCESS) {
+			ShowError(serial->GetLastError(), _T("Unable to receive data"));
+		} else if (read) {
+			receiver->receive(buf, read);
+		}
+	}
 };
 
 class logger_impl_t : public logger_t {
@@ -244,6 +239,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	globals::modal_overlay.push_modal(&screen1);
 
 
+
+	CSerial serial;
+
 	LONG    lLastError = ERROR_SUCCESS;
 
     // Attempt to open the serial port (COM1)
@@ -261,12 +259,19 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	if (lLastError != ERROR_SUCCESS)
 		return ::ShowError(serial.GetLastError(), _T("Unable to set COM-port handshaking"));
 
-    hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
-    pkz.init(&my_hdlc_tx_frame);
-	ser.init(&pkz,&app_model_t::instance);
+	serial_interface_impl_t sintf(&serial);
+	myvi::serializer_t ser;
+	exported_interface2_impl_t exported2;
+	ser.init(&app_model_t::instance, &exported2, &sintf);
 	app_model_t::instance.subscribe_host(&ser);
 
-	test_drawer.plot_surface(s1);
+	test_drawer.create_window(s1);
+
+	bool exit = false;
+	while (!exit) {
+		exit = test_drawer.cycle(s1);
+		sintf.cycle();
+	}
 
 	return 0;
 }

@@ -9,12 +9,17 @@
 #define SOME_FUNCS_H_
 
 #include "app_events.h"
+#include "types.h"
 //#ifdef __cplusplus
 //extern "C" {
 //#endif
 //
-void init_zone7(void);
+void init_zone7();
+void init_pie_table();
+
 void kbd_init();
+void enc_init();
+s16  enc_reset_counter();
 myvi::key_t::key_t kbd_get_key();
 //void init_pll(unsigned int val);
 //void dsbl_dog(void);

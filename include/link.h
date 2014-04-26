@@ -30,10 +30,11 @@ public:
 };
 
 // 
-class serializer_t : public msg::host_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
+class serializer_t : public msg::host_interface_t, public msg::host_interface2_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
 
 private:
 	msg::exported_interface_t *exported;
+	msg::exported_interface2_t *exported2;
 	serial_interface_t *sintf;
 public:
 	serializer_t() {
@@ -41,7 +42,7 @@ public:
 		sintf = 0;
 	}
 
-	void init(msg::exported_interface_t *aexported, serial_interface_t *asintf );
+	void init(msg::exported_interface_t *aexported, msg::exported_interface2_t *aexported2, serial_interface_t *asintf );
 
 // ----------------------- public msg::host_interface_t (туда)------------------------------------
 
@@ -59,6 +60,7 @@ public:
 	void resolution_y_changed(u32 v) OVERRIDE;
 	void offset_x_changed(u32 v) OVERRIDE;
 
+// ----------------------- public msg::host_interface2_t (туда)------------------------------------
 	void download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE;
 	void file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc)  OVERRIDE;
 	void error(u32 code) OVERRIDE;
@@ -73,10 +75,11 @@ public:
 
 
 //сериализер на стороне хоста
-class host_serializer_t : public msg::exported_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
+class host_serializer_t : public msg::exported_interface_t, public msg::exported_interface2_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
 
 private:
 	msg::host_interface_t *host;
+	msg::host_interface2_t *host2;
 	serial_interface_t *sintf;
 public:
 	host_serializer_t() {
@@ -84,7 +87,7 @@ public:
 		sintf = 0;
 	}
 
-	void init(msg::host_interface_t *ahost, serial_interface_t *asintf );
+	void init(msg::host_interface_t *ahost, msg::host_interface2_t *ahost2, serial_interface_t *asintf );
 // ------------------------ public msg::exported_interface_t ----------------------------
 
 	void set_dme_channel(u8 number, msg::tSuffix::tSuffix suffix) OVERRIDE;
@@ -129,6 +132,8 @@ public:
 	void set_offset_x(u32 v) OVERRIDE;
 //	void set_time_sweep(u32 timeSweep);
 //	void set_screen_saver(u8 screenSaver);
+
+// ------------------------ public msg::exported_interface2_t ----------------------------
 	void key_event(key_t::key_t key) OVERRIDE;
 
 	void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE;

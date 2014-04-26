@@ -28,11 +28,12 @@ extern "C" void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
 }
 
 
+static u8 hdlc_buf[512];
+
 static void send_message(myvi_proto_host_interface_t &message, serial_interface_t *sintf) {
 
-	u8 hdlc_buf[512];
 	pb_ostream_t ostream = pb_ostream_from_buffer(hdlc_buf, sizeof(hdlc_buf));
-	_WEAK_ASSERT(pb_encode(&ostream, myvi_proto_host_interface_t_fields, &message),return);
+	_WEAK_ASSERT(pb_encode(&ostream, myvi_proto_host_interface_t_fields, &message), return);
 
 	current_serial_interface = sintf;
 	hdlc_tx_frame((const u8_t*)hdlc_buf, ostream.bytes_written);
@@ -41,7 +42,6 @@ static void send_message(myvi_proto_host_interface_t &message, serial_interface_
 
 static void send_message(myvi_proto_exported_interface_t &message, serial_interface_t *sintf) {
 
-	u8 hdlc_buf[512];
 	pb_ostream_t ostream = pb_ostream_from_buffer(hdlc_buf, sizeof(hdlc_buf));
 	_WEAK_ASSERT(pb_encode(&ostream, myvi_proto_exported_interface_t_fields, &message),return);
 
@@ -51,8 +51,9 @@ static void send_message(myvi_proto_exported_interface_t &message, serial_interf
 }
 
 
-void serializer_t::init(msg::exported_interface_t *aexported, serial_interface_t *asintf ) {
+void serializer_t::init(msg::exported_interface_t *aexported,msg::exported_interface2_t *aexported2, serial_interface_t *asintf ) {
 	exported = aexported;
+	exported2 = aexported2;
 	sintf = asintf;
 	sintf->subscribe(this);
 
@@ -172,7 +173,9 @@ void serializer_t::file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32
 	h.has_file_info_response = true;
 	h.file_info_response.file_id = file_id;
 	h.file_info_response.cur_len = cur_len;
+	h.file_info_response.has_max_len = true;
 	h.file_info_response.max_len = max_len;
+	h.file_info_response.has_crc = true;
 	h.file_info_response.crc = crc;
 	send_message(h, sintf);
 }
@@ -195,7 +198,6 @@ void serializer_t::receive(u8 *data, u32 len) {
 }
 
 void serializer_t::receive_frame(u8 *data, u32 len) {
-	_MY_ASSERT(exported, return);
 
 	myvi_proto_exported_interface_t ei;
 	memset(&ei,0, sizeof(ei));
@@ -204,78 +206,102 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
     _WEAK_ASSERT(pb_decode(&istream, myvi_proto_exported_interface_t_fields, &ei), return);
 
 	if (ei.has_set_dme_channel) {
+		if (exported)
 		exported->set_dme_channel(ei.set_dme_channel.number, (msg::tSuffix::tSuffix)ei.set_dme_channel.sfx);
 	}
 	if (ei.has_set_dme_channel_range) {
+		if (exported)
 		exported->set_dme_channel_range(ei.set_dme_channel_range.lo,ei.set_dme_channel_range.hi);
 	}
 	if (ei.has_set_request_frequency) {
+		if (exported)
 		exported->set_request_frequency(ei.set_request_frequency);
 	}
 	if (ei.has_set_request_frequency_range) {
+		if (exported)
 		exported->set_request_frequency_range(ei.set_request_frequency_range.lo,ei.set_request_frequency_range.hi);
 	}
 	if (ei.has_set_response_frequency) {
+		if (exported)
 		exported->set_response_frequency(ei.set_response_frequency);
 	}
 	if (ei.has_set_request_span) {
+		if (exported)
 		exported->set_request_span(ei.set_request_span);
 	}
 	if (ei.has_set_request_span_range) {
+		if (exported)
 		exported->set_request_span_range(ei.set_request_span_range.lo,ei.set_request_span_range.hi);
 	}
 	if (ei.has_set_response_span) {
+		if (exported)
 		exported->set_response_span(ei.set_response_span);
 	}
 	if (ei.has_set_response_span_range) {
+		if (exported)
 		exported->set_response_span_range(ei.set_response_span_range.lo,ei.set_response_span_range.hi);
 	}
 	if (ei.has_set_request_frequency_zapr) {
+		if (exported)
 		exported->set_request_frequency_zapr(ei.set_request_frequency_zapr);
 	}
 	if (ei.has_set_request_frequency_zapr_range) {
+		if (exported)
 		exported->set_request_frequency_zapr_range(ei.set_request_frequency_zapr_range.lo,ei.set_request_frequency_zapr_range.hi);
 	}
 	if (ei.has_set_request_frequency_otv) {
+		if (exported)
 		exported->set_request_frequency_otv(ei.set_request_frequency_otv);
 	}
 	if (ei.has_set_request_frequency_otv_range) {
+		if (exported)
 		exported->set_request_frequency_otv_range(ei.set_request_frequency_otv_range.lo,ei.set_request_frequency_otv_range.hi);
 	}
 	if (ei.has_set_request_level) {
+		if (exported)
 		exported->set_request_level(ei.set_request_level);
 	}
 	if (ei.has_set_request_level_range) {
+		if (exported)
 		exported->set_request_level_range(ei.set_request_level_range.lo,ei.set_request_level_range.hi);
 	}
 	if (ei.has_set_response_level) {
+		if (exported)
 		exported->set_response_level(ei.set_response_level);
 	}
 	if (ei.has_set_efficiency) {
+		if (exported)
 		exported->set_efficiency(ei.set_efficiency);
 	}
 	if (ei.has_set_response_delay) {
+		if (exported)
 		exported->set_response_delay(ei.set_response_delay);
 	}
 	if (ei.has_set_range) {
+		if (exported)
 		exported->set_range(ei.set_range);
 	}
 	if (ei.has_set_battery_status) {
+		if (exported)
 		exported->set_battery_status(ei.set_battery_status);
 	}
 	if (ei.has_set_device_status) {
+		if (exported)
 		exported->set_device_status(ei.set_device_status);
 	}
 	if (ei.has_set_ksvn) {
+		if (exported)
 		exported->set_ksvn(ei.set_ksvn);
 	}
 	if (ei.has_set_co_code) {
+		if (exported)
 		exported->set_co_code(
 			ei.set_co_code.code,
 			ei.set_co_code.aeroport
 			);
 	}
 	if (ei.has_set_statistics) {
+		if (exported)
 		exported->set_statistics(
 			ei.set_statistics.ev_range,
 			ei.set_statistics.ev_delay,
@@ -284,6 +310,7 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_update_chart) {
+		if (exported)
 		exported->update_chart(
 			ei.update_chart.maxy,
 			(s32*)ei.update_chart.yvalues,
@@ -292,22 +319,28 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_set_user_mode) {
+		if (exported)
 		exported->set_user_mode((msg::UserMode::UserMode)ei.set_user_mode);
 	}
 	if (ei.has_set_request_form) {
+		if (exported)
 		exported->set_request_form((msg::tRequestForm::tRequestForm)ei.set_request_form);
 	}
 	if (ei.has_set_output_mode) {
+		if (exported)
 		exported->set_output_mode((msg::OutputMode::OutputMode)ei.set_output_mode);
 	}
 	if (ei.has_set_offset_x) {
+		if (exported)
 		exported->set_offset_x(ei.set_offset_x);
 	}
 	if (ei.has_key_event) {
-		exported->key_event((myvi::key_t::key_t)ei.key_event);
+		if (exported2)
+		exported2->key_event((myvi::key_t::key_t)ei.key_event);
 	}
 	if (ei.has_upload_file) {
-		exported->upload_file(
+		if (exported2)
+		exported2->upload_file(
 			ei.upload_file.file_id,
 			ei.upload_file.offset,
 			ei.upload_file.crc,
@@ -317,14 +350,16 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_download_file) {
-		exported->download_file(
+		if (exported2)
+		exported2->download_file(
 			ei.download_file.file_id,
 			ei.download_file.offset,
 			ei.download_file.length
 			);
 	}
 	if (ei.has_update_file_info) {
-		exported->update_file_info(
+		if (exported2)
+		exported2->update_file_info(
 			ei.update_file_info.file_id,
 			ei.update_file_info.cur_len,
 			ei.update_file_info.max_len,
@@ -332,7 +367,8 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (ei.has_read_file_info) {
-		exported->read_file_info(ei.read_file_info);
+		if (exported2)
+		exported2->read_file_info(ei.read_file_info);
 	}
 }
 
@@ -340,8 +376,9 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 //сериализер на стороне хоста
 // ---------------------------------------
 
-void host_serializer_t::init(msg::host_interface_t *ahost, serial_interface_t *asintf ) {
+void host_serializer_t::init(msg::host_interface_t *ahost,msg::host_interface2_t *ahost2, serial_interface_t *asintf ) {
 	host = ahost;
+	host2 = ahost2;
 	sintf = asintf;
 	sintf->subscribe(this);
 
@@ -640,7 +677,6 @@ void host_serializer_t::receive(u8 *data, u32 len) {
 }
 
 void host_serializer_t::receive_frame(u8 *data, u32 len) {
-	_MY_ASSERT(host, return);
 
 	myvi_proto_host_interface_t h;
 	memset(&h,0, sizeof(h));
@@ -649,46 +685,60 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
     _WEAK_ASSERT(pb_decode(&istream, myvi_proto_host_interface_t_fields, &h), return);
 
 	if (h.has_channelDMEChanged) {
+		if (host)
 		host->ChannelDMEChanged(h.channelDMEChanged.number,(msg::tSuffix::tSuffix)h.channelDMEChanged.sfx);
 	}
 	if (h.has_requestFrequency) {
+		if (host)
 		host->RequestFrequency(h.requestFrequency);
 	}
 	if (h.has_requestFrequencyZapr) {
+		if (host)
 		host->RequestFrequencyZapr(h.requestFrequencyZapr);
 	}
 	if (h.has_requestFrequencyOtv) {
+		if (host)
 		host->RequestFrequencyOtv(h.requestFrequencyOtv);
 	}
 	if (h.has_requestSpanChanged) {
+		if (host)
 		host->RequestSpanChanged(h.requestSpanChanged);
 	}
 	if (h.has_replySpanChanged) {
+		if (host)
 		host->ReplySpanChanged(h.replySpanChanged);
 	}
 	if (h.has_rfLevelChanged) {
+		if (host)
 		host->RFLevelChanged(h.rfLevelChanged);
 	}
 	if (h.has_requestFormChanged) {
+		if (host)
 		host->RequestFormChanged((msg::tRequestForm::tRequestForm)h.requestFormChanged);
 	}
 	if (h.has_userModeChanged) {
+		if (host)
 		host->UserModeChanged((msg::UserMode::UserMode)h.userModeChanged);
 	}
 	if (h.has_outputModeChanged) {
+		if (host)
 		host->OutputModeChanged((msg::OutputMode::OutputMode)h.outputModeChanged);
 	}
 	if (h.has_resolution_x_changed) {
+		if (host)
 		host->resolution_x_changed(h.resolution_x_changed);
 	}
 	if (h.has_resolution_y_changed) {
+		if (host)
 		host->resolution_y_changed(h.resolution_y_changed);
 	}
 	if (h.has_offset_x_changed) {
+		if (host)
 		host->offset_x_changed(h.offset_x_changed);
 	}
 	if (h.has_download_response) {
-		host->download_response(
+		if (host2)
+		host2->download_response(
 			h.download_response.file_id,
 			h.download_response.offset,
 
@@ -700,7 +750,8 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (h.has_file_info_response) {
-		host->file_info_response(
+		if (host2)
+		host2->file_info_response(
 			h.file_info_response.file_id,
 			h.file_info_response.cur_len,
 			h.file_info_response.max_len,
@@ -708,6 +759,7 @@ void host_serializer_t::receive_frame(u8 *data, u32 len) {
 			);
 	}
 	if (h.has_error) {
-		host->error(h.error);
+		if (host2)
+		host2->error(h.error);
 	}
 }

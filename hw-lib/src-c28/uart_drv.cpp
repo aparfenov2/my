@@ -13,7 +13,24 @@
 #include "DSP2833x_GlobalPrototypes.h"
 #include "DSP2833x_Examples.h"
 
-uart_drv_t *uart_drv_t::instance = 0;
+extern "C" {
+#include "ring_buffer.h"
+}
+
+static ring_buffer_t ring_buf;
+
+//uart_drv_t *uart_drv_t::instance = 0;
+
+u8 uart_drv_t::read() {
+	u8_t ret;
+	_MY_ASSERT(ring_buffer_read_byte(&ring_buf, &ret),return 0);
+	return (u8)ret;
+}
+
+bool uart_drv_t::is_empty() {
+	return ring_buffer_empty(&ring_buf);
+}
+
 
 void uart_drv_t::init(volatile SCI_REGS *asci) {
 	ring_buffer_init(&ring_buf,(u8_t*)_buf, UART_BUFF_SIZE);
@@ -106,9 +123,7 @@ interrupt void Scib_Rx_Int (void)
 	}
 
 	u8 byte = ScibRegs.SCIRXBUF.bit.RXDT;
-	if (uart_drv_t::instance) {
-		ring_buffer_write_byte(&uart_drv_t::instance->ring_buf,byte);
-	}
+	ring_buffer_write_byte(&ring_buf,byte);
 
 	ScibRegs.SCIFFRX.bit.RXFFOVRCLR = 1;			// Clear Overflow flag
 	ScibRegs.SCIFFRX.bit.RXFFINTCLR = 1;			// Clear Interrupt flag
@@ -131,9 +146,7 @@ interrupt void Scic_Rx_Int (void)
 		return;
 	}
 	u8 byte = ScicRegs.SCIRXBUF.bit.RXDT;
-	if (uart_drv_t::instance) {
-		ring_buffer_write_byte(&uart_drv_t::instance->ring_buf,byte);
-	}
+	ring_buffer_write_byte(&ring_buf,byte);
 
 	ScicRegs.SCIFFRX.bit.RXFFOVRCLR = 1;			// Clear Overflow flag
 	ScicRegs.SCIFFRX.bit.RXFFINTCLR = 1;			// Clear Interrupt flag

@@ -49,7 +49,8 @@ bp_return_t::bp_return_t ssd1963drv_t::begin_paint(surface_t &src, s32 sx,s32 sy
 
 	if (!src.ctx.mode && src.itype == img_type_t::bpp24 && src.w == sw && sx == 0) {
 #ifdef RGB565_MODE
-		_MY_ASSERT(0,return);
+//		_WEAK_ASSERT(0,return);
+		return bp_return_t::bpOk;
 #endif
 		// source is RGB, full width,
 		u8 *p = &src.buf[BMP_GET_OFFS(sx,sy,src.w, 24)];
@@ -70,7 +71,8 @@ bp_return_t::bp_return_t ssd1963drv_t::begin_paint(surface_t &src, s32 sx,s32 sy
 
 	} else if (!src.ctx.mode && src.itype == img_type_t::bpp24) {
 #ifdef RGB565_MODE
-		_MY_ASSERT(0,return);
+//		_MY_ASSERT(0,return);
+		return bp_return_t::bpOk;
 #endif
 		// row by row copy
 		for (s32 r=0; r < sh; r++) {
