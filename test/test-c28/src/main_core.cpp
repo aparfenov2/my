@@ -116,6 +116,33 @@ public:
 	}
 };
 
+void draw_pallete(surface_t *drv1) {
+	// draw pallete
+#define W 20
+#define H 20
+
+
+	drv1->ctx.pen_color = 0;
+	drv1->fill(0,0,TFT_WIDTH,TFT_HEIGHT);
+
+	s32 x = 0, y = 0, s = 0;
+	for (s32 i=0; i<256; i++) {
+		drv1->ctx.pen_color = i << (s * 8);
+		s++;
+		if (s >= 3) {
+			s = 0;
+		}
+		drv1->fill(x,y,W,H);
+
+		x += W+1;
+		if (x+W > TFT_WIDTH) {
+			x = 0;
+			y += H+1;
+			if (y+H > TFT_HEIGHT)
+				break;
+		}
+	}
+}
 
 void my_main() {
 
@@ -146,7 +173,11 @@ void my_main() {
 
 			spic.copy_to(0,0,-1,-1,0,0,drv1);
 			delete picbuf;
+		} else {
+			draw_pallete(&drv1);
 		}
+	} else {
+		draw_pallete(&drv1);
 	}
 
 	s32 buf_sz = BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT);
@@ -161,22 +192,19 @@ void my_main() {
 
     if (ttcache_dat && ttcache_sz) {
     	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
+
+    	res.init();
+
+		screen1.init();
+		screen1.dirty = true;
+
+		globals::modal_overlay.w = TFT_WIDTH;
+		globals::modal_overlay.h = TFT_HEIGHT;
+		globals::modal_overlay.push_modal(&screen1);
+		globals::modal_overlay.dirty = true;
+
+		app_model_t::instance.init();
     }
-
-	res.init();
-
-
-	screen1.init();
-	screen1.dirty = true;
-
-	globals::modal_overlay.w = TFT_WIDTH;
-	globals::modal_overlay.h = TFT_HEIGHT;
-	globals::modal_overlay.push_modal(&screen1);
-	globals::modal_overlay.dirty = true;
-
-	app_model_t::instance.init();
-//	emu.set_target(&app_model_t::instance);
-//	app_model_t::instance.subscribe_host(&emu);
 
     uart.init(&ScibRegs);
 
@@ -189,7 +217,9 @@ void my_main() {
 	init_pie_table();
 
 	while (1) {
-		drawScene(s1);
+		if (ttcache_dat && ttcache_sz) {
+			drawScene(s1);
+		}
 		sintf.cycle();
 	}
 
