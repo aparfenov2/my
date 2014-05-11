@@ -51,7 +51,17 @@ uart_drv_t	uart;
 
 extern resources_t res;
 
+char buffer[256];
 
+void uart_print(const char *format, ...) {
+	va_list args;
+	va_start (args, format);
+	int w = vsnprintf (buffer,256, format, args);
+	for (int i=0; i<w; i++) {
+		uart.write(buffer[i]);
+	}
+	va_end (args);
+}
 
 int main(void)
 {
@@ -61,22 +71,23 @@ int main(void)
 
     kbd_init();
     enc_init();
+    uart.init(&ScibRegs);
     init_pie_table();
 
 
 
-//	while(1) {
-//		s16 enc_cnt = enc_reset_counter();
-//		while(enc_cnt) {
-//			if (enc_cnt > 0) {
-//				enc_cnt--;
-//				asm(" ESTOP0");
-//			} else if (enc_cnt < 0) {
-//				enc_cnt++;
-//				asm(" ESTOP0");
-//			}
-//		}
-//	}
+    key_t::key_t lk;
+
+	while(1) {
+		s16 enc_cnt = enc_reset_counter();
+		key_t::key_t k = kbd_get_key();
+		if (lk != k) {
+			lk = k;
+			if (k) {
+				uart_print("%d\n\r",k);
+			}
+		}
+	}
 //    while(1) {
 //    	key_t::key_t k = kbd_get_key();
 //    	if (k) {
