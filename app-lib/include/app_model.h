@@ -2,7 +2,7 @@
 #define _MODEL_H
 
 #include "exported.h"
-
+#include "basic.h"
 
 
 // ------------------- parameter abstraction -------------------------------

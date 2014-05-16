@@ -29,19 +29,32 @@ namespace globals {
 	extern bool gui_debug;
 }
 
+
+// глобальный менеджер фокуса
 class focus_manager_t {
 public:
 	gobject_t *selected;
+	gobject_t *captured_child;
+
 public:
+
 	focus_manager_t() {
 		selected = 0;
+		captured_child = 0;
 	}
-	bool key_event(key_t::key_t key, iterator_t<gobject_t> *iter);
+
+	void key_event(key_t::key_t key, gobject_t *root);
 	void select(gobject_t *p);
+
+	void capture_child(gobject_t *child) {
+		captured_child = child;
+	}
+
 };
 
 
-class gobject_t : public iterator_t<gobject_t> { //, public subscriber_t<message_t> { 
+
+class gobject_t { 
 public:
 	s32 x; // координаты относительно родительского контейнера
 	s32 y;
@@ -65,14 +78,12 @@ private:
 	bool _selected;
 	bool _enabled;
 	bool _dirty; // if true - shall render
-	gobject_t *captured_child;
+
 
 public:
 	gobject_t() {
 		parent=(0),x=(0),y=(0),w=(0),h=(0),_dirty=(false), _can_be_selected=(false);
 		visible = true, layout = 0, preferred_layout = 0, _selected = false, _enabled = true;
-		captured_child = 0;
-
 		selected.init(this,&gobject_t::get_selected, &gobject_t::set_selected);
 		enabled.init(this,&gobject_t::get_enabled, &gobject_t::set_enabled);
 		dirty.init(this,&gobject_t::get_dirty, &gobject_t::set_dirty);
@@ -133,15 +144,55 @@ public:
 	virtual void render(surface_t &dst) {
 //		render_children(dst);
 	}
-
+	
+	// перечислитель всех дочерних обьектов
 	virtual gobject_t* next_all(void* prev) {
 		return 0;
 	}
 
-	virtual gobject_t* next(void* prev) SEALED OVERRIDE {
+	// перечислитель всех  видимых дочерних обьектов
+	gobject_t* next(void* prev) {
+
 		gobject_t* p = next_all(prev);
-		while (p && !p->visible)
+
+		while (p && !p->visible) {
 			p = next_all(p);
+		}
+		return p;
+	}
+
+	// возвращает признак дочерних объектов, в дереве которых есть selectable
+	gobject_t * first_selectable() {
+
+		gobject_t* p = next(0);
+
+		while (p) {
+			if (p->enabled) {
+				if (p->can_be_selected) {
+					return p;
+				}
+				if (p->first_selectable()) {
+					return p;
+				}
+			}
+			p = next(p);
+		}
+		return p;
+	}
+
+	// перечеслитель всех дочерних обьектов, способных к фокусу, или дочерних объектов, в дереве которых есть selectable
+	gobject_t* next_selectable(void* prev) {
+
+		gobject_t* p = next(prev);
+
+		while (p) {
+			if (p->enabled) {
+				if (p->can_be_selected || p->first_selectable()) {
+					return p;
+				}
+			}
+			p = next(p);
+		}
 		return p;
 	}
 
@@ -162,8 +213,20 @@ public:
 		if (preferred_layout) {
 			preferred_layout->set_preferred_size(this);
 		}
-		if (next(0))
-			_MY_ASSERT(w && h,return);
+		//// если есть дети, то наш рамер должен был быть уже установлен, иначе они упадут на do_layout
+		//if (next(0))
+		//	_MY_ASSERT(w && h,return);
+	}
+
+	void extend_preferred_size() {
+		s32 aw = this->w, ah = this->h;
+		set_preferred_size();
+		if (this->h < ah) {
+			this->h = ah;
+		}
+		if (this->w < aw) {
+			this->w = aw;
+		}
 	}
 
 	void set_preferred_size_children() {
@@ -183,34 +246,29 @@ public:
 		layout_children();
 	}
 
+
 	void capture_key_events(gobject_t *child) {
-		_MY_ASSERT(!child || (child && child->parent == this && !captured_child),return);
-		captured_child = child;
+		focus_manager.capture_child(child);
 	}
 
 	virtual void key_event(key_t::key_t key) {
-		if (!_enabled)
-			return;
-		if (captured_child) {
-//			_MY_ASSERT(captured->visible && captured->selected && captured->can_be_selected);
-			captured_child->key_event(key);
-
-		} else if (!focus_manager.key_event(key, this)) {
-			if (focus_manager.selected) {
-				focus_manager.selected->key_event(key);
-			}
-		}
+		_MY_ASSERT(visible && enabled, return);
+		// отдаем событи€ дет€м
+		focus_manager.key_event(key, this);
 	}
 
 };
 
 class rasterizer_t {
 public:
+	static u32 colors[4];
+	static u32 deepLevel;
 public:
+
 	// очищаем dirty дл€ обьекта и всех дочерних, т.к. он уже перерисовалс€
 
 	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw = false) {
-		
+		deepLevel++;
 		_MY_ASSERT(p->visible,return false);
 		bool ret = false;
 
@@ -219,8 +277,8 @@ public:
 			p->translate(x1,y1);
 			dst.set_allowed_area(x1,y1,p->w,p->h);
 // DEBUG DRAW:
-			//dst.ctx.pen_color = 0x00ff00;
-			//dst.rect(x1,y1,p->w,p->h);
+			dst.ctx.pen_color = colors[deepLevel & 0x03];
+			dst.rect(x1,y1,p->w,p->h);
 
 			p->render(dst);
 			clear_dirty(p);
@@ -236,6 +294,7 @@ public:
 				ret = true;
 			pp = p->next(pp);
 		}
+		deepLevel--;
 		return ret;
 	}
 private:
@@ -345,6 +404,9 @@ public:
 	}
 };
 
+
+// калькул€тор предпочитаемого размера - стек
+// вычисл€ет ширину и высоту виджета как сумму ширин\высот его дочерних компонентов
 class preferred_stack_layout_t : public preferred_layout_t {
 public:
 	s32 spx;
@@ -438,6 +500,8 @@ public:
 };
 
 
+// располагает дочерние компоненты подр€д
+
 class stack_layout_t : public layout_t {
 public:
 	s32 spx;
@@ -445,7 +509,7 @@ public:
 	s32 bw;   // button width
 	s32 bh;
 	bool vertical;
-	bool preferred_item_size;
+	bool preferred_item_size;  // использовать предпочитаемый размер компонента вместо размера €чейки
 public:
 	stack_layout_t() {
 		spx=5,spy=5,vertical=(true);
@@ -490,6 +554,8 @@ public:
 	}
 };
 
+
+// раст€гивает дочерние виджеты на весь размер текущего
 class stretch_layout_t : public layout_t {
 public:
 public:
@@ -506,6 +572,7 @@ public:
 	}
 };
 
+// выравнивает виджеты по заданным линейкам
 #define LL_LEV_SIZE 4
 class levels_layout_t : public layout_t {
 public:
@@ -738,9 +805,14 @@ lab_update_input:
 		dirty = true;
 	}
 
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		parent->dirty = true;
+		super::set_dirty(dirty);
+	}
+
 	virtual void set_selected(bool selected) {
 		_MY_ASSERT(parent,return);
-		parent->dirty = true;
+		dirty = true;
 		super::set_selected(selected);
 	}
 
@@ -819,6 +891,11 @@ public:
 		can_be_selected = true;
 
 		values = &empty_iterator;
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		parent->dirty = true;
+		super::set_dirty(dirty);
 	}
 
 	virtual void set_preferred_size() OVERRIDE {
