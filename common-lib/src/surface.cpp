@@ -624,7 +624,9 @@ surface_16bpp_t::surface_16bpp_t(s32 _w, s32 _h, s32 _buf_sz, u8 *_buf)
 
 void surface_16bpp_t::fill(s32 x1,s32 y1, s32 rw, s32 rh) {
 	_MY_ASSERT(buf && buf_sz,return);
-	this->trim_to_allowed(x1,y1,rw,rh);
+	if (!this->trim_to_allowed(x1,y1,rw,rh)) {
+		return;
+	}
 	_MY_ASSERT(x1>=0 && y1>=0 && x1+rw <= w && y1+rh <=h,return);
 
 	for (s32 y=y1; y < y1+rh; y++) {

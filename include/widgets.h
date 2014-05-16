@@ -21,7 +21,7 @@ public:
 class preferred_layout_t {
 public:
 public:
-	virtual void set_preferred_size(gobject_t *parent) = 0;
+	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) = 0;
 };
 
 
@@ -151,7 +151,7 @@ public:
 	}
 
 	// перечислитель всех  видимых дочерних обьектов
-	gobject_t* next(void* prev) {
+	gobject_t* next_visible(void* prev) {
 
 		gobject_t* p = next_all(prev);
 
@@ -164,7 +164,7 @@ public:
 	// возвращает признак дочерних объектов, в дереве которых есть selectable
 	gobject_t * first_selectable() {
 
-		gobject_t* p = next(0);
+		gobject_t* p = next_visible(0);
 
 		while (p) {
 			if (p->enabled) {
@@ -175,7 +175,7 @@ public:
 					return p;
 				}
 			}
-			p = next(p);
+			p = next_visible(p);
 		}
 		return p;
 	}
@@ -183,7 +183,7 @@ public:
 	// перечеслитель всех дочерних обьектов, способных к фокусу, или дочерних объектов, в дереве которых есть selectable
 	gobject_t* next_selectable(void* prev) {
 
-		gobject_t* p = next(prev);
+		gobject_t* p = next_visible(prev);
 
 		while (p) {
 			if (p->enabled) {
@@ -191,56 +191,37 @@ public:
 					return p;
 				}
 			}
-			p = next(p);
+			p = next_visible(p);
 		}
 		return p;
 	}
 
 	void layout_children() {
 		_MY_ASSERT(w && h, return);
-		gobject_t *bt = next(0);
+		gobject_t *bt = next_visible(0);
 		while (bt) {
 			bt->do_layout();
-			bt = next(bt);
+			bt = next_visible(bt);
 		}
 	}
-
-	virtual void child_size_changed(gobject_t *child) {
+	// дитё запрашивает изменение своего размера
+	virtual void child_request_size_change(gobject_t *child, s32 new_w, s32 new_h) {
 	}
 
 
-	virtual void set_preferred_size() {
+	virtual void get_preferred_size(s32 &pw, s32 &ph) {
+
+		_MY_ASSERT(preferred_layout,return);
+
 		if (preferred_layout) {
-			preferred_layout->set_preferred_size(this);
-		}
-		//// если есть дети, то наш рамер должен был быть уже установлен, иначе они упадут на do_layout
-		//if (next(0))
-		//	_MY_ASSERT(w && h,return);
-	}
-
-	void extend_preferred_size() {
-		s32 aw = this->w, ah = this->h;
-		set_preferred_size();
-		if (this->h < ah) {
-			this->h = ah;
-		}
-		if (this->w < aw) {
-			this->w = aw;
-		}
-	}
-
-	void set_preferred_size_children() {
-			gobject_t *bt = next(0);
-			while (bt) {
-				bt->set_preferred_size();
-				bt = next(bt);
-			}
+			preferred_layout->get_preferred_size(this, pw,ph);
+		} 
 	}
 
 	// размещает детей в пространстве родителя
 	virtual void do_layout() {
-//		_WEAK_ASSERT(w && h,return);
-		if (!(w && h)) return;
+		_MY_ASSERT(w && h,return);
+//		if (!(w && h)) return;
 		if (layout)
 			layout->layout(this);
 		layout_children();
@@ -278,7 +259,7 @@ public:
 			dst.set_allowed_area(x1,y1,p->w,p->h);
 // DEBUG DRAW:
 			dst.ctx.pen_color = colors[deepLevel & 0x03];
-			dst.rect(x1,y1,p->w,p->h);
+//			dst.rect(x1,y1,p->w,p->h);
 
 			p->render(dst);
 			clear_dirty(p);
@@ -287,12 +268,12 @@ public:
 //			return true;
 		} 
 		// только дочерние
-		gobject_t *pp = p->next(0);
+		gobject_t *pp = p->next_visible(0);
 		while (pp) {
 			bool ret1 = render(pp, dst, force_redreaw);
 			if (!ret && ret1)
 				ret = true;
-			pp = p->next(pp);
+			pp = p->next_visible(pp);
 		}
 		deepLevel--;
 		return ret;
@@ -300,10 +281,10 @@ public:
 private:
 	static void clear_dirty(gobject_t *p) {
 		p->dirty = (false);
-		gobject_t *pp = p->next(0);
+		gobject_t *pp = p->next_visible(0);
 		while (pp) {
 			clear_dirty(pp);
-			pp = p->next(pp);
+			pp = p->next_visible(pp);
 		}
 	}
 
@@ -366,27 +347,25 @@ public:
 //		render_children(dst);
 	}
 
-	virtual void set_preferred_size() OVERRIDE {
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		_MY_ASSERT(visible,return);
 		_MY_ASSERT(ctx.font,return);
 		ctx.font->set_char_size_px(0,ctx.font_size);
 		if (!text32.is_empty()) {
 			// glyph string
-			ctx.font->get_string_size(text32, w, h);
+			ctx.font->get_string_size(text32, aw, ah);
 		} else if (!text.is_empty()) {
 			// text
-			ctx.font->get_string_size(this->text, w, h);
+			ctx.font->get_string_size(this->text, aw, ah);
 		} else if (this->glyph_code) {
 			// glyph
-			ctx.font->get_gly_size(this->glyph_code, w, h);
+			ctx.font->get_gly_size(this->glyph_code, aw, ah);
 		} else {
 			// no content - try measure something
 			string_t cs1 = string_t("1");
-			ctx.font->get_string_size(cs1, w, h);
-	//		_MY_ASSERT(0);
+			ctx.font->get_string_size(cs1, aw, ah);
 		}
 
-		_MY_ASSERT(w && h, return);
 	}
 };
 
@@ -419,28 +398,29 @@ public:
 	}
 
 
-	virtual void set_preferred_size(gobject_t *parent) OVERRIDE {
-		gobject_t *bt = parent->next(0);
-		parent->w = 0;
-		parent->h = 0;
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		gobject_t *bt = parent->next_visible(0);
+		aw = 0;
+		ah = 0;
 		while (bt) {
-			bt->set_preferred_size();
+			s32 btw, bth;
+			bt->get_preferred_size(btw, bth);
 
 			if (vertical) {
-				if (bt->w > parent->w) {
-					parent->w = bt->w;
+				if (btw > aw) {
+					aw = btw;
 				}
-				parent->h += bt->h + spy;
+				ah += bth + spy;
 			} else {
-				if (bt->h > parent->h) {
-					parent->h = bt->h;
+				if (bth > ah) {
+					ah = bth;
 				}
-				parent->w += bt->w + spx;
+				aw += btw + spx;
 			}
-			bt = parent->next(bt);
+			bt = parent->next_visible(bt);
 		}
-		if (vertical && parent->h) parent->h -= spy;
-		if (!vertical && parent->w) parent->w -= spx;
+		if (vertical && ah) ah -= spy;
+		if (!vertical && aw) aw -= spx;
 	}
 };
 
@@ -458,7 +438,7 @@ public:
 
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *p = parent->next(0);
+		gobject_t *p = parent->next_visible(0);
 		s32 py = 0, px = 0;
 		while (p) {
 			_WEAK_ASSERT(p->visible,return);
@@ -478,7 +458,7 @@ public:
 				px += p->w + spx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next(p);
+			p = parent->next_visible(p);
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -486,7 +466,7 @@ public:
 
 		s32 dy = (parent->h - py)/2;
 		s32 dx = (parent->w - px)/2;
-		p = parent->next(0);
+		p = parent->next_visible(0);
 		while (p) {
 			if (vertical) {
 				p->y += dy;
@@ -494,7 +474,7 @@ public:
 				p->x += dx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next(p);
+			p = parent->next_visible(p);
 		}
 	}
 };
@@ -520,7 +500,7 @@ public:
 	void layout(gobject_t *parent) OVERRIDE {
 		_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
-		gobject_t *child = parent->next(0);
+		gobject_t *child = parent->next_visible(0);
 		s32 px = 0;
 		s32 py = 0;
 		while (child) {
@@ -529,9 +509,9 @@ public:
 				child->x = 0;
 				child->y = py;
 				if (preferred_item_size) {
-					child->set_preferred_size();
-					if (child->w > parent->w)
-						child->w = parent->w;
+					s32 cw, ch;
+					child->get_preferred_size(cw,ch);
+					child->h = ch;
 				} else child->h = bh;
 				child->w = parent->w;
 				py += child->h + spy;
@@ -539,14 +519,14 @@ public:
 				child->x = px;
 				child->y = 0;
 				if (preferred_item_size) {
-					child->set_preferred_size();
-					if (child->h > parent->h)
-						child->h = parent->h;
+					s32 cw, ch;
+					child->get_preferred_size(cw,ch);
+					child->w = cw;
 				} else child->w = bw;
 				child->h = parent->h;
 				px += child->w + spx;
 			}
-			child = parent->next(child);
+			child = parent->next_visible(child);
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -560,13 +540,13 @@ class stretch_layout_t : public layout_t {
 public:
 public:
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next(0);
+		gobject_t *child = parent->next_visible(0);
 		while (child) {
 			child->x = 0;
 			child->y = 0;
 			child->h = parent->h;
 			child->w = parent->w;
-			child = parent->next(child);
+			child = parent->next_visible(child);
 			_WEAK_ASSERT(!child,return); // нельзя растянуть все обьекты
 		}
 	}
@@ -585,7 +565,7 @@ public:
 		levels[3] = -1;
 	}
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next(0);
+		gobject_t *child = parent->next_visible(0);
 		gobject_t *pchild = 0;
 		s32 i = 0;
 		while (child) {
@@ -602,7 +582,7 @@ public:
 			}
 			i++;
 			pchild = child;
-			child = parent->next(child);
+			child = parent->next_visible(child);
 		}
 		if (pchild && pchild->y + pchild->h > parent->h) {
 			pchild->h = parent->h - pchild->y;
@@ -662,13 +642,8 @@ public:
 		dst.ctx.alfa = 128;
 		dst.rect(ax,ay,w,h);
 
-//		render_children(dst);
 	}
 
-	virtual void do_layout() OVERRIDE {
-		set_preferred_size_children();
-		gobject_t::do_layout();
-	}
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
 		if (!prev) return &l_top;
@@ -719,8 +694,9 @@ public:
 	void measure_cursor_pos() {
 		for (s32 i=1; i <= _value.length(); i++) {
 			lab.text = _value.sub(0,i);
-			lab.set_preferred_size();
-			cursor_pos[i-1] = lab.w;
+			s32 lw, lh;
+			lab.get_preferred_size(lw,lh);
+			cursor_pos[i-1] = lw;
 		}
 		lab.text = _value;
 	}
@@ -730,17 +706,17 @@ public:
 		return 0;
 	}
 
-	virtual void set_preferred_size() OVERRIDE {
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		measure_cursor_pos();
-		lab.set_preferred_size();
-		if (h < lab.h) h = lab.h;
-		if (w < lab.w + 5) w = lab.w + 5;
+		lab.get_preferred_size(aw, ah);
+		//if (h < lab.h) h = lab.h;
+		//if (w < lab.w + 5) w = lab.w + 5;
 	}
 
 	virtual void do_layout() OVERRIDE {
 		lab.x = 0;
 		lab.y = 0;
-		lab.w = w - 5; // место для курсора
+		lab.w = w; // место для курсора
 		lab.h = h;
 	}
 
@@ -799,9 +775,12 @@ public:
 		return;
 lab_update_input:
 		lab.text = _value;
-		set_preferred_size();
-		if (parent)
-			parent->child_size_changed(this);
+		s32 aw,ah;
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw,ah);
+		}
 		dirty = true;
 	}
 
@@ -898,10 +877,10 @@ public:
 		super::set_dirty(dirty);
 	}
 
-	virtual void set_preferred_size() OVERRIDE {
-		lab.set_preferred_size();
-		if (h < lab.h) h = lab.h;
-		if (w < lab.w + 5) w = lab.w + 5;
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+		lab.get_preferred_size(aw,ah);
+		//if (h < lab.h) h = lab.h;
+		//if (w < lab.w + 5) w = lab.w + 5;
 	}
 
 	virtual void do_layout() OVERRIDE {
@@ -957,9 +936,10 @@ lab_update_cbox:
 		if (sprev)
 			_value=(*sprev);
 		lab.text = _value;
-		set_preferred_size();
+		s32 aw,ah;
+		get_preferred_size(aw,ah);
 		if (parent)
-			parent->child_size_changed(this);
+			parent->child_request_size_change(this, aw,ah);
 		dirty = true;
 	}
 

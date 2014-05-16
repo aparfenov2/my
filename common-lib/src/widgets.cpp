@@ -19,6 +19,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 	
 	gobject_t *last_captured = captured_child;
 
+
 	if (captured_child) {
 		_MY_ASSERT(captured_child->visible && captured_child->enabled, return);
 		captured_child->key_event(key);
@@ -40,8 +41,8 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 
 
 	gobject_t *p = root->next_selectable(0);
-
 	gobject_t *next = 0;
+
 
 	if (!selected) {
 		next = p;

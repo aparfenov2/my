@@ -55,12 +55,17 @@ public:
 	}
 
 
-	virtual void child_size_changed(gobject_t *child) OVERRIDE {
-		set_preferred_size();
-		do_layout();
-		if (parent)
-			parent->child_size_changed(this);
-		dirty = true;
+	virtual void child_request_size_change(gobject_t *child, s32 aw, s32 ah) OVERRIDE {
+
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw, ah);
+
+		} else {
+			do_layout();
+			dirty = true;
+		}
 	}
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {

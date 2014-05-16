@@ -14,11 +14,11 @@
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "disp_def.h"
 
 
-using namespace std;
 using namespace myvi;
 
 u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
@@ -40,7 +40,7 @@ public:
 		h = TFT_HEIGHT * 2;
 		kx = 2;
 		ky = 2;
-		cout << "set size to " << w << "x" << h << endl;
+		std::cout << "set size to " << w << "x" << h << std::endl;
 	}
 
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) OVERRIDE {
@@ -63,7 +63,7 @@ public:
 	}
 
     virtual logger_t& operator << (s32 v) OVERRIDE {
-		cout << v;
+		std::cout << v;
 		log << v;
 //		log.flush();
         return *this;
@@ -71,10 +71,10 @@ public:
 
     virtual logger_t& operator << (const char *v) OVERRIDE {
 		if (v == _endl) {
-			cout << endl;
-			log << endl;
+			std::cout << std::endl;
+			log << std::endl;
 		} else {
-			cout << v;
+			std::cout << v;
 			log << v;
 		}
 //		log.flush();
@@ -110,7 +110,13 @@ class menu_row_t :  public gobject_t {
 public:
 	label_t lname;
 	tedit_t valbox;
+	preferred_stack_layout_t preferred_stack_layout;
 public:
+
+	menu_row_t() {
+		preferred_stack_layout.vertical = false;
+		preferred_layout = &preferred_stack_layout;
+	}
 
 	virtual void init() {
 		gobject_t::init();
@@ -150,32 +156,92 @@ public:
 
 };
 
+class suffixes_t : public iterator_t<string_t> {
+public:
+	string_t str1;
+	string_t str2;
+public:
+	suffixes_t() {
+		str1 = string_t("A");
+		str2 = string_t("B");
+	}
+
+	virtual string_t* next(void* prev) OVERRIDE {
+		if (!prev) return &str1;
+		if (prev == &str1) return &str2;
+		return 0;
+	}
+
+};
+
+class scrollable_menu_t : public gobject_t {
+	typedef gobject_t super;
+public:
+	std::vector<menu_row_t *> rows;
+
+	suffixes_t suffixes;
+	stack_layout_t stack_layout;
+
+public:
+
+	scrollable_menu_t() {
+		stack_layout.preferred_item_size = true;
+		layout = &stack_layout;
+
+		for (s32 i=0; i < 12; i++) {
+			rows.push_back(new menu_row_t());
+		}
+	}
+
+	void init_row(menu_row_t *row) {
+
+		row->valbox.lval.value = "Helo!";
+		row->valbox.lsfx.values = &suffixes;
+		row->valbox.lsfx.value = *suffixes.next(0);
+		row->lname.text = "Menu_name";
+	}
+
+	virtual void init() OVERRIDE {
+		super::init();
+
+		gobject_t *p = next_visible(0);
+		while (p) {
+			init_row((menu_row_t *)p);
+			p = next_visible(p);
+		}
+
+	}
+
+
+	virtual gobject_t* next_all(void* prev) OVERRIDE {
+		std::vector<menu_row_t *>::iterator it = rows.begin();
+
+		if (!prev) {
+			return *it;
+		}
+
+		while (*it != prev && it != rows.end()) {
+			it++;
+		}
+		if (it != rows.end()) {
+			it++;
+			if (it != rows.end()) {
+				return *it;
+			}
+		}
+		return 0;
+	}
+
+};
+
 
 // весь экран
 class test_screen_t : public gobject_t {
 
 public:
-	class suffixes_t : public iterator_t<string_t> {
-	public:
-		string_t str1;
-		string_t str2;
-	public:
-		suffixes_t() {
-			str1 = string_t("A");
-			str2 = string_t("B");
-		}
-
-		virtual string_t* next(void* prev) OVERRIDE {
-			if (!prev) return &str1;
-			if (prev == &str1) return &str2;
-			return 0;
-		}
-
-	};
-
-public:
 	tedit_t hdr_box;
-	menu_row_t dlg_row;
+
+	scrollable_menu_t menu;
 
 	suffixes_t suffixes;
 
@@ -206,23 +272,18 @@ public:
 		menu_context_t::instance.lctx1 = lctx1;
 		menu_context_t::instance.lctxg = lctxg;
 
-		hdr_box.x = hdr_box.y = 0;
+		hdr_box.x = 0;
+		hdr_box.y = 0;
 		hdr_box.w = w;
 		hdr_box.h = 20;
 		hdr_box.lval.value = "Helo!";
 		hdr_box.lsfx.values = &suffixes;
 		hdr_box.lsfx.value = *suffixes.next(0);
 
-
-		dlg_row.x = 0;
-		dlg_row.y = 40;
-		dlg_row.w = w;
-		dlg_row.h = 20;
-		dlg_row.valbox.lval.value = "Helo!";
-		dlg_row.valbox.lsfx.values = &suffixes;
-		dlg_row.valbox.lsfx.value = *suffixes.next(0);
-		dlg_row.lname.text = "Menu_name";
-
+		menu.x = 0;
+		menu.y = hdr_box.h + hdr_box.y;
+		menu.w = w;
+		menu.h = h - menu.y;
 
 
 		init_children();
@@ -247,7 +308,7 @@ public:
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
 		if (!prev) return &hdr_box;
-		if (prev == &hdr_box) return &dlg_row;
+		if (prev == &hdr_box) return &menu;
 		return 0;
 	}
 
