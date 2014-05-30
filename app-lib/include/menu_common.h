@@ -25,14 +25,11 @@ public:
 	text_box_t lval;
 	combo_box_t lsfx;
 	stack_layout_t stack_layout;
-	preferred_stack_layout_t preferred_stack_layout;
 public:
 	inp_dlg_row_t() {
 		stack_layout.vertical = false;
 		stack_layout.preferred_item_size = true;
-		preferred_stack_layout.vertical = false;
 		layout = &stack_layout;
-		preferred_layout = &preferred_stack_layout;
 	}
 
 	virtual void init() {

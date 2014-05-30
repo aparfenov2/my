@@ -182,10 +182,16 @@ public:
 	bool trim_to_allowed(s32 &x1, s32 &y1,s32 &sw,s32 &sh) {
 		return _trim_to(x1,y1,sw,sh,allowed_x1, allowed_y1, allowed_w, allowed_h );
 	}
+	static bool trim_to(s32 &x1, s32 &y1,s32 &sw,s32 &sh, s32 x0, s32 y0, s32 w0, s32 h0) {
+		return __trim_to(x1,y1,sw,sh,x0,y0,w0,h0);
+	}
 private:
 	bool _trim_to(s32 &x1, s32 &y1,s32 &sw,s32 &sh, s32 x0, s32 y0, s32 w0, s32 h0) {
-		_MY_ASSERT(sw >= 0 && sh >= 0 && x0 >= 0 && y0 >= 0 && w0 >= 0 && h0 >= 0, return false); // все положительные
 		_MY_ASSERT(x0+w0 <= this->w && y0+h0 <= this->h, return false); // рамка меньше границы
+		return __trim_to(x1,y1,sw,sh,x0,y0,w0,h0);
+	}
+	static bool __trim_to(s32 &x1, s32 &y1,s32 &sw,s32 &sh, s32 x0, s32 y0, s32 w0, s32 h0) {
+		_MY_ASSERT(sw >= 0 && sh >= 0 && x0 >= 0 && y0 >= 0 && w0 >= 0 && h0 >= 0, return false); // все положительные
 		// перейдем в абсолютные координаты
 
 		s32 x1e = x1+sw;

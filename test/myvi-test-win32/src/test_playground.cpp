@@ -13,8 +13,10 @@
 #include "ttcache.h"
 
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <vector>
+#include <string>
 
 #include "disp_def.h"
 
@@ -47,12 +49,16 @@ public:
 		if (key == key_t::K_SAVE) {
 		}
 		if (key) {
-			gobj->key_event((key_t::key_t)key);
+			focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+			if (focus_aware) {
+				focus_aware->key_event((key_t::key_t)key);
+			}
 		}
 		return rasterizer_t::render(gobj, s1);
 	}
 
 };
+
 
 class logger_impl_t : public logger_t {
 public:
@@ -95,7 +101,7 @@ public:
 	virtual void do_layout() OVERRIDE {
 		_MY_ASSERT(w && h, return);
 
-		lval.w = w * 0.7;
+		lval.w = (s32)(w * 0.7);
 		lval.h = h;
 		lsfx.h = h;
 		lsfx.x = lval.w + 5;
@@ -110,12 +116,12 @@ class menu_row_t :  public gobject_t {
 public:
 	label_t lname;
 	tedit_t valbox;
-	preferred_stack_layout_t preferred_stack_layout;
+	stack_layout_t stack_layout;
 public:
 
 	menu_row_t() {
-		preferred_stack_layout.vertical = false;
-		preferred_layout = &preferred_stack_layout;
+		stack_layout.vertical = false;
+		layout = &stack_layout;
 	}
 
 	virtual void init() {
@@ -144,7 +150,7 @@ public:
 
 	virtual void do_layout() OVERRIDE {
 		_MY_ASSERT(w && h, return);
-		lname.w = w * 0.7;
+		lname.w = (s32)(w * 0.7);
 		lname.h = h;
 		valbox.h = h;
 		valbox.x = lname.w + 5;
@@ -155,6 +161,147 @@ public:
 
 
 };
+
+
+// окно с прокруткой. Состоит из viewport и virtual окна. Для прокрутки сдвигаем virtual. Как наследоваться ?
+
+// интерфейс interior-окна
+class scrollable_interior_t : public gobject_t {
+public:
+public:
+};
+
+// окно с прокруткой.
+class scrollable_window_t : public gobject_t, public subscriber_t<focus_client_t *>, public focus_master_t {
+	typedef gobject_t super;
+public:
+	scrollable_interior_t *interior;
+public:
+	scrollable_window_t(scrollable_interior_t *ainterior) {
+		interior = ainterior;
+		focus_manager_t::instance.subscribe(this);
+	}
+
+	virtual gobject_t* next_all(void* prev) OVERRIDE {
+		if (!prev) return interior;
+		return 0;
+	}
+
+	// оповещение от focus_manager о выбранном объекте
+	// обьект не наш, а interior !!!
+
+	virtual void accept(focus_client_t* &sel) OVERRIDE {
+		// если это наш объект (или одно из детей наших детей)
+		gobject_t *p = next_selectable_deep(0);
+		gobject_t *our = 0;
+		while (p) {
+			if (p == dynamic_cast<gobject_t *>(sel)) {
+				our = p;
+				break;
+			}
+			p = next_selectable_deep(p);
+		}
+		// то пытаемся скрыть крайние дочерние объекты чтобы объект в фокусе оставался видимым
+		if (our) {
+			// находим непосредственного childrena
+			gobject_t *p = our;
+			gobject_t *our_child = 0;
+
+			while (p && p != this && p != this->interior) {
+				our_child = p;
+				p = p->parent;
+			}
+			_MY_ASSERT(our_child && our_child->parent == this->interior, return);
+			
+			scroll_to(our_child);
+		}
+	}
+
+	// прокрутить чтобы выбранный children стал виден
+	void scroll_to(gobject_t *interior_child) {
+
+		_MY_ASSERT(interior_child->parent == this->interior, return);
+
+		s32 ix,iy, ax,ay;
+		interior_child->translate(ix,iy);
+		this->translate(ax,ay);
+
+		// пытаемся сдвинуть окно
+		s32 dx = 0;
+
+		if (ix < ax) {
+			dx = ax - ix;
+		} else if ((ix + interior_child->w) > (ax + this->w)) {
+			dx = (ax + this->w) - (ix + interior_child->w);
+		}
+
+		s32 dy = 0;
+
+		if (iy < ay) {
+			dy = ay - iy;
+		} else if ((iy + interior_child->h) > (ay + this->h)) {
+			dy = (ay + this->h) - (iy + interior_child->h);
+		}
+
+		if (dx || dy) {
+			interior->x += dx;
+			interior->y += dy;
+			this->dirty = true;
+		}
+	}
+
+	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+		_MY_ASSERT(interior,return);
+		interior->get_preferred_size(pw,ph);
+	}
+
+	virtual void do_layout() OVERRIDE {
+		_MY_ASSERT(w && h, return);
+
+		s32 ipw,iph;
+		interior->get_preferred_size(ipw,iph);
+
+		interior->w = w;
+		interior->h = h;
+
+		if (ipw > interior->w) {
+			interior->w = ipw;
+		}
+		if (iph > interior->h) {
+			interior->h = iph;
+		}
+
+		interior->do_layout();
+	}
+
+	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE {
+
+		_MY_ASSERT(intention.current, return );
+		if (!intention.next) return;
+
+		gobject_t *p = dynamic_cast<gobject_t*>(intention.current);
+		while (p && p->parent != interior) {
+			p = p->parent;
+		}
+		_MY_ASSERT(p, return );
+
+		p = dynamic_cast<gobject_t*>(intention.next);
+		while (p && p->parent != interior) {
+			p = p->parent;
+		}
+		if (!p) { // менеджер фокуса собирается перейти на чужой объект
+			// проверим, есть ли возможность перейти на обьект внутри нашего inerior
+			focus_client_t *next = focus_manager_t::instance.locate_next(intention.direction, interior);
+			if (next) {
+				intention.next = next;
+			}
+		}
+
+	}
+};
+
+// ----------------- пример наследования окна с прокруткой --------------------------
+
 
 class suffixes_t : public iterator_t<string_t> {
 public:
@@ -174,44 +321,51 @@ public:
 
 };
 
-class scrollable_menu_t : public gobject_t {
-	typedef gobject_t super;
+
+
+// наследник класса внутреннего окна
+class scrollable_menu_interior_t : public scrollable_interior_t {
+	typedef scrollable_interior_t super;
 public:
 	std::vector<menu_row_t *> rows;
 
 	suffixes_t suffixes;
 	stack_layout_t stack_layout;
-
 public:
 
-	scrollable_menu_t() {
+	scrollable_menu_interior_t() {
+
 		stack_layout.preferred_item_size = true;
 		layout = &stack_layout;
 
-		for (s32 i=0; i < 12; i++) {
+		for (s32 i=0; i < 1; i++) {
 			rows.push_back(new menu_row_t());
 		}
 	}
 
-	void init_row(menu_row_t *row) {
+	void init_row(menu_row_t *row, int i) {
 
-		row->valbox.lval.value = "Helo!";
+		std::stringstream str;
+		str << "Menu_name " << i;
+
+		row->valbox.lval.value = "Value";
 		row->valbox.lsfx.values = &suffixes;
 		row->valbox.lsfx.value = *suffixes.next(0);
-		row->lname.text = "Menu_name";
+		std::string *s = new std::string(str.str());
+		row->lname.text = (*s).c_str();
 	}
 
 	virtual void init() OVERRIDE {
 		super::init();
 
 		gobject_t *p = next_visible(0);
+		int i = 0;
 		while (p) {
-			init_row((menu_row_t *)p);
+			init_row((menu_row_t *)p, i++);
 			p = next_visible(p);
 		}
 
 	}
-
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
 		std::vector<menu_row_t *>::iterator it = rows.begin();
@@ -220,7 +374,7 @@ public:
 			return *it;
 		}
 
-		while (*it != prev && it != rows.end()) {
+		while (it != rows.end() && *it != prev) {
 			it++;
 		}
 		if (it != rows.end()) {
@@ -235,13 +389,243 @@ public:
 };
 
 
-// весь экран
-class test_screen_t : public gobject_t {
+
+
+// наследник класса окна с прокруткой
+class scrollable_menu_t : public scrollable_window_t {
+	typedef scrollable_window_t super;
+public:
+	scrollable_menu_interior_t interior;
 
 public:
-	tedit_t hdr_box;
+	scrollable_menu_t(): super(&interior) {
+	}
 
-	scrollable_menu_t menu;
+	virtual void render(surface_t &dst) OVERRIDE {
+		dst.ctx.alfa = 0xff;
+		dst.ctx.pen_color = 0x8a8a8a;
+		s32 ax,ay;
+		translate(ax,ay);
+		dst.fill(ax,ay,w,h);
+	}
+
+};
+
+/*
+
+class tedit_bkg_t : public tedit_t {
+	typedef tedit_t super;
+public:
+public:
+
+	virtual void render(surface_t &dst) OVERRIDE {
+		dst.ctx.alfa = 0xff;
+		dst.ctx.pen_color = 0xaaaaaa;
+		s32 ax,ay;
+		translate(ax,ay);
+		dst.fill(ax,ay,w,h);
+	}
+
+};
+*/
+
+
+// ------------------------------------------------------------
+// ------------ прототип поля ввода параметра -----------------
+// ------------------------------------------------------------
+
+
+
+
+// контроллер вида с полем ввода и комбобоксом
+class tbox_cbox_controller_t  {
+public:
+	//units
+	//validators
+	//textbox*
+	//combobox*
+public:
+};
+
+
+// вид с полем ввода и комбобоксом
+class tbox_cbox_view_t : public gobject_t {
+public:
+	text_box_t lval;
+	combo_box_t lsfx;
+	stack_layout_t stack_layout;
+//	input_controller_t controller;
+public:
+	tbox_cbox_view_t() {
+		stack_layout.vertical = false;
+		stack_layout.preferred_item_size = true;
+		layout = &stack_layout;
+	}
+
+	virtual void init() {
+		gobject_t::init();
+
+		menu_context_t &ctx = menu_context_t::instance;
+
+		lval.visible = true;
+		lval.lab.ctx = ctx.lctx1;
+		lval.lab.ctx.font_size = font_size_t::FS_20;
+
+		lsfx.visible = true;
+		lsfx.lab.ctx = ctx.lctx1;
+		lsfx.lab.ctx.font_size = font_size_t::FS_20;
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		_MY_ASSERT(parent,return);
+		parent->dirty = dirty;
+	}
+
+
+	virtual void child_request_size_change(gobject_t *child, s32 aw, s32 ah) OVERRIDE {
+
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw, ah);
+
+		} else {
+			do_layout();
+			dirty = true;
+		}
+	}
+
+	virtual gobject_t* next_all(void* prev) OVERRIDE {
+		if (!prev) return &lval;
+		else if (prev == &lval) return &lsfx;
+		return 0;
+	}
+};
+
+
+// ----------------- DME - наследник вида с текстбоксом и комбобоксом ----------------------
+
+
+class dme_view_t : public gobject_t {
+public:
+	label_t menu_label;
+	tbox_cbox_view_t tbox_cbox;
+public:
+};
+
+
+// -------- контроллеры -----------------
+
+// Вариантный тип. Надо избавиться !
+/*
+class variant_t {
+public:
+public:
+};
+*/
+
+// примесь для класса вида, позволяет находить детей по id
+class view_meta_t {
+public:
+public:
+	virtual gobject_t * get_child_by_id(u32 id) = 0; 
+};
+
+class parameter_meta_t;
+
+// интерфейс контроллера вида
+class view_controller_t {
+public:
+public:
+	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
+	virtual void init(gobject_t *view, parameter_meta_t *meta) = 0;
+};
+
+// метаинфа о параметре
+class parameter_meta_t {
+public:
+	virtual void get_name(string_t &dst) = 0;
+	virtual parameter_meta_t * get_children(void *prev) = 0;
+
+	// метод фабрики вида
+	virtual gobject_t * build_view() = 0;
+	virtual view_controller_t * build_controller() = 0;
+};
+
+
+class model_t {
+public:
+	// обновление модели
+//	virtual void update_me(parameter_meta_t *parameter_meta, variant_t &value) = 0;
+};
+
+
+// инициализирует поле названия элемента меню
+class label_controller_t {
+public:
+	label_t *lab;
+public:
+	void init(label_t *alab, parameter_meta_t *parameter_meta) {
+		lab = alab;
+	}
+};
+
+
+// пример контроллера составного параметра
+// Контроллеры статически определены в коде до генерации
+class dme_controller_t {
+public:
+	label_controller_t lab_ctl;
+	tbox_cbox_controller_t tcb_ctl;
+public:
+	void init(dme_view_t *dme_view, parameter_meta_t *parameter_meta) {
+	}
+};
+
+// пример сериализованного параметра из схемы
+class dme_parameter_t : public parameter_meta_t {
+public:
+public:
+};
+
+// динамический вид для фабрики видов. Позволяет динамически добавлять дочерние виды до инициализации
+class dynamic_view_t : public gobject_t {
+public:
+public:
+	void add_child(gobject_t *child) {
+	}
+};
+
+// фабрика виджетов меню
+class menu_factory_t {
+public:
+public:
+	gobject_t * build_menu(parameter_meta_t * meta_root) {
+
+		dynamic_view_t *menu_root = new dynamic_view_t();
+		parameter_meta_t *child_meta = meta_root->get_children(0);
+
+		while (child_meta) {
+
+			gobject_t *child_view = child_meta->build_view();
+			menu_root->add_child(child_view);
+
+			view_controller_t *child_controller = child_meta->build_controller();
+			child_controller->init(child_view, child_meta);
+
+			child_meta = meta_root->get_children(child_meta);
+		}
+	}
+};
+
+// ------------------------------- весь экран ------------------------------------
+class test_screen_t : public gobject_t, public focus_aware_t {
+
+public:
+//	tedit_t hdr_box;
+	dme_view_t dme;
+
+//	scrollable_menu_t menu;
 
 	suffixes_t suffixes;
 
@@ -272,18 +656,18 @@ public:
 		menu_context_t::instance.lctx1 = lctx1;
 		menu_context_t::instance.lctxg = lctxg;
 
-		hdr_box.x = 0;
-		hdr_box.y = 0;
-		hdr_box.w = w;
-		hdr_box.h = 20;
-		hdr_box.lval.value = "Helo!";
-		hdr_box.lsfx.values = &suffixes;
-		hdr_box.lsfx.value = *suffixes.next(0);
+		dme.x = 0;
+		dme.y = 0;
+		dme.w = w;
+		dme.h = 20;
+		//hdr_box.lval.value = "Helo!";
+		//hdr_box.lsfx.values = &suffixes;
+		//hdr_box.lsfx.value = *suffixes.next(0);
 
-		menu.x = 0;
-		menu.y = hdr_box.h + hdr_box.y;
-		menu.w = w;
-		menu.h = h - menu.y;
+		//menu.x = 0;
+		//menu.y = 20;
+		//menu.w = w;
+		//menu.h = h/4;
 
 
 		init_children();
@@ -293,22 +677,18 @@ public:
 
 	}
 
-	//virtual void key_event(key_t::key_t key) OVERRIDE {
-	//}
-
-	void mouse_event(s32 mx, s32 my, mkey_t::mkey_t mkey);
-
 	virtual void render(surface_t &dst) OVERRIDE {
-		// синий фон
 		dst.ctx.alfa = 0xff;
 		dst.ctx.pen_color = 0xf9f9f9;//0x203E95;
-		dst.fill(0,0,w,h);
+		s32 ax,ay;
+		translate(ax,ay);
+		dst.fill(ax,ay,w,h);
 
 	}
 
 	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &hdr_box;
-		if (prev == &hdr_box) return &menu;
+		if (!prev) return &dme;
+//		if (prev == &hdr_box) return &menu;
 		return 0;
 	}
 

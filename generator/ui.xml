@@ -1,0 +1,69 @@
+<schema>
+
+<!-- Генерация UI: Схема сериализуется в нативный формат через генератор. Интерфейс строит нативная фабрика -->
+
+<!-- Единицы измерения -->
+	<units>
+		<group id="mhz_ut">
+			<unit multiplier="1000000" name="MHz"/>
+			<unit multiplier="1000" name="KHz"/>
+			<unit multiplier="1" name="Hz"/>
+		</unit>
+	</units>
+	
+<!-- Виды определяются в коде, здесь только ссылки-->	
+	<views>
+		<view id="dme" /> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
+		<view id="tbox" /> <!-- label{param_name} + textbox -->
+		<view id="cbox" /> <!-- label{param_name} + combobox -->
+		<view id="tbox_cbox" /> <!-- label{param_name} + textbox + combobox -->
+		<view id="tbox_label" /> <!-- label{param_name} + textbox + label -->
+	</views>
+
+	<types>
+<!-- опишем простые типы, чтобы их можно было найти -->	
+		<type id="float" type="base" />
+		<type id="u8" type="base" />
+		<type id="s8" type="base" />
+		<type id="u16" type="base" />
+		<type id="s16" type="base" />
+		<type id="u32" type="base" />
+		<type id="s32" type="base" />
+		
+		<type id="dme_sfx_t" name="Суффикс DME" type="enum">
+			<enum id="X" name="X" value="0" />
+			<enum id="Y" name="Y" value="1" />
+		</type>
+		
+		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
+		<type id="dme_t" name="Параметры DME" type="complex">
+			<parameter id="ch" name="Канал DME" type="u8" validators="range" lo="-127" hi="128" />
+			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" />
+		</type>
+		<type id="measure_ctl_t" name="Измерение" type="enum">
+			<enum id="START" name="Старт" value="0" />
+			<enum id="STOP" name="Стоп" value="1" />
+		</type>
+		<type id="output_mode_t" name="Выход" type="enum">
+			<enum id="ANT" name="Антенна" value="0" glyph="A" />
+			<enum id="ATTEN" name="Аттен." value="1" glyph="B" />
+			<enum id="CALIB" name="Калибр." value="2" glyph="C" />
+		</type>
+	</types>
+	
+	<parameters>
+		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
+		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" view="cbox" />
+		<parameter id="output_mode" type="output_mode_t"  name="Выход" view="cbox" />
+		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
+	</parameters>
+	
+	<groups>
+		<group id="main" name="Главное">
+			<parameterRef id="dme" />
+			<parameterRef id="measure_ctl" />
+			<parameterRef id="output_mode" />
+			<parameterRef id="out_level" />
+		</group>
+	</groups>
+</schema>

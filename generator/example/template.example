@@ -1,0 +1,45 @@
+<#macro print_tabs level>
+	<#if level gt 0>
+		<#t><#list 0..level as lev>${"\t"}</#list>
+	</#if>
+</#macro>
+
+<#macro print_attrs node>
+	<#list node.@@ as attr>
+		<#t> ${attr.@@qname} = "${attr?string}"<#t>
+	</#list>
+</#macro>
+
+<#macro print_node node level left right>
+	<@print_tabs level/>
+	<#t>${left}${node.@@qname}
+	<#if ! left?starts_with("</")>
+		<@print_attrs node/>
+	</#if>
+	<#t>${right}
+</#macro>
+
+<#macro process_node node level>
+	<#if node?node_name == 'surface' && node.contact.ode?children?size == 0 && node.friction.ode?children?size == 0>
+	<#elseif node?node_name == 'velocity_decay' && node.linear?string == '0' && node.angular?string == '0'>
+	<#elseif node?node_name == 'uri' && node?string == '__default__'>
+	<#else>
+		<#if node.*?size gt 0>
+			<@print_node node level "<" ">\n" />
+			<#list node.* as child>
+				<@process_node child level+1/>
+			</#list>
+			<@print_node node level "</" ">\n" />
+		<#else>
+			<#if node?string?length == 0>
+				<@print_node node level "<" "/>\n" />
+			<#else>
+				<@print_node node level "<" ">" />
+				<#t>${node.@@nested_markup?trim}
+				<@print_node node 0 "</" ">\n" />
+			</#if>
+		</#if>
+	</#if>
+</#macro>
+
+<@process_node sdf.sdf 0 />

@@ -7,6 +7,7 @@
 #include "assert_impl.h"
 #include "basic.h"
 
+
 namespace myvi {
 
 
@@ -15,13 +16,8 @@ class gobject_t;
 class layout_t {
 public:
 public:
-	virtual void layout(gobject_t *parent) = 0;
-};
-
-class preferred_layout_t {
-public:
-public:
 	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) = 0;
+	virtual void layout(gobject_t *parent) = 0;
 };
 
 
@@ -29,31 +25,123 @@ namespace globals {
 	extern bool gui_debug;
 }
 
+#define _MAX_GOBJECT_TREE_DEPTH 32
+#define _MAX_FOCUS_MANAGER_SUBSCRIBERS 32
+
+namespace direction_t {
+	typedef enum {
+		UP,
+		DOWN,
+		LEFT,
+		RIGHT
+	} direction_t;
+}
+
+class focus_client_t;
+class focus_aware_t;
 
 // глобальный менеджер фокуса
-class focus_manager_t {
+class focus_manager_t : public publisher_t<focus_client_t *,_MAX_FOCUS_MANAGER_SUBSCRIBERS> {
 public:
-	gobject_t *selected;
-	gobject_t *captured_child;
+	focus_client_t *selected;
+	stack_t<focus_aware_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
 
-public:
+	static focus_manager_t instance;
+
+private:
 
 	focus_manager_t() {
 		selected = 0;
-		captured_child = 0;
 	}
 
+public:
 	void key_event(key_t::key_t key, gobject_t *root);
-	void select(gobject_t *p);
+	void select(focus_client_t *p);
 
-	void capture_child(gobject_t *child) {
-		captured_child = child;
+	void capture_child(focus_aware_t *child) {
+		_MY_ASSERT(child,return);
+		if (captured.length()) {
+			_MY_ASSERT(captured.last() != child, return);
+		}
+		captured.push(child);
+	}
+
+	void release_child(focus_aware_t *child) {
+		_MY_ASSERT(child,return);
+		_MY_ASSERT(captured.last()  == child,return);
+		captured.pop();
+	}
+
+	focus_client_t * locate_next(direction_t::direction_t direction, gobject_t *root);
+
+};
+
+class focus_intention_t {
+public:
+	focus_client_t *current;
+	focus_client_t *next;
+	direction_t::direction_t direction;
+public:
+	focus_intention_t() {
+		current = 0;
+		next = 0;
+		direction = direction_t::UP;
+	}
+};
+
+
+// могут изменять назначения фокуса
+class focus_master_t {
+public:
+public:
+	virtual void alter_focus_intention(focus_intention_t &intention) = 0;
+};
+
+
+// могут захватывать фокус, обрабатывать сообщения клавиатуры
+class focus_aware_t {
+public:
+	virtual void key_event(key_t::key_t key);
+
+	void capture_focus() {
+		focus_manager_t::instance.capture_child(this);
+	}
+
+	void release_focus() {
+		focus_manager_t::instance.release_child(this);
 	}
 
 };
 
 
 
+// могут быть в фокусе, "выбраны"
+class focus_client_t {
+public:
+	property_t<bool, focus_client_t> selected;
+private:
+	bool _selected;
+
+private:
+	bool get_selected() {
+		return _selected;
+	}
+public:
+	focus_client_t() {
+		_selected = false;
+		selected.init(this,&focus_client_t::get_selected, &focus_client_t::set_selected);
+	}
+
+
+	virtual void set_selected(bool selected) {
+		_selected = selected;
+	}
+
+};
+
+
+
+// Базовый класс всех объектов экрана
 class gobject_t { 
 public:
 	s32 x; // координаты относительно родительского контейнера
@@ -64,30 +152,26 @@ public:
 	bool visible;
 
 	gobject_t *parent;
-	layout_t *layout;
-	preferred_layout_t *preferred_layout;
 
-	property_t<bool, gobject_t> selected;
+	layout_t *layout;
+
 	property_t<bool, gobject_t> enabled;
 	property_t<bool, gobject_t> dirty;
-	property_t<bool, gobject_t> can_be_selected;
 
-	focus_manager_t focus_manager;
 private:
-	bool _can_be_selected;
-	bool _selected;
 	bool _enabled;
 	bool _dirty; // if true - shall render
+	gobject_t *last_selectable;
 
 
 public:
 	gobject_t() {
-		parent=(0),x=(0),y=(0),w=(0),h=(0),_dirty=(false), _can_be_selected=(false);
-		visible = true, layout = 0, preferred_layout = 0, _selected = false, _enabled = true;
-		selected.init(this,&gobject_t::get_selected, &gobject_t::set_selected);
+		parent = 0;
+		x=(0),y=(0),w=(0),h=(0),_dirty=(false), 
+		visible = true, layout = 0,  _enabled = true;
 		enabled.init(this,&gobject_t::get_enabled, &gobject_t::set_enabled);
 		dirty.init(this,&gobject_t::get_dirty, &gobject_t::set_dirty);
-		can_be_selected.init(this,&gobject_t::get_can_be_selected, &gobject_t::set_can_be_selected);
+		last_selectable = 0;
 	}
 
 	virtual void init() {
@@ -97,24 +181,14 @@ private:
 	bool get_dirty() {
 		return _dirty;
 	}
-	bool get_selected() {
-		return _selected;
-	}
 	bool get_enabled() {
 		return _enabled;
 	}
-	bool get_can_be_selected() {
-		return _can_be_selected && _enabled;
-	}
 public:
-	void set_can_be_selected(bool can_be_selected) {
-		_can_be_selected = can_be_selected;
-	}
+
+
 	virtual void set_dirty(bool dirty) {
 		_dirty = dirty;
-	}
-	virtual void set_selected(bool selected) {
-		_selected = selected;
 	}
 	virtual void set_enabled(bool enabled) {
 		_enabled = enabled;
@@ -142,11 +216,23 @@ public:
 
 
 	virtual void render(surface_t &dst) {
-//		render_children(dst);
 	}
 	
 	// перечислитель всех дочерних обьектов
 	virtual gobject_t* next_all(void* prev) {
+		return 0;
+	}
+
+	focus_master_t * get_focus_master() {
+
+		gobject_t *p = parent;
+		while (p) {
+			focus_master_t *ret = dynamic_cast<focus_master_t*>(p);
+			if (ret) {
+				return ret;
+			}
+			p = p->parent;
+		}
 		return 0;
 	}
 
@@ -161,41 +247,42 @@ public:
 		return p;
 	}
 
-	// возвращает признак дочерних объектов, в дереве которых есть selectable
-	gobject_t * first_selectable() {
-
-		gobject_t* p = next_visible(0);
-
-		while (p) {
-			if (p->enabled) {
-				if (p->can_be_selected) {
-					return p;
-				}
-				if (p->first_selectable()) {
-					return p;
-				}
-			}
-			p = next_visible(p);
-		}
-		return p;
-	}
-
-	// перечеслитель всех дочерних обьектов, способных к фокусу, или дочерних объектов, в дереве которых есть selectable
-	gobject_t* next_selectable(void* prev) {
+	// перечислитель всех дочерних обьектов, способных к фокусу с поиском в глубину
+	gobject_t * next_selectable_deep(void* prev) {
 
 		gobject_t* p = next_visible(prev);
+		while (p) {
+			focus_client_t *ret = dynamic_cast<focus_client_t*>(p);
+			if (p->enabled && ret) {
+				return p;
+			}
+			p = next_visible(p);
+		}
+
+		// в своих детях не нашли, поищем в детях детей
+		p = next_visible(0);
 
 		while (p) {
 			if (p->enabled) {
-				if (p->can_be_selected || p->first_selectable()) {
-					return p;
+				gobject_t* pp = p->next_selectable_deep(prev);
+				if (pp) {
+					last_selectable = p;
+					return pp;
+
+				} else if (last_selectable == p) {
+					// не нашли в дите, в котором раньше находили - переходим к итерации след. дитя
+					last_selectable = 0;
+					prev = 0;
 				}
 			}
 			p = next_visible(p);
 		}
-		return p;
+
+		return 0;
 	}
 
+
+	// вызывает do_layout для каждого из детей
 	void layout_children() {
 		_MY_ASSERT(w && h, return);
 		gobject_t *bt = next_visible(0);
@@ -210,35 +297,23 @@ public:
 
 
 	virtual void get_preferred_size(s32 &pw, s32 &ph) {
-
-		_MY_ASSERT(preferred_layout,return);
-
-		if (preferred_layout) {
-			preferred_layout->get_preferred_size(this, pw,ph);
-		} 
+		_MY_ASSERT(layout,return);
+		layout->get_preferred_size(this, pw,ph);
 	}
 
 	// размещает детей в пространстве родителя
 	virtual void do_layout() {
 		_MY_ASSERT(w && h,return);
-//		if (!(w && h)) return;
-		if (layout)
+		// если layout не указан, то считаем, что все дети были расположены в init
+		if (layout) {
 			layout->layout(this);
-		layout_children();
-	}
-
-
-	void capture_key_events(gobject_t *child) {
-		focus_manager.capture_child(child);
-	}
-
-	virtual void key_event(key_t::key_t key) {
-		_MY_ASSERT(visible && enabled, return);
-		// отдаем события детям
-		focus_manager.key_event(key, this);
+		}
+		layout_children();	
 	}
 
 };
+
+
 
 class rasterizer_t {
 public:
@@ -247,16 +322,30 @@ public:
 public:
 
 	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
-
 	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw = false) {
+		return render(p,dst,force_redreaw,-1,-1,-1,-1);
+	}
+
+	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw, s32 pax, s32 pay, s32 paw, s32 pah) {
 		deepLevel++;
 		_MY_ASSERT(p->visible,return false);
 		bool ret = false;
 
 		if (p->dirty || force_redreaw) {
-			s32 x1,y1;
+			s32 x1,y1, w1,h1;
 			p->translate(x1,y1);
-			dst.set_allowed_area(x1,y1,p->w,p->h);
+			w1 = p->w;
+			h1 = p->h;
+			if (pah >= 0) {
+				if (!surface_t::trim_to(x1,y1,w1,h1, pax,pay,paw,pah)) {
+					return false;
+				};
+			}
+			pax = x1;
+			pay = y1;
+			paw = w1;
+			pah = h1;
+			dst.set_allowed_area(pax,pay,paw,pah);
 // DEBUG DRAW:
 			dst.ctx.pen_color = colors[deepLevel & 0x03];
 //			dst.rect(x1,y1,p->w,p->h);
@@ -270,7 +359,7 @@ public:
 		// только дочерние
 		gobject_t *pp = p->next_visible(0);
 		while (pp) {
-			bool ret1 = render(pp, dst, force_redreaw);
+			bool ret1 = render(pp, dst, force_redreaw, pax, pay, paw, pah);
 			if (!ret && ret1)
 				ret = true;
 			pp = p->next_visible(pp);
@@ -384,46 +473,6 @@ public:
 };
 
 
-// калькулятор предпочитаемого размера - стек
-// вычисляет ширину и высоту виджета как сумму ширин\высот его дочерних компонентов
-class preferred_stack_layout_t : public preferred_layout_t {
-public:
-	s32 spx;
-	s32 spy;
-	bool vertical;
-public:
-	preferred_stack_layout_t() {
-		spx = spy = 5;
-		vertical = true;
-	}
-
-
-	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
-		gobject_t *bt = parent->next_visible(0);
-		aw = 0;
-		ah = 0;
-		while (bt) {
-			s32 btw, bth;
-			bt->get_preferred_size(btw, bth);
-
-			if (vertical) {
-				if (btw > aw) {
-					aw = btw;
-				}
-				ah += bth + spy;
-			} else {
-				if (bth > ah) {
-					ah = bth;
-				}
-				aw += btw + spx;
-			}
-			bt = parent->next_visible(bt);
-		}
-		if (vertical && ah) ah -= spy;
-		if (!vertical && aw) aw -= spx;
-	}
-};
-
 // выравнивает дочерние обьекты по центру
 class center_layout_t : public layout_t {
 public:
@@ -436,6 +485,10 @@ public:
 		vertical = true;
 	}
 
+
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0,return);
+	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
 		gobject_t *p = parent->next_visible(0);
@@ -497,7 +550,35 @@ public:
 		preferred_item_size = false;
 	}
 
-	void layout(gobject_t *parent) OVERRIDE {
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		gobject_t *bt = parent->next_visible(0);
+		aw = 0;
+		ah = 0;
+		while (bt) {
+			s32 btw, bth;
+			bt->get_preferred_size(btw, bth);
+
+			if (vertical) {
+				if (btw > aw) {
+					aw = btw;
+				}
+				ah += bth + spy;
+			} else {
+				if (bth > ah) {
+					ah = bth;
+				}
+				aw += btw + spx;
+			}
+			bt = parent->next_visible(bt);
+		}
+		if (vertical && ah) ah -= spy;
+		if (!vertical && aw) aw -= spx;
+	}
+
+
+
+	virtual void layout(gobject_t *parent) OVERRIDE {
+
 		_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
 		gobject_t *child = parent->next_visible(0);
@@ -539,6 +620,10 @@ public:
 class stretch_layout_t : public layout_t {
 public:
 public:
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0, return);
+	}
+
 	virtual void layout(gobject_t *parent) OVERRIDE {
 		gobject_t *child = parent->next_visible(0);
 		while (child) {
@@ -564,6 +649,11 @@ public:
 		levels[2] = 75;
 		levels[3] = -1;
 	}
+
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0, return);
+	}
+
 	virtual void layout(gobject_t *parent) OVERRIDE {
 		gobject_t *child = parent->next_visible(0);
 		gobject_t *pchild = 0;
@@ -593,7 +683,7 @@ public:
 
 
 
-class button_t : public gobject_t {
+class button_t : public gobject_t, public focus_client_t {
 public:
 	label_t l_top;
 	label_t l_mid;
@@ -615,7 +705,6 @@ private:
 public:
 	button_t() {
 		_pressed = (false);
-		can_be_selected = true;
 		layout = &levels_layout;
 		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
 	}
@@ -659,7 +748,7 @@ public:
 #define COLOR_SELECTED 0xAFBFCF
 #define COLOR_CAPTURED 0x267F00
 
-class text_box_t : public gobject_t {
+class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
 	typedef gobject_t super;
 public:
 	property_t<string_t , text_box_t> value;
@@ -687,7 +776,6 @@ public:
 		lab.visible = true;
 		caret_pos = 0;
 		cursor_visible = false;
-		can_be_selected = true;
 		cursor_color = 0x000000;
 	}
 
@@ -727,10 +815,10 @@ public:
 		if (key == key_t::K_ENTER) {
 			_MY_ASSERT(parent,return);
 			if (!cursor_visible) {
-				parent->capture_key_events(this);
+				this->capture_focus();
 				cursor_visible = true;
 			} else {
-				parent->capture_key_events(0);
+				this->release_focus();
 				cursor_visible = false;
 			}
 			goto lab_update_input;
@@ -792,7 +880,7 @@ lab_update_input:
 	virtual void set_selected(bool selected) {
 		_MY_ASSERT(parent,return);
 		dirty = true;
-		super::set_selected(selected);
+		focus_client_t::set_selected(selected);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE {
@@ -820,7 +908,7 @@ lab_update_input:
 };
 
 // метка с функцией выбора из списка значений
-class combo_box_t : public gobject_t {
+class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
 	typedef gobject_t super;
 
 	class empty_iterator_t : public iterator_t<string_t> {
@@ -867,7 +955,6 @@ public:
 		lab.visible = true;
 		values.init(this,&combo_box_t::set_values);
 		value.init(this,&combo_box_t::get_value, &combo_box_t::set_value);
-		can_be_selected = true;
 
 		values = &empty_iterator;
 	}
@@ -901,10 +988,10 @@ public:
 		if (key == key_t::K_ENTER) {
 			_MY_ASSERT(parent,return);
 			if (!captured) {
-				parent->capture_key_events(this);
+				this->capture_focus();
 				captured = true;
 			} else {
-				parent->capture_key_events(0);
+				this->release_focus();
 				captured = false;
 			}
 			goto lab_update_cbox;
@@ -994,10 +1081,6 @@ public:
 			return 0;
 	}
 
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		_MY_ASSERT(modals.length(),return);
-		modals.last()->key_event(key);
-	}
 
 };
 
