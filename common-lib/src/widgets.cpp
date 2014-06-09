@@ -47,7 +47,8 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 
 
 	if (!selected) {
-		focus_client_t *p = dynamic_cast<focus_client_t*>(root->next_selectable_deep(0));
+		gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
+		focus_client_t *p = dynamic_cast<focus_client_t*>(iter.next());
 		select(p);
 		return;
 	}
@@ -101,11 +102,11 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 	float sxf = (float)sx, syf = (float)sy;
 	float ud,dd,ld,rd;
 
-
-	gobject_t *p =  root->next_selectable_deep(0);
+	gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
+	gobject_t *p =  iter.next();
 	while (p) {
 		if (p == selected_g) {
-			p = root->next_selectable_deep(p);
+			p = iter.next();
 			continue;
 		}
 
@@ -139,7 +140,7 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 				rd = pd;
 			}
 		}
-		p = root->next_selectable_deep(p);
+		p = iter.next();
 	}
 
 	if (direction == direction_t::UP) {

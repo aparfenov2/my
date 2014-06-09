@@ -11,14 +11,6 @@
 		</unit>
 	</units>
 	
-<!-- Виды определяются в коде, здесь только ссылки-->	
-	<views>
-		<view id="dme" /> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
-		<view id="tbox" /> <!-- label{param_name} + textbox -->
-		<view id="cbox" /> <!-- label{param_name} + combobox -->
-		<view id="tbox_cbox" /> <!-- label{param_name} + textbox + combobox -->
-		<view id="tbox_label" /> <!-- label{param_name} + textbox + label -->
-	</views>
 
 	<types>
 <!-- опишем простые типы, чтобы их можно было найти -->	
@@ -58,12 +50,33 @@
 		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
 	</parameters>
 	
-	<groups>
-		<group id="main" name="Главное">
+	
+	<views>
+<!-- предопределенные (в коде) виды. Для них также создается мета -->
+		<view id="dme" kind="predefined"/> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
+		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
+		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->
+		<view id="tbox_cbox" kind="predefined" /> <!-- label{param_name} + textbox + combobox -->
+		<view id="tbox_label" kind="predefined" /> <!-- label{param_name} + textbox + label -->
+<!-- генерируемые виды -->
+		<view id="root" kind="generated">
+		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
+		<!-- контроллер меню достраивает вид меню по списку параметров -->
+			<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" x="0" y="0" w="w" h="h" controller="menu" />
+<!-- view reference -->			
+<!--			<view id="&cbox" x="0" y="0" w="w" h="h" /> -->
+		</view>
+		
+	</views>
+	
+	<menus>
+		<menu id="main" name="Главное">
 			<parameterRef id="dme" />
+<!--			
 			<parameterRef id="measure_ctl" />
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
+-->			
 		</group>
 	</groups>
 </schema>

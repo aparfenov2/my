@@ -7,6 +7,8 @@
 #include "assert_impl.h"
 #include "basic.h"
 
+#include <vector>
+
 
 namespace myvi {
 
@@ -144,6 +146,137 @@ public:
 // Базовый класс всех объектов экрана
 class gobject_t { 
 public:
+
+	// итератор по всей коллекции детей
+	class iterator_all_t  {
+	private:
+		const gobject_t *that;
+		std::vector<gobject_t *>::const_iterator it;
+		bool neverRun;
+	public:
+		iterator_all_t() {
+			that = 0;
+			neverRun = true;
+		}
+
+		iterator_all_t(const gobject_t *_that) {
+			that = _that;
+			neverRun = true;
+			it = that->children.begin();
+		}
+
+		gobject_t * next() {
+
+			if (!that) return 0;
+
+			if (neverRun) {
+				it = that->children.begin();
+			}
+			
+			if (it != that->children.end()) {
+				if (neverRun) {
+					neverRun = false;
+					return *it;
+				}
+				it++;
+				if (it != that->children.end()) {
+					return *it;
+				}
+			}
+			return 0;
+		}
+	};
+
+	// итератор по видимым детям
+	class iterator_visible_t  {
+	private:
+		iterator_all_t iter_all;
+	public:
+		iterator_visible_t() {
+		}
+
+		iterator_visible_t(iterator_all_t _iter_all) {
+			iter_all = _iter_all;
+		}
+
+		gobject_t * next() {
+			gobject_t * nxt = iter_all.next();
+			while (nxt && !nxt->visible) {
+				nxt = iter_all.next();
+			}
+			return nxt;
+		}
+
+	};
+
+	// итератор по selectable детям с заходом в глубину
+	class iterator_visible_deep_t {
+	private:
+		stack_t<iterator_visible_t, _MAX_GOBJECT_TREE_DEPTH> iter_stack;
+	public:
+		iterator_visible_deep_t() {
+		}
+
+		iterator_visible_deep_t(iterator_visible_t _iter_visible) {
+			iter_stack.push(_iter_visible);
+		}
+
+		gobject_t * next() {
+
+			gobject_t * p = iter_stack.last_ref()->next();
+			
+			do {
+
+				if (p) {
+					iterator_visible_t child_iter = p->iterator_visible();
+					iter_stack.push(child_iter);
+					return p;
+
+				}
+
+				while (!p) {
+					iter_stack.pop();
+
+					if (iter_stack.is_empty()) {
+						return 0;
+					}
+					p = iter_stack.last_ref()->next();
+				}
+
+			} while (p);
+
+
+			return p;
+		}
+
+	};
+
+	// итератор по selectable детям с заходом в глубину
+	class iterator_selectable_deep_t {
+	private:
+		iterator_visible_deep_t iter_visible_deep;
+	public:
+		iterator_selectable_deep_t(iterator_visible_deep_t _iterator_visible_deep) {
+			iter_visible_deep = _iterator_visible_deep;
+		}
+
+		gobject_t * next() {
+
+			gobject_t * p = iter_visible_deep.next();
+
+			while (p) {
+				if (p->enabled && dynamic_cast<focus_client_t*>(p)) {
+					break;
+				}
+				p = iter_visible_deep.next();
+			}
+			return p;
+		}
+
+	};
+
+
+public:
 	s32 x; // координаты относительно родительского контейнера
 	s32 y;
 	s32 w; // размеры обьекта
@@ -157,6 +290,8 @@ public:
 
 	property_t<bool, gobject_t> enabled;
 	property_t<bool, gobject_t> dirty;
+
+	std::vector<gobject_t *> children;
 
 private:
 	bool _enabled;
@@ -193,13 +328,20 @@ public:
 	virtual void set_enabled(bool enabled) {
 		_enabled = enabled;
 	}
+
+	void add_child(gobject_t *child) {
+		child->parent = this;
+		children.push_back(child);
+	}
+
 	
 	void init_children() {		// must be called from derived class ctor
-		gobject_t *p = next_all(0);
+		iterator_all_t iter = iterator_all();
+		gobject_t *p = iter.next();
 		while(p) {
 			p->parent = this;
 			p->init();
-			p = next_all(p);
+			p = iter.next();
 		}
 	}
 
@@ -219,9 +361,26 @@ public:
 	}
 	
 	// перечислитель всех дочерних обьектов
-	virtual gobject_t* next_all(void* prev) {
-		return 0;
+	const iterator_all_t iterator_all() const {
+		return iterator_all_t(this);
 	}
+
+	// перечислитель всех видимых дочерних обьектов
+	const iterator_visible_t iterator_visible() const {
+		return iterator_visible_t(iterator_all());
+	}
+
+	// перечислитель всех видимых дочерних обьектов с заходом в глубину
+	const iterator_visible_deep_t iterator_visible_deep() const {
+		return iterator_visible_deep_t(iterator_visible());
+	}
+
+
+	// итератор по selectable детям с заходом в глубину
+	const iterator_selectable_deep_t iterator_selectable_deep() const {
+		return iterator_selectable_deep_t(iterator_visible_deep());
+	}
+
 
 	focus_master_t * get_focus_master() {
 
@@ -236,59 +395,14 @@ public:
 		return 0;
 	}
 
-	// перечислитель всех  видимых дочерних обьектов
-	gobject_t* next_visible(void* prev) {
-
-		gobject_t* p = next_all(prev);
-
-		while (p && !p->visible) {
-			p = next_all(p);
-		}
-		return p;
-	}
-
-	// перечислитель всех дочерних обьектов, способных к фокусу с поиском в глубину
-	gobject_t * next_selectable_deep(void* prev) {
-
-		gobject_t* p = next_visible(prev);
-		while (p) {
-			focus_client_t *ret = dynamic_cast<focus_client_t*>(p);
-			if (p->enabled && ret) {
-				return p;
-			}
-			p = next_visible(p);
-		}
-
-		// в своих детях не нашли, поищем в детях детей
-		p = next_visible(0);
-
-		while (p) {
-			if (p->enabled) {
-				gobject_t* pp = p->next_selectable_deep(prev);
-				if (pp) {
-					last_selectable = p;
-					return pp;
-
-				} else if (last_selectable == p) {
-					// не нашли в дите, в котором раньше находили - переходим к итерации след. дитя
-					last_selectable = 0;
-					prev = 0;
-				}
-			}
-			p = next_visible(p);
-		}
-
-		return 0;
-	}
-
-
 	// вызывает do_layout для каждого из детей
 	void layout_children() {
 		_MY_ASSERT(w && h, return);
-		gobject_t *bt = next_visible(0);
+		iterator_visible_t iter = iterator_visible();
+		gobject_t *bt = iter.next();
 		while (bt) {
 			bt->do_layout();
-			bt = next_visible(bt);
+			bt = iter.next();
 		}
 	}
 	// дитё запрашивает изменение своего размера
@@ -357,12 +471,14 @@ public:
 //			return true;
 		} 
 		// только дочерние
-		gobject_t *pp = p->next_visible(0);
+		gobject_t::iterator_visible_t iter = p->iterator_visible();
+		gobject_t *pp = iter.next();
+
 		while (pp) {
 			bool ret1 = render(pp, dst, force_redreaw, pax, pay, paw, pah);
 			if (!ret && ret1)
 				ret = true;
-			pp = p->next_visible(pp);
+			pp = iter.next();
 		}
 		deepLevel--;
 		return ret;
@@ -370,10 +486,11 @@ public:
 private:
 	static void clear_dirty(gobject_t *p) {
 		p->dirty = (false);
-		gobject_t *pp = p->next_visible(0);
+		gobject_t::iterator_visible_t iter = p->iterator_visible();
+		gobject_t *pp = iter.next();
 		while (pp) {
 			clear_dirty(pp);
-			pp = p->next_visible(pp);
+			pp = iter.next();
 		}
 	}
 
@@ -491,7 +608,8 @@ public:
 	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *p = parent->next_visible(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *p = iter.next();
 		s32 py = 0, px = 0;
 		while (p) {
 			_WEAK_ASSERT(p->visible,return);
@@ -511,7 +629,7 @@ public:
 				px += p->w + spx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next_visible(p);
+			p = iter.next();
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -519,7 +637,9 @@ public:
 
 		s32 dy = (parent->h - py)/2;
 		s32 dx = (parent->w - px)/2;
-		p = parent->next_visible(0);
+
+		iter = parent->iterator_visible();
+		p = p = iter.next();
 		while (p) {
 			if (vertical) {
 				p->y += dy;
@@ -527,7 +647,7 @@ public:
 				p->x += dx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next_visible(p);
+			p = iter.next();
 		}
 	}
 };
@@ -551,7 +671,8 @@ public:
 	}
 
 	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
-		gobject_t *bt = parent->next_visible(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *bt = iter.next();
 		aw = 0;
 		ah = 0;
 		while (bt) {
@@ -569,7 +690,7 @@ public:
 				}
 				aw += btw + spx;
 			}
-			bt = parent->next_visible(bt);
+			bt = iter.next();
 		}
 		if (vertical && ah) ah -= spy;
 		if (!vertical && aw) aw -= spx;
@@ -581,7 +702,9 @@ public:
 
 		_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
-		gobject_t *child = parent->next_visible(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
+
 		s32 px = 0;
 		s32 py = 0;
 		while (child) {
@@ -607,7 +730,7 @@ public:
 				child->h = parent->h;
 				px += child->w + spx;
 			}
-			child = parent->next_visible(child);
+			child = iter.next();
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -625,13 +748,15 @@ public:
 	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next_visible(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
 		while (child) {
 			child->x = 0;
 			child->y = 0;
 			child->h = parent->h;
 			child->w = parent->w;
-			child = parent->next_visible(child);
+
+			child = iter.next();
 			_WEAK_ASSERT(!child,return); // нельзя растянуть все обьекты
 		}
 	}
@@ -655,7 +780,8 @@ public:
 	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next_visible(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
 		gobject_t *pchild = 0;
 		s32 i = 0;
 		while (child) {
@@ -672,7 +798,7 @@ public:
 			}
 			i++;
 			pchild = child;
-			child = parent->next_visible(child);
+			child = iter.next();
 		}
 		if (pchild && pchild->y + pchild->h > parent->h) {
 			pchild->h = parent->h - pchild->y;
@@ -707,6 +833,10 @@ public:
 		_pressed = (false);
 		layout = &levels_layout;
 		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
+
+		add_child(&l_top);
+		add_child(&l_mid);
+		add_child(&l_bot);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE {
@@ -731,14 +861,6 @@ public:
 		dst.ctx.alfa = 128;
 		dst.rect(ax,ay,w,h);
 
-	}
-
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &l_top;
-		else if (prev == &l_top) return &l_mid;
-		else if (prev == &l_mid) return &l_bot;
-		else return 0;
 	}
 
 };
@@ -777,6 +899,8 @@ public:
 		caret_pos = 0;
 		cursor_visible = false;
 		cursor_color = 0x000000;
+
+		add_child(&lab);
 	}
 
 	void measure_cursor_pos() {
@@ -787,11 +911,6 @@ public:
 			cursor_pos[i-1] = lw;
 		}
 		lab.text = _value;
-	}
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &lab;
-		return 0;
 	}
 
 	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
@@ -957,6 +1076,8 @@ public:
 		value.init(this,&combo_box_t::get_value, &combo_box_t::set_value);
 
 		values = &empty_iterator;
+
+		add_child(&lab);
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
@@ -975,11 +1096,6 @@ public:
 		lab.y = 0;
 		lab.w = w;
 		lab.h = h;
-	}
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &lab;
-		return 0;
 	}
 
 	virtual void key_event(key_t::key_t key) OVERRIDE {
@@ -1046,41 +1162,27 @@ lab_update_cbox:
 
 // оверлей модальных диалогов - должен находиться в короне дерева отображения
 
-#define MAX_MODAL_ITEMS 4
 
 class modal_overlay_t : public gobject_t {
 private:
-	s32 _prev;
 public:
-	stack_t<gobject_t *, MAX_MODAL_ITEMS> modals;
 
 	void push_modal(gobject_t *modal) {
-		modals.push(modal);
-		modal->parent = this;
+
+		add_child(modal);
+
 		modal->dirty = true;
 	}
 
 	void pop_modal(gobject_t *modal) {
-		gobject_t *popped = modals.pop();
+
+		gobject_t *popped = children.back();
+		children.pop_back();
+
 		_MY_ASSERT(modal == popped,return);
 		modal->parent = 0;
-		modals.last()->dirty = true;
+		children.front()->dirty = true;
 	}
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		_MY_ASSERT(modals.length(),return 0);
-		if (!prev) {
-			_prev = 0;
-			return modals[0];
-		}
-		_MY_ASSERT(prev == modals[_prev],return 0);
-		_prev++;
-		if (_prev < modals.length())
-			return modals[_prev];
-		else
-			return 0;
-	}
-
 
 };
 
