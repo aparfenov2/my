@@ -2,7 +2,7 @@
 #define _MODEL_H
 
 #include "exported.h"
-
+#include "basic.h"
 
 
 // ------------------- parameter abstraction -------------------------------
@@ -321,7 +321,10 @@ private:
 		out_mode = msg::OutputMode::omAntenna;
 	}
 public:
-	static app_model_t instance;
+	static app_model_t & instance() {
+		static app_model_t instance;
+		return instance;
+	}
 
 	void init() {
 		dme_ch_changed(dme.ch,dme.suffix);

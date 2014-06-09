@@ -87,6 +87,11 @@ public:
 		return data[count-1];
 	}
 
+	T * last_ref() {
+		_MY_ASSERT(count, return 0);
+		return & data[count-1];
+	}
+
 };
 
 
@@ -393,6 +398,7 @@ public:
 		return (base->*dlg)(prev);
 	}
 };
+
 
 
 // Базовый класс шаблона свойства.

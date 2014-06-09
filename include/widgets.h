@@ -7,6 +7,9 @@
 #include "assert_impl.h"
 #include "basic.h"
 
+#include <vector>
+
+
 namespace myvi {
 
 
@@ -15,13 +18,8 @@ class gobject_t;
 class layout_t {
 public:
 public:
+	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) = 0;
 	virtual void layout(gobject_t *parent) = 0;
-};
-
-class preferred_layout_t {
-public:
-public:
-	virtual void set_preferred_size(gobject_t *parent) = 0;
 };
 
 
@@ -29,19 +27,255 @@ namespace globals {
 	extern bool gui_debug;
 }
 
-class focus_manager_t {
+#define _MAX_GOBJECT_TREE_DEPTH 32
+#define _MAX_FOCUS_MANAGER_SUBSCRIBERS 32
+
+namespace direction_t {
+	typedef enum {
+		UP,
+		DOWN,
+		LEFT,
+		RIGHT
+	} direction_t;
+}
+
+class focus_client_t;
+class focus_aware_t;
+
+// глобальный менеджер фокуса
+class focus_manager_t : public publisher_t<focus_client_t *,_MAX_FOCUS_MANAGER_SUBSCRIBERS> {
 public:
-	gobject_t *selected;
-public:
+	focus_client_t *selected;
+	stack_t<focus_aware_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
+
+	static focus_manager_t instance;
+
+private:
+
 	focus_manager_t() {
 		selected = 0;
 	}
-	bool key_event(key_t::key_t key, iterator_t<gobject_t> *iter);
-	void select(gobject_t *p);
+
+public:
+	void key_event(key_t::key_t key, gobject_t *root);
+	void select(focus_client_t *p);
+
+	void capture_child(focus_aware_t *child) {
+		_MY_ASSERT(child,return);
+		if (captured.length()) {
+			_MY_ASSERT(captured.last() != child, return);
+		}
+		captured.push(child);
+	}
+
+	void release_child(focus_aware_t *child) {
+		_MY_ASSERT(child,return);
+		_MY_ASSERT(captured.last()  == child,return);
+		captured.pop();
+	}
+
+	focus_client_t * locate_next(direction_t::direction_t direction, gobject_t *root);
+
+};
+
+class focus_intention_t {
+public:
+	focus_client_t *current;
+	focus_client_t *next;
+	direction_t::direction_t direction;
+public:
+	focus_intention_t() {
+		current = 0;
+		next = 0;
+		direction = direction_t::UP;
+	}
 };
 
 
-class gobject_t : public iterator_t<gobject_t> { //, public subscriber_t<message_t> { 
+// могут изменять назначения фокуса
+class focus_master_t {
+public:
+public:
+	virtual void alter_focus_intention(focus_intention_t &intention) = 0;
+};
+
+
+// могут захватывать фокус, обрабатывать сообщения клавиатуры
+class focus_aware_t {
+public:
+	virtual void key_event(key_t::key_t key);
+
+	void capture_focus() {
+		focus_manager_t::instance.capture_child(this);
+	}
+
+	void release_focus() {
+		focus_manager_t::instance.release_child(this);
+	}
+
+};
+
+
+
+// могут быть в фокусе, "выбраны"
+class focus_client_t {
+public:
+	property_t<bool, focus_client_t> selected;
+private:
+	bool _selected;
+
+private:
+	bool get_selected() {
+		return _selected;
+	}
+public:
+	focus_client_t() {
+		_selected = false;
+		selected.init(this,&focus_client_t::get_selected, &focus_client_t::set_selected);
+	}
+
+
+	virtual void set_selected(bool selected) {
+		_selected = selected;
+	}
+
+};
+
+
+
+// Базовый класс всех объектов экрана
+class gobject_t { 
+public:
+
+	// итератор по всей коллекции детей
+	class iterator_all_t  {
+	private:
+		const gobject_t *that;
+		std::vector<gobject_t *>::const_iterator it;
+		bool neverRun;
+	public:
+		iterator_all_t() {
+			that = 0;
+			neverRun = true;
+		}
+
+		iterator_all_t(const gobject_t *_that) {
+			that = _that;
+			neverRun = true;
+			it = that->children.begin();
+		}
+
+		gobject_t * next() {
+
+			if (!that) return 0;
+
+			if (neverRun) {
+				it = that->children.begin();
+			}
+			
+			if (it != that->children.end()) {
+				if (neverRun) {
+					neverRun = false;
+					return *it;
+				}
+				it++;
+				if (it != that->children.end()) {
+					return *it;
+				}
+			}
+			return 0;
+		}
+	};
+
+	// итератор по видимым детям
+	class iterator_visible_t  {
+	private:
+		iterator_all_t iter_all;
+	public:
+		iterator_visible_t() {
+		}
+
+		iterator_visible_t(iterator_all_t _iter_all) {
+			iter_all = _iter_all;
+		}
+
+		gobject_t * next() {
+			gobject_t * nxt = iter_all.next();
+			while (nxt && !nxt->visible) {
+				nxt = iter_all.next();
+			}
+			return nxt;
+		}
+
+	};
+
+	// итератор по selectable детям с заходом в глубину
+	class iterator_visible_deep_t {
+	private:
+		stack_t<iterator_visible_t, _MAX_GOBJECT_TREE_DEPTH> iter_stack;
+	public:
+		iterator_visible_deep_t() {
+		}
+
+		iterator_visible_deep_t(iterator_visible_t _iter_visible) {
+			iter_stack.push(_iter_visible);
+		}
+
+		gobject_t * next() {
+
+			gobject_t * p = iter_stack.last_ref()->next();
+			
+			do {
+
+				if (p) {
+					iterator_visible_t child_iter = p->iterator_visible();
+					iter_stack.push(child_iter);
+					return p;
+
+				}
+
+				while (!p) {
+					iter_stack.pop();
+
+					if (iter_stack.is_empty()) {
+						return 0;
+					}
+					p = iter_stack.last_ref()->next();
+				}
+
+			} while (p);
+
+
+			return p;
+		}
+
+	};
+
+	// итератор по selectable детям с заходом в глубину
+	class iterator_selectable_deep_t {
+	private:
+		iterator_visible_deep_t iter_visible_deep;
+	public:
+		iterator_selectable_deep_t(iterator_visible_deep_t _iterator_visible_deep) {
+			iter_visible_deep = _iterator_visible_deep;
+		}
+
+		gobject_t * next() {
+
+			gobject_t * p = iter_visible_deep.next();
+
+			while (p) {
+				if (p->enabled && dynamic_cast<focus_client_t*>(p)) {
+					break;
+				}
+				p = iter_visible_deep.next();
+			}
+			return p;
+		}
+
+	};
+
+
 public:
 	s32 x; // координаты относительно родительского контейнера
 	s32 y;
@@ -51,32 +285,28 @@ public:
 	bool visible;
 
 	gobject_t *parent;
-	layout_t *layout;
-	preferred_layout_t *preferred_layout;
 
-	property_t<bool, gobject_t> selected;
+	layout_t *layout;
+
 	property_t<bool, gobject_t> enabled;
 	property_t<bool, gobject_t> dirty;
-	property_t<bool, gobject_t> can_be_selected;
 
-	focus_manager_t focus_manager;
+	std::vector<gobject_t *> children;
+
 private:
-	bool _can_be_selected;
-	bool _selected;
 	bool _enabled;
 	bool _dirty; // if true - shall render
-	gobject_t *captured_child;
+	gobject_t *last_selectable;
+
 
 public:
 	gobject_t() {
-		parent=(0),x=(0),y=(0),w=(0),h=(0),_dirty=(false), _can_be_selected=(false);
-		visible = true, layout = 0, preferred_layout = 0, _selected = false, _enabled = true;
-		captured_child = 0;
-
-		selected.init(this,&gobject_t::get_selected, &gobject_t::set_selected);
+		parent = 0;
+		x=(0),y=(0),w=(0),h=(0),_dirty=(false), 
+		visible = true, layout = 0,  _enabled = true;
 		enabled.init(this,&gobject_t::get_enabled, &gobject_t::set_enabled);
 		dirty.init(this,&gobject_t::get_dirty, &gobject_t::set_dirty);
-		can_be_selected.init(this,&gobject_t::get_can_be_selected, &gobject_t::set_can_be_selected);
+		last_selectable = 0;
 	}
 
 	virtual void init() {
@@ -86,35 +316,32 @@ private:
 	bool get_dirty() {
 		return _dirty;
 	}
-	bool get_selected() {
-		return _selected;
-	}
 	bool get_enabled() {
 		return _enabled;
 	}
-	bool get_can_be_selected() {
-		return _can_be_selected && _enabled;
-	}
 public:
-	void set_can_be_selected(bool can_be_selected) {
-		_can_be_selected = can_be_selected;
-	}
+
+
 	virtual void set_dirty(bool dirty) {
 		_dirty = dirty;
-	}
-	virtual void set_selected(bool selected) {
-		_selected = selected;
 	}
 	virtual void set_enabled(bool enabled) {
 		_enabled = enabled;
 	}
+
+	void add_child(gobject_t *child) {
+		child->parent = this;
+		children.push_back(child);
+	}
+
 	
 	void init_children() {		// must be called from derived class ctor
-		gobject_t *p = next_all(0);
+		iterator_all_t iter = iterator_all();
+		gobject_t *p = iter.next();
 		while(p) {
 			p->parent = this;
 			p->init();
-			p = next_all(p);
+			p = iter.next();
 		}
 	}
 
@@ -131,96 +358,111 @@ public:
 
 
 	virtual void render(surface_t &dst) {
-//		render_children(dst);
+	}
+	
+	// перечислитель всех дочерних обьектов
+	const iterator_all_t iterator_all() const {
+		return iterator_all_t(this);
 	}
 
-	virtual gobject_t* next_all(void* prev) {
+	// перечислитель всех видимых дочерних обьектов
+	const iterator_visible_t iterator_visible() const {
+		return iterator_visible_t(iterator_all());
+	}
+
+	// перечислитель всех видимых дочерних обьектов с заходом в глубину
+	const iterator_visible_deep_t iterator_visible_deep() const {
+		return iterator_visible_deep_t(iterator_visible());
+	}
+
+
+	// итератор по selectable детям с заходом в глубину
+	const iterator_selectable_deep_t iterator_selectable_deep() const {
+		return iterator_selectable_deep_t(iterator_visible_deep());
+	}
+
+
+	focus_master_t * get_focus_master() {
+
+		gobject_t *p = parent;
+		while (p) {
+			focus_master_t *ret = dynamic_cast<focus_master_t*>(p);
+			if (ret) {
+				return ret;
+			}
+			p = p->parent;
+		}
 		return 0;
 	}
 
-	virtual gobject_t* next(void* prev) SEALED OVERRIDE {
-		gobject_t* p = next_all(prev);
-		while (p && !p->visible)
-			p = next_all(p);
-		return p;
-	}
-
+	// вызывает do_layout для каждого из детей
 	void layout_children() {
 		_MY_ASSERT(w && h, return);
-		gobject_t *bt = next(0);
+		iterator_visible_t iter = iterator_visible();
+		gobject_t *bt = iter.next();
 		while (bt) {
 			bt->do_layout();
-			bt = next(bt);
+			bt = iter.next();
 		}
 	}
-
-	virtual void child_size_changed(gobject_t *child) {
+	// дитё запрашивает изменение своего размера
+	virtual void child_request_size_change(gobject_t *child, s32 new_w, s32 new_h) {
 	}
 
 
-	virtual void set_preferred_size() {
-		if (preferred_layout) {
-			preferred_layout->set_preferred_size(this);
-		}
-		if (next(0))
-			_MY_ASSERT(w && h,return);
-	}
-
-	void set_preferred_size_children() {
-			gobject_t *bt = next(0);
-			while (bt) {
-				bt->set_preferred_size();
-				bt = next(bt);
-			}
+	virtual void get_preferred_size(s32 &pw, s32 &ph) {
+		_MY_ASSERT(layout,return);
+		layout->get_preferred_size(this, pw,ph);
 	}
 
 	// размещает детей в пространстве родителя
 	virtual void do_layout() {
-//		_WEAK_ASSERT(w && h,return);
-		if (!(w && h)) return;
-		if (layout)
+		_MY_ASSERT(w && h,return);
+		// если layout не указан, то считаем, что все дети были расположены в init
+		if (layout) {
 			layout->layout(this);
-		layout_children();
-	}
-
-	void capture_key_events(gobject_t *child) {
-		_MY_ASSERT(!child || (child && child->parent == this && !captured_child),return);
-		captured_child = child;
-	}
-
-	virtual void key_event(key_t::key_t key) {
-		if (!_enabled)
-			return;
-		if (captured_child) {
-//			_MY_ASSERT(captured->visible && captured->selected && captured->can_be_selected);
-			captured_child->key_event(key);
-
-		} else if (!focus_manager.key_event(key, this)) {
-			if (focus_manager.selected) {
-				focus_manager.selected->key_event(key);
-			}
 		}
+		layout_children();	
 	}
 
 };
 
+
+
 class rasterizer_t {
 public:
+	static u32 colors[4];
+	static u32 deepLevel;
 public:
-	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
 
+	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
 	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw = false) {
-		
+		return render(p,dst,force_redreaw,-1,-1,-1,-1);
+	}
+
+	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw, s32 pax, s32 pay, s32 paw, s32 pah) {
+		deepLevel++;
 		_MY_ASSERT(p->visible,return false);
 		bool ret = false;
 
 		if (p->dirty || force_redreaw) {
-			s32 x1,y1;
+			s32 x1,y1, w1,h1;
 			p->translate(x1,y1);
-			dst.set_allowed_area(x1,y1,p->w,p->h);
+			w1 = p->w;
+			h1 = p->h;
+			if (pah >= 0) {
+				if (!surface_t::trim_to(x1,y1,w1,h1, pax,pay,paw,pah)) {
+					return false;
+				};
+			}
+			pax = x1;
+			pay = y1;
+			paw = w1;
+			pah = h1;
+			dst.set_allowed_area(pax,pay,paw,pah);
 // DEBUG DRAW:
-			//dst.ctx.pen_color = 0x00ff00;
-			//dst.rect(x1,y1,p->w,p->h);
+			dst.ctx.pen_color = colors[deepLevel & 0x03];
+//			dst.rect(x1,y1,p->w,p->h);
 
 			p->render(dst);
 			clear_dirty(p);
@@ -229,22 +471,26 @@ public:
 //			return true;
 		} 
 		// только дочерние
-		gobject_t *pp = p->next(0);
+		gobject_t::iterator_visible_t iter = p->iterator_visible();
+		gobject_t *pp = iter.next();
+
 		while (pp) {
-			bool ret1 = render(pp, dst, force_redreaw);
+			bool ret1 = render(pp, dst, force_redreaw, pax, pay, paw, pah);
 			if (!ret && ret1)
 				ret = true;
-			pp = p->next(pp);
+			pp = iter.next();
 		}
+		deepLevel--;
 		return ret;
 	}
 private:
 	static void clear_dirty(gobject_t *p) {
 		p->dirty = (false);
-		gobject_t *pp = p->next(0);
+		gobject_t::iterator_visible_t iter = p->iterator_visible();
+		gobject_t *pp = iter.next();
 		while (pp) {
 			clear_dirty(pp);
-			pp = p->next(pp);
+			pp = iter.next();
 		}
 	}
 
@@ -307,27 +553,25 @@ public:
 //		render_children(dst);
 	}
 
-	virtual void set_preferred_size() OVERRIDE {
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		_MY_ASSERT(visible,return);
 		_MY_ASSERT(ctx.font,return);
 		ctx.font->set_char_size_px(0,ctx.font_size);
 		if (!text32.is_empty()) {
 			// glyph string
-			ctx.font->get_string_size(text32, w, h);
+			ctx.font->get_string_size(text32, aw, ah);
 		} else if (!text.is_empty()) {
 			// text
-			ctx.font->get_string_size(this->text, w, h);
+			ctx.font->get_string_size(this->text, aw, ah);
 		} else if (this->glyph_code) {
 			// glyph
-			ctx.font->get_gly_size(this->glyph_code, w, h);
+			ctx.font->get_gly_size(this->glyph_code, aw, ah);
 		} else {
 			// no content - try measure something
 			string_t cs1 = string_t("1");
-			ctx.font->get_string_size(cs1, w, h);
-	//		_MY_ASSERT(0);
+			ctx.font->get_string_size(cs1, aw, ah);
 		}
 
-		_MY_ASSERT(w && h, return);
 	}
 };
 
@@ -345,42 +589,6 @@ public:
 	}
 };
 
-class preferred_stack_layout_t : public preferred_layout_t {
-public:
-	s32 spx;
-	s32 spy;
-	bool vertical;
-public:
-	preferred_stack_layout_t() {
-		spx = spy = 5;
-		vertical = true;
-	}
-
-
-	virtual void set_preferred_size(gobject_t *parent) OVERRIDE {
-		gobject_t *bt = parent->next(0);
-		parent->w = 0;
-		parent->h = 0;
-		while (bt) {
-			bt->set_preferred_size();
-
-			if (vertical) {
-				if (bt->w > parent->w) {
-					parent->w = bt->w;
-				}
-				parent->h += bt->h + spy;
-			} else {
-				if (bt->h > parent->h) {
-					parent->h = bt->h;
-				}
-				parent->w += bt->w + spx;
-			}
-			bt = parent->next(bt);
-		}
-		if (vertical && parent->h) parent->h -= spy;
-		if (!vertical && parent->w) parent->w -= spx;
-	}
-};
 
 // выравнивает дочерние обьекты по центру
 class center_layout_t : public layout_t {
@@ -395,8 +603,13 @@ public:
 	}
 
 
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0,return);
+	}
+
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *p = parent->next(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *p = iter.next();
 		s32 py = 0, px = 0;
 		while (p) {
 			_WEAK_ASSERT(p->visible,return);
@@ -416,7 +629,7 @@ public:
 				px += p->w + spx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next(p);
+			p = iter.next();
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -424,7 +637,9 @@ public:
 
 		s32 dy = (parent->h - py)/2;
 		s32 dx = (parent->w - px)/2;
-		p = parent->next(0);
+
+		iter = parent->iterator_visible();
+		p = p = iter.next();
 		while (p) {
 			if (vertical) {
 				p->y += dy;
@@ -432,11 +647,13 @@ public:
 				p->x += dx;
 			}
 			_WEAK_ASSERT(p->y + p->h <= parent->h && p->x + p->w <= parent->w,return);
-			p = parent->next(p);
+			p = iter.next();
 		}
 	}
 };
 
+
+// располагает дочерние компоненты подряд
 
 class stack_layout_t : public layout_t {
 public:
@@ -445,7 +662,7 @@ public:
 	s32 bw;   // button width
 	s32 bh;
 	bool vertical;
-	bool preferred_item_size;
+	bool preferred_item_size;  // использовать предпочитаемый размер компонента вместо размера ячейки
 public:
 	stack_layout_t() {
 		spx=5,spy=5,vertical=(true);
@@ -453,10 +670,41 @@ public:
 		preferred_item_size = false;
 	}
 
-	void layout(gobject_t *parent) OVERRIDE {
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *bt = iter.next();
+		aw = 0;
+		ah = 0;
+		while (bt) {
+			s32 btw, bth;
+			bt->get_preferred_size(btw, bth);
+
+			if (vertical) {
+				if (btw > aw) {
+					aw = btw;
+				}
+				ah += bth + spy;
+			} else {
+				if (bth > ah) {
+					ah = bth;
+				}
+				aw += btw + spx;
+			}
+			bt = iter.next();
+		}
+		if (vertical && ah) ah -= spy;
+		if (!vertical && aw) aw -= spx;
+	}
+
+
+
+	virtual void layout(gobject_t *parent) OVERRIDE {
+
 		_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
-		gobject_t *child = parent->next(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
+
 		s32 px = 0;
 		s32 py = 0;
 		while (child) {
@@ -465,9 +713,9 @@ public:
 				child->x = 0;
 				child->y = py;
 				if (preferred_item_size) {
-					child->set_preferred_size();
-					if (child->w > parent->w)
-						child->w = parent->w;
+					s32 cw, ch;
+					child->get_preferred_size(cw,ch);
+					child->h = ch;
 				} else child->h = bh;
 				child->w = parent->w;
 				py += child->h + spy;
@@ -475,14 +723,14 @@ public:
 				child->x = px;
 				child->y = 0;
 				if (preferred_item_size) {
-					child->set_preferred_size();
-					if (child->h > parent->h)
-						child->h = parent->h;
+					s32 cw, ch;
+					child->get_preferred_size(cw,ch);
+					child->w = cw;
 				} else child->w = bw;
 				child->h = parent->h;
 				px += child->w + spx;
 			}
-			child = parent->next(child);
+			child = iter.next();
 		}
 		if (!vertical && px) px -= spx;
 		if (vertical && py) py -= spy;
@@ -490,22 +738,31 @@ public:
 	}
 };
 
+
+// растягивает дочерние виджеты на весь размер текущего
 class stretch_layout_t : public layout_t {
 public:
 public:
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0, return);
+	}
+
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
 		while (child) {
 			child->x = 0;
 			child->y = 0;
 			child->h = parent->h;
 			child->w = parent->w;
-			child = parent->next(child);
+
+			child = iter.next();
 			_WEAK_ASSERT(!child,return); // нельзя растянуть все обьекты
 		}
 	}
 };
 
+// выравнивает виджеты по заданным линейкам
 #define LL_LEV_SIZE 4
 class levels_layout_t : public layout_t {
 public:
@@ -517,8 +774,14 @@ public:
 		levels[2] = 75;
 		levels[3] = -1;
 	}
+
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(0, return);
+	}
+
 	virtual void layout(gobject_t *parent) OVERRIDE {
-		gobject_t *child = parent->next(0);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
 		gobject_t *pchild = 0;
 		s32 i = 0;
 		while (child) {
@@ -535,7 +798,7 @@ public:
 			}
 			i++;
 			pchild = child;
-			child = parent->next(child);
+			child = iter.next();
 		}
 		if (pchild && pchild->y + pchild->h > parent->h) {
 			pchild->h = parent->h - pchild->y;
@@ -546,7 +809,7 @@ public:
 
 
 
-class button_t : public gobject_t {
+class button_t : public gobject_t, public focus_client_t {
 public:
 	label_t l_top;
 	label_t l_mid;
@@ -568,9 +831,12 @@ private:
 public:
 	button_t() {
 		_pressed = (false);
-		can_be_selected = true;
 		layout = &levels_layout;
 		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
+
+		add_child(&l_top);
+		add_child(&l_mid);
+		add_child(&l_bot);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE {
@@ -595,19 +861,6 @@ public:
 		dst.ctx.alfa = 128;
 		dst.rect(ax,ay,w,h);
 
-//		render_children(dst);
-	}
-
-	virtual void do_layout() OVERRIDE {
-		set_preferred_size_children();
-		gobject_t::do_layout();
-	}
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &l_top;
-		else if (prev == &l_top) return &l_mid;
-		else if (prev == &l_mid) return &l_bot;
-		else return 0;
 	}
 
 };
@@ -617,7 +870,7 @@ public:
 #define COLOR_SELECTED 0xAFBFCF
 #define COLOR_CAPTURED 0x267F00
 
-class text_box_t : public gobject_t {
+class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
 	typedef gobject_t super;
 public:
 	property_t<string_t , text_box_t> value;
@@ -645,35 +898,32 @@ public:
 		lab.visible = true;
 		caret_pos = 0;
 		cursor_visible = false;
-		can_be_selected = true;
 		cursor_color = 0x000000;
+
+		add_child(&lab);
 	}
 
 	void measure_cursor_pos() {
 		for (s32 i=1; i <= _value.length(); i++) {
 			lab.text = _value.sub(0,i);
-			lab.set_preferred_size();
-			cursor_pos[i-1] = lab.w;
+			s32 lw, lh;
+			lab.get_preferred_size(lw,lh);
+			cursor_pos[i-1] = lw;
 		}
 		lab.text = _value;
 	}
 
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &lab;
-		return 0;
-	}
-
-	virtual void set_preferred_size() OVERRIDE {
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		measure_cursor_pos();
-		lab.set_preferred_size();
-		if (h < lab.h) h = lab.h;
-		if (w < lab.w + 5) w = lab.w + 5;
+		lab.get_preferred_size(aw, ah);
+		//if (h < lab.h) h = lab.h;
+		//if (w < lab.w + 5) w = lab.w + 5;
 	}
 
 	virtual void do_layout() OVERRIDE {
 		lab.x = 0;
 		lab.y = 0;
-		lab.w = w - 5; // место для курсора
+		lab.w = w; // место для курсора
 		lab.h = h;
 	}
 
@@ -684,10 +934,10 @@ public:
 		if (key == key_t::K_ENTER) {
 			_MY_ASSERT(parent,return);
 			if (!cursor_visible) {
-				parent->capture_key_events(this);
+				this->capture_focus();
 				cursor_visible = true;
 			} else {
-				parent->capture_key_events(0);
+				this->release_focus();
 				cursor_visible = false;
 			}
 			goto lab_update_input;
@@ -732,16 +982,24 @@ public:
 		return;
 lab_update_input:
 		lab.text = _value;
-		set_preferred_size();
-		if (parent)
-			parent->child_size_changed(this);
+		s32 aw,ah;
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw,ah);
+		}
 		dirty = true;
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		parent->dirty = true;
+		super::set_dirty(dirty);
 	}
 
 	virtual void set_selected(bool selected) {
 		_MY_ASSERT(parent,return);
-		parent->dirty = true;
-		super::set_selected(selected);
+		dirty = true;
+		focus_client_t::set_selected(selected);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE {
@@ -769,7 +1027,7 @@ lab_update_input:
 };
 
 // метка с функцией выбора из списка значений
-class combo_box_t : public gobject_t {
+class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
 	typedef gobject_t super;
 
 	class empty_iterator_t : public iterator_t<string_t> {
@@ -816,15 +1074,21 @@ public:
 		lab.visible = true;
 		values.init(this,&combo_box_t::set_values);
 		value.init(this,&combo_box_t::get_value, &combo_box_t::set_value);
-		can_be_selected = true;
 
 		values = &empty_iterator;
+
+		add_child(&lab);
 	}
 
-	virtual void set_preferred_size() OVERRIDE {
-		lab.set_preferred_size();
-		if (h < lab.h) h = lab.h;
-		if (w < lab.w + 5) w = lab.w + 5;
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		parent->dirty = true;
+		super::set_dirty(dirty);
+	}
+
+	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+		lab.get_preferred_size(aw,ah);
+		//if (h < lab.h) h = lab.h;
+		//if (w < lab.w + 5) w = lab.w + 5;
 	}
 
 	virtual void do_layout() OVERRIDE {
@@ -834,21 +1098,16 @@ public:
 		lab.h = h;
 	}
 
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		if (!prev) return &lab;
-		return 0;
-	}
-
 	virtual void key_event(key_t::key_t key) OVERRIDE {
 		_MY_ASSERT(_values,return);
 
 		if (key == key_t::K_ENTER) {
 			_MY_ASSERT(parent,return);
 			if (!captured) {
-				parent->capture_key_events(this);
+				this->capture_focus();
 				captured = true;
 			} else {
-				parent->capture_key_events(0);
+				this->release_focus();
 				captured = false;
 			}
 			goto lab_update_cbox;
@@ -880,9 +1139,10 @@ lab_update_cbox:
 		if (sprev)
 			_value=(*sprev);
 		lab.text = _value;
-		set_preferred_size();
+		s32 aw,ah;
+		get_preferred_size(aw,ah);
 		if (parent)
-			parent->child_size_changed(this);
+			parent->child_request_size_change(this, aw,ah);
 		dirty = true;
 	}
 
@@ -902,44 +1162,26 @@ lab_update_cbox:
 
 // оверлей модальных диалогов - должен находиться в короне дерева отображения
 
-#define MAX_MODAL_ITEMS 4
 
 class modal_overlay_t : public gobject_t {
 private:
-	s32 _prev;
 public:
-	stack_t<gobject_t *, MAX_MODAL_ITEMS> modals;
 
 	void push_modal(gobject_t *modal) {
-		modals.push(modal);
-		modal->parent = this;
+
+		add_child(modal);
+
 		modal->dirty = true;
 	}
 
 	void pop_modal(gobject_t *modal) {
-		gobject_t *popped = modals.pop();
+
+		gobject_t *popped = children.back();
+		children.pop_back();
+
 		_MY_ASSERT(modal == popped,return);
 		modal->parent = 0;
-		modals.last()->dirty = true;
-	}
-
-	virtual gobject_t* next_all(void* prev) OVERRIDE {
-		_MY_ASSERT(modals.length(),return 0);
-		if (!prev) {
-			_prev = 0;
-			return modals[0];
-		}
-		_MY_ASSERT(prev == modals[_prev],return 0);
-		_prev++;
-		if (_prev < modals.length())
-			return modals[_prev];
-		else
-			return 0;
-	}
-
-	virtual void key_event(key_t::key_t key) OVERRIDE {
-		_MY_ASSERT(modals.length(),return);
-		modals.last()->key_event(key);
+		children.front()->dirty = true;
 	}
 
 };
