@@ -3,6 +3,8 @@
 
 #include "menu_common.h"
 #include "generator_common.h"
+#include <sstream>
+
 
 namespace myvi {
 
@@ -143,7 +145,6 @@ public:
 class scrollable_menu_interior_t : public scrollable_interior_t {
 	typedef scrollable_interior_t super;
 public:
-	gen::suffixes_t suffixes;
 	stack_layout_t stack_layout;
 public:
 
@@ -163,8 +164,12 @@ public:
 		str << "Menu_name " << i;
 
 		row->valbox.lval.value = "Value";
-		row->valbox.lsfx.values = &suffixes;
-		row->valbox.lsfx.value = *suffixes.next(0);
+
+		gen::type_meta_t *dme_sfx_meta = gen::meta_registry_t::instance().find_type_meta("dme_sfx_t");
+		myvi::iterator_t<myvi::combobox_item_t> *suffixes = dme_sfx_meta->get_combobox_iterator();
+
+		row->valbox.lsfx.values = suffixes;
+		row->valbox.lsfx.value = suffixes->next(0);
 		std::string *s = new std::string(str.str());
 		row->lname.text = (*s).c_str();
 	}
@@ -269,6 +274,13 @@ public:
 	}
 };
 
+// контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
+class menu_controller_t : public view_controller_t {
+public:
+public:
+	virtual void init(gobject_t *view, gen::view_meta_t *view_meta) OVERRIDE {
+	}
+};
 
 }  // ns
 #endif

@@ -17,7 +17,6 @@ class gobject_t;
 
 class layout_t {
 public:
-public:
 	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) = 0;
 	virtual void layout(gobject_t *parent) = 0;
 };
@@ -1026,29 +1025,36 @@ lab_update_input:
 
 };
 
+// элемент в выпадающем списке
+class combobox_item_t {
+public:
+	virtual string_t get_string_value() = 0;
+};
+
 // метка с функцией выбора из списка значений
 class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
 	typedef gobject_t super;
 
-	class empty_iterator_t : public iterator_t<string_t> {
+	class empty_iterator_t : public iterator_t<combobox_item_t> {
 	public:
-		virtual string_t* next(void* prev) OVERRIDE {
+		virtual combobox_item_t* next(void* prev) OVERRIDE {
 			return 0;
 		}
 	};
 public:
 	label_t lab;
-	wo_property_t<iterator_t<string_t>*,combo_box_t> values;
-	property_t<string_t, combo_box_t> value;
+	wo_property_t<iterator_t<combobox_item_t>*,combo_box_t> values;
+	property_t<combobox_item_t *, combo_box_t> value;
 private:
-	string_impl_t<INPUT_MAX_LEN> _value;
-	iterator_t<string_t> *_values;
+	combobox_item_t * _value;
+	string_impl_t<INPUT_MAX_LEN> _str_value;
+	iterator_t<combobox_item_t> *_values;
 	bool captured;
-	string_t *sprev;
-	reverse_iterator_t<string_t> revit;
+	combobox_item_t *sprev;
+	reverse_iterator_t<combobox_item_t> revit;
 	empty_iterator_t empty_iterator;
 private:
-	void set_values(iterator_t<string_t> *values) {
+	void set_values(iterator_t<combobox_item_t> *values) {
 		_values = values;
 		if (!values)
 			_values = &empty_iterator;
@@ -1056,12 +1062,12 @@ private:
 		sprev = 0;
 	}
 
-	void set_value(string_t value) {
+	void set_value(combobox_item_t * value) {
 		_value=(value);
-		lab.text = _value;
+		lab.text = _value->get_string_value();
 	}
 
-	string_t get_value() {
+	combobox_item_t * get_value() {
 		return _value;
 	}
 public:
@@ -1137,8 +1143,9 @@ public:
 lab_update_cbox:
 
 		if (sprev)
-			_value=(*sprev);
-		lab.text = _value;
+			_value=(sprev);
+		_str_value = _value->get_string_value();;
+		lab.text = _str_value;
 		s32 aw,ah;
 		get_preferred_size(aw,ah);
 		if (parent)
