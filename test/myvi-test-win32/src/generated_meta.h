@@ -3,6 +3,8 @@
 
 #include "generator_common.h"
 #include "basic.h"
+#include "widgets.h"
+#include "custom_views.h"
 
 /*
 *  Схема UI, сериализованная в целевой формат
@@ -10,23 +12,6 @@
 
 namespace gen {
 
-class suffixes_t : public myvi::iterator_t<myvi::string_t> {
-public:
-	myvi::string_t str1;
-	myvi::string_t str2;
-public:
-	suffixes_t() {
-		str1 = myvi::string_t("A");
-		str2 = myvi::string_t("B");
-	}
-
-	virtual myvi::string_t* next(void* prev) OVERRIDE {
-		if (!prev) return &str1;
-		if (prev == &str1) return &str2;
-		return 0;
-	}
-
-};
 
 class ch_parameter_meta_t : public parameter_meta_t {
 public:
@@ -36,20 +21,90 @@ public:
 		if (key == "name") return "Канал DME";
 		if (key == "type") return "u8";
 		if (key == "validators") return "range";
-		if (key == "lo") return "-127";
-		if (key == "hi") return "128";
 		return 0;
 	}
 
-	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
+	virtual s32 get_int_param(myvi::string_t key) {
+		if (key == "lo") return -127;
+		if (key == "hi") return 128;
 		return 0;
 	}
+
 };
 
-//TODO: как представить enum ?
 
 class dme_sfx_t_type_meta_t : public type_meta_t {
 public:
+	class combobox_item_iterator_t : public myvi::iterator_t<myvi::combobox_item_t> {
+	public:
+		dme_sfx_t_type_meta_t *type_meta;
+	public:
+		virtual myvi::combobox_item_t* next(void* prev) OVERRIDE {
+
+			bool go = !prev;
+
+			for (s32 i=0; ;i++) {
+				parameter_meta_t *child_meta = type_meta->get_child(i);
+				if (!child_meta) {
+					return 0;
+				}
+				if (go) {
+					return dynamic_cast<myvi::combobox_item_t *>(child_meta);
+				}
+				if (dynamic_cast<myvi::combobox_item_t *>(child_meta) == prev) {
+					go = true;
+				}
+			}
+			return 0;
+		}
+	};
+
+	class X_parameter_meta_t : public parameter_meta_t, public myvi::combobox_item_t {
+	public:
+		virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+			if (key == "id") return "X";
+			if (key == "name") return "X";
+			return 0;
+		}
+
+		virtual s32 get_int_param(myvi::string_t key) {
+			if (key == "value") return 0;
+			return 0;
+		}
+
+		virtual myvi::string_t get_string_value() OVERRIDE {
+			return get_string_param("name");
+		}
+	};
+
+	class Y_parameter_meta_t : public parameter_meta_t, public myvi::combobox_item_t  {
+	public:
+		virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+			if (key == "id") return "Y";
+			if (key == "name") return "Y";
+			return 0;
+		}
+
+		virtual s32 get_int_param(myvi::string_t key) {
+			if (key == "value") return 1;
+			return 0;
+		}
+
+		virtual myvi::string_t get_string_value() OVERRIDE {
+			return get_string_param("name");
+		}
+	};
+
+public:
+	combobox_item_iterator_t combobox_iterator;
+	X_parameter_meta_t X_parameter_meta;
+	Y_parameter_meta_t Y_parameter_meta;
+public:
+
+	dme_sfx_t_type_meta_t() {
+		combobox_iterator.type_meta = this;
+	}
+
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
 		if (key == "id") return "dme_sfx_t";
 		if (key == "name") return "Суффикс DME";
@@ -58,9 +113,18 @@ public:
 	}
 
 	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
+		switch (i) {
+		case 0 : return &X_parameter_meta;
+		case 1 : return &Y_parameter_meta;
+		}
 		return 0;
 	}
+
+	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() OVERRIDE {
+		return &combobox_iterator;
+	}
 };
+
 
 class sfx_parameter_meta_t : public parameter_meta_t {
 public:
@@ -71,9 +135,6 @@ public:
 		return 0;
 	}
 
-	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
-		return 0;
-	}
 };
 
 class dme_t_type_meta_t : public type_meta_t {
@@ -114,14 +175,11 @@ public:
 		return 0;
 	}
 
-	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
-		return 0;
-	}
 
 };
 
 /*
-<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" controller="menu" />
+<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" x="0" y="0" w="-1" h="-1" controller="menu" />
 */
 class menu_view_meta_t : public view_meta_t {
 public:
@@ -135,16 +193,35 @@ public:
 		return 0;
 	}
 
-// дочерние виды комплексного вида
-	virtual view_meta_t * get_child(s32 i) OVERRIDE {
+	virtual s32 get_int_param(myvi::string_t key) {
+		if (key == "x") return 0;
+		if (key == "y") return 0;
+		if (key == "w") return -1;
+		if (key == "h") return -1;
 		return 0;
+	}
+
+	virtual myvi::gobject_t * build_view() OVERRIDE {
+
+		myvi::gobject_t *view = new myvi::dynamic_view_t(this);
+
+		myvi::stack_layout_t *layout = new myvi::stack_layout_t();
+		layout->vertical = true;
+		view->layout = layout;
+
+		myvi::menu_controller_t *menu_controller = new myvi::menu_controller_t();
+		menu_controller->init(view, this);
+
+		myvi::view_factory_t::build_child_views(view, this);
+
+		return view;
 	}
 
 };
 
 
 /*
-<view id="root">
+<view id="root" kind="generated" layout="static">
 */
 class root_view_meta_t : public view_meta_t {
 public:
@@ -163,9 +240,23 @@ public:
 		return 0;
 	}
 
+	virtual myvi::gobject_t * build_view() OVERRIDE {
+
+		myvi::gobject_t *view = new myvi::dynamic_view_t(this);
+		myvi::static_layout_t *layout = new myvi::static_layout_t();
+		view->layout = layout;
+
+		myvi::view_factory_t::build_child_views(view, this);
+
+		return view;
+	}
+
+
 };
 
-
+/*
+<menu id="main" name="Главное">
+*/
 class menu_menu_meta_t : public menu_meta_t {
 public:
 	virtual  parameter_meta_t * get_child(s32 i)  OVERRIDE {

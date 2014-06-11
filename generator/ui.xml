@@ -59,10 +59,11 @@
 		<view id="tbox_cbox" kind="predefined" /> <!-- label{param_name} + textbox + combobox -->
 		<view id="tbox_label" kind="predefined" /> <!-- label{param_name} + textbox + label -->
 <!-- генерируемые виды -->
-		<view id="root" kind="generated">
+		<view id="root" kind="generated" layout="static">
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
-			<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" x="0" y="0" w="w" h="h" controller="menu" />
+		<!-- w=-1, h=-1 - значения взять из parent -->
+			<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" x="0" y="0" w="-1" h="-1" controller="menu" />
 <!-- view reference -->			
 <!--			<view id="&cbox" x="0" y="0" w="w" h="h" /> -->
 		</view>

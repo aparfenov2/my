@@ -13,7 +13,6 @@
 #include "ttcache.h"
 
 #include <iostream>
-#include <sstream>
 #include <fstream>
 #include <vector>
 #include <string>
@@ -113,7 +112,6 @@ class test_screen_t : public gobject_t, public focus_aware_t {
 public:
 	tedit_t hdr_box;
 	scrollable_menu_t scrollable;
-	gen::suffixes_t suffixes;
 
 
 public:
@@ -141,34 +139,38 @@ public:
 		menu_context_t::instance().lctx1 = lctx1;
 		menu_context_t::instance().lctxg = lctxg;
 
-		//gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
-		//gobject_t *menu = view_factory_t::build_view(root_view_meta);
+		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
+		gobject_t *root_view = root_view_meta->build_view();
 
-		//add_child(menu);
+		add_child(root_view);
 
-		//menu->x = 0;
-		//menu->y = 0;
-		//menu->w = w;
-		//menu->h = h;
+		root_view->x = 0;
+		root_view->y = 0;
+		root_view->w = w;
+		root_view->h = h;
 
 
-		hdr_box.x = 0;
-		hdr_box.y = 0;
-		hdr_box.w = w;
-		hdr_box.h = 20;
+		//hdr_box.x = 0;
+		//hdr_box.y = 0;
+		//hdr_box.w = w;
+		//hdr_box.h = 20;
 
-		hdr_box.lval.value = "Helo!";
-		hdr_box.lsfx.values = &suffixes;
-		hdr_box.lsfx.value = *suffixes.next(0);
+		//hdr_box.lval.value = "Helo!";
 
-		add_child(&hdr_box);
+		//gen::type_meta_t *dme_sfx_meta = gen::meta_registry_t::instance().find_type_meta("dme_sfx_t");
+		//myvi::iterator_t<myvi::combobox_item_t> *suffixes = dme_sfx_meta->get_combobox_iterator();
 
-		scrollable.x = 0;
-		scrollable.y = 20;
-		scrollable.w = w;
-		scrollable.h = h/4;
+		//hdr_box.lsfx.values = suffixes;
+		//hdr_box.lsfx.value = suffixes->next(0);
 
-		add_child(&scrollable);
+		//add_child(&hdr_box);
+
+		//scrollable.x = 0;
+		//scrollable.y = 20;
+		//scrollable.w = w;
+		//scrollable.h = h/4;
+
+		//add_child(&scrollable);
 
 
 		init_children();
