@@ -17,6 +17,8 @@ public:
 
 // ======================================= меты =============================================
 
+#define _NAN 0xffffffff
+
 // базовый класс меты
 class meta_t {
 public:
@@ -50,6 +52,8 @@ public:
 
 // метаинфа о параметре
 class parameter_meta_t : public composite_meta_t<parameter_meta_t> {
+public:
+	virtual myvi::gobject_t * build_view();
 };
 
 // метаинфа о типе
@@ -86,6 +90,8 @@ public:
 
 // матаинфа о меню
 class menu_meta_t : public composite_meta_t<parameter_meta_t> {
+public:
+	virtual myvi::gobject_t * build_view();
 };
 
 
@@ -151,12 +157,6 @@ public:
 //	virtual void update_me(parameter_meta_t *parameter_meta, variant_t &value) = 0;
 };
 
-// view mixin
-class composite_view_t {
-public:
-	// контроллер запрашивает view, передава€ известные ему id
-	virtual  gobject_t * get_part_by_id(string_t id)  = 0; 
-};
 
 // view mixin
 class meta_provider_t {
@@ -165,16 +165,12 @@ public:
 };
 
 
-class dynamic_view_t : public gobject_t, public composite_view_t, public meta_provider_t {
-	gen::view_meta_t * meta;
+class dynamic_view_t : public gobject_t, public meta_provider_t {
+	gen::meta_t * meta;
 public:
 
-	dynamic_view_t (gen::view_meta_t * _meta) {
+	dynamic_view_t (gen::meta_t * _meta) {
 		meta = _meta;
-	}
-
-	virtual  gobject_t * get_part_by_id(string_t id)  OVERRIDE {
-		return 0;
 	}
 
 	virtual gen::meta_t * get_meta() OVERRIDE {
@@ -203,6 +199,48 @@ public:
 			view->add_child(child_view);
 		}
 	}
+
+	static void build_child_views(gobject_t *view, gen::menu_meta_t * meta) {
+
+		for (s32 i=0; ;i++) {
+			gen::parameter_meta_t *child_meta = meta->get_child(i);
+			if (!child_meta) break;
+			gobject_t *child_view = child_meta->build_view();
+			view->add_child(child_view);
+		}
+	}
+
+	static void build_child_views(gobject_t *view, gen::parameter_meta_t * meta) {
+
+		string_t type_id = meta->get_string_param("type");
+
+		// если тип определен отдельно - строим по типу
+		if (!type_id.is_empty()) {
+			gen::type_meta_t *type_meta = gen::meta_registry_t::instance().find_type_meta(type_id);
+			// строим виды только дл€ составных типов, виды простых типов предопределены и конструируютс€ сразу в meta_t::build_view()
+			_MY_ASSERT(type_meta, return);
+
+			string_t type_of_type = type_meta->get_string_param("type");
+			_MY_ASSERT(type_of_type == "complex", return);
+
+			build_type_child_views(view, type_meta);
+
+		} else {
+			// строим по inline - типу
+			build_type_child_views(view, meta);
+		}
+	}
+
+private:
+	static void build_type_child_views(gobject_t *view, gen::composite_meta_t<gen::parameter_meta_t> * meta) {
+		for (s32 i=0; ;i++) {
+			gen::parameter_meta_t *child_meta = meta->get_child(i);
+			if (!child_meta) break;
+			gobject_t *child_view = child_meta->build_view();
+			view->add_child(child_view);
+		}
+	}
+
 
 };
 
@@ -234,14 +272,86 @@ public:
 
 // менеджер размещени€ с заранее заданными размерами
 // ожидает от инстанса вида поддержки meta_provider_t
-class static_layout_t : public layout_t {
+class absolute_layout_t : public layout_t {
+private:
+	s32 check_w(gobject_t *parent, gobject_t *child, s32 w) {
+		_MY_ASSERT(w != _NAN, return _NAN);
+
+		if (child->x + w > parent->w) w = parent->w - child->x;
+		if (w <= 0) {
+			w = _NAN;
+		}
+		return w;
+	}
+	s32 check_h(gobject_t *parent, gobject_t *child, s32 h) {
+		_MY_ASSERT(h != _NAN, return _NAN);
+
+		if (child->y + h > parent->h) h = parent->h - child->y;
+		if (h <= 0) {
+			h = _NAN;
+		}
+		return h;
+	}
+
 public:
 	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
+
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t * child = iter.next();
+
+		pw = 0;
+		ph = 0;
+
+		while (child) {
+			meta_provider_t *meta_provider = dynamic_cast<meta_provider_t *>(child);
+			if (meta_provider) {
+				gen::meta_t *meta = meta_provider->get_meta();
+				s32 x = meta->get_int_param("x");
+				_WEAK_ASSERT(x != _NAN, continue);
+				s32 y = meta->get_int_param("y");
+				_WEAK_ASSERT(y != _NAN, continue);
+				s32 w = meta->get_int_param("w");
+				_WEAK_ASSERT(w != _NAN, continue);
+				s32 h = meta->get_int_param("h");
+				_WEAK_ASSERT(h != _NAN, continue);
+
+				if (pw < x+w) pw = x+w;
+				if (ph < y+h) ph = y+h;
+			}
+			child = iter.next();
+		}
+		
 	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
+
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t * child = iter.next();
+
+		while (child) {
+			meta_provider_t *meta_provider = dynamic_cast<meta_provider_t *>(child);
+			if (meta_provider) {
+				gen::meta_t *meta = meta_provider->get_meta();
+
+				s32 x = meta->get_int_param("x");
+				_WEAK_ASSERT(x != _NAN, continue);
+				s32 y = meta->get_int_param("y");
+				_WEAK_ASSERT(y != _NAN, continue);
+				s32 w = meta->get_int_param("w");
+				_WEAK_ASSERT(w != _NAN, continue);
+				s32 h = meta->get_int_param("h");
+				_WEAK_ASSERT(h != _NAN, continue);
+
+				child->x = x;
+				child->y = y;
+				child->w = check_w(parent, child, w);
+				child->h = check_h(parent, child, h);
+
+			}
+			child = iter.next();
+		}
 	}
 };
 
-} // ns
+} // ns myvi
 #endif
