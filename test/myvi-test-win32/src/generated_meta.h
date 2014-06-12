@@ -174,8 +174,12 @@ public:
 		if (key == "dme") return "dme";
 		return 0;
 	}
-
-
+/*
+	virtual myvi::gobject_t * build_view() OVERRIDE {
+		// custom view
+		return new myvi::dme_view_t();
+	}
+*/
 };
 
 /*
@@ -190,14 +194,6 @@ public:
 		if (key == "layout") return "stack";
 		if (key == "vertical") return "true";
 		if (key == "controller") return "menu";
-		return 0;
-	}
-
-	virtual s32 get_int_param(myvi::string_t key) {
-		if (key == "x") return 0;
-		if (key == "y") return 0;
-		if (key == "w") return -1;
-		if (key == "h") return -1;
 		return 0;
 	}
 
@@ -243,7 +239,7 @@ public:
 	virtual myvi::gobject_t * build_view() OVERRIDE {
 
 		myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-		myvi::static_layout_t *layout = new myvi::static_layout_t();
+		myvi::stretch_layout_t *layout = new myvi::stretch_layout_t();
 		view->layout = layout;
 
 		myvi::view_factory_t::build_child_views(view, this);
