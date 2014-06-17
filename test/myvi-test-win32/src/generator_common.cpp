@@ -1,21 +1,16 @@
-#include "generator_common.h"
+#include "view_factory.h"
 
 using namespace gen;
 
+myvi::view_factory_impl_t view_factory_impl;
+myvi::view_factory_t * myvi::view_factory_t::_instance;
+
+// метод фабрики вида по умолчанию для составного вида
 myvi::gobject_t * view_meta_t::build_view() {
-	myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-	myvi::view_factory_t::build_child_views(view, this);
-	return view;
+	return myvi::view_factory_t::instance()->build_view(this);
 }
 
-myvi::gobject_t * menu_meta_t::build_view() {
-	myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-	myvi::view_factory_t::build_child_views(view, this);
-	return view;
-}
-
-myvi::gobject_t * parameter_meta_t::build_view() {
-	myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-	myvi::view_factory_t::build_child_views(view, this);
-	return view;
+// метод фабрики вида по умолчанию для составного параметра
+myvi::gobject_t * parameter_meta_t::build_menu_view() {
+	return myvi::view_factory_t::instance()->build_menu_view(this);
 }

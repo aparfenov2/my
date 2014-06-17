@@ -10,7 +10,7 @@
 			<unit multiplier="1" name="Hz"/>
 		</unit>
 	</units>
-	
+
 
 	<types>
 <!-- опишем простые типы, чтобы их можно было найти -->	
@@ -28,6 +28,7 @@
 		</type>
 		
 		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
+		<!-- поэтому здесь для полей вид не указан -->
 		<type id="dme_t" name="Параметры DME" type="complex">
 			<parameter id="ch" name="Канал DME" type="u8" validators="range" lo="-127" hi="128" />
 			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" />

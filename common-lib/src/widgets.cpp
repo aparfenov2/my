@@ -10,6 +10,8 @@ modal_overlay_t globals::modal_overlay;
 
 u32 rasterizer_t::colors[4] = {0x00ff00, 0x0000ff, 0xff0000, 0xff00ff};
 u32 rasterizer_t::deepLevel = 0;
+bool rasterizer_t::debug = false;
+
 focus_manager_t focus_manager_t::instance;
 
 

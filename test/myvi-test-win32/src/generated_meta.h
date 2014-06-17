@@ -171,15 +171,9 @@ public:
 		if (key == "id") return "dme";
 		if (key == "type") return "dme_t";
 		if (key == "name") return "Параметры DME";
-		if (key == "dme") return "dme";
+		if (key == "view") return "dme";
 		return 0;
 	}
-/*
-	virtual myvi::gobject_t * build_view() OVERRIDE {
-		// custom view
-		return new myvi::dme_view_t();
-	}
-*/
 };
 
 /*
@@ -197,22 +191,6 @@ public:
 		return 0;
 	}
 
-	virtual myvi::gobject_t * build_view() OVERRIDE {
-
-		myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-
-		myvi::stack_layout_t *layout = new myvi::stack_layout_t();
-		layout->vertical = true;
-		view->layout = layout;
-
-		myvi::menu_controller_t *menu_controller = new myvi::menu_controller_t();
-		menu_controller->init(view, this);
-
-		myvi::view_factory_t::build_child_views(view, this);
-
-		return view;
-	}
-
 };
 
 
@@ -226,6 +204,7 @@ public:
 
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
 		if (key == "id") return "root";
+		if (key == "layout") return "stretch";
 		return 0;
 	}
 
@@ -235,18 +214,6 @@ public:
 		}
 		return 0;
 	}
-
-	virtual myvi::gobject_t * build_view() OVERRIDE {
-
-		myvi::gobject_t *view = new myvi::dynamic_view_t(this);
-		myvi::stretch_layout_t *layout = new myvi::stretch_layout_t();
-		view->layout = layout;
-
-		myvi::view_factory_t::build_child_views(view, this);
-
-		return view;
-	}
-
 
 };
 

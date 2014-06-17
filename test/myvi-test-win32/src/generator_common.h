@@ -51,9 +51,9 @@ public:
 };
 
 // метаинфа о параметре
-class parameter_meta_t : public composite_meta_t<parameter_meta_t> {
+class parameter_meta_t : public meta_t {
 public:
-	virtual myvi::gobject_t * build_view();
+	myvi::gobject_t * build_menu_view();
 };
 
 // метаинфа о типе
@@ -85,13 +85,12 @@ public:
 class view_meta_t : public composite_meta_t<view_meta_t> {
 public:
 // метод фабрики вида. Создает вид и привязывает к нему контроллер
-	virtual myvi::gobject_t * build_view();
+	myvi::gobject_t * build_view();
 };
 
 // матаинфа о меню
 class menu_meta_t : public composite_meta_t<parameter_meta_t> {
 public:
-	virtual myvi::gobject_t * build_view();
 };
 
 
@@ -111,6 +110,12 @@ private:
 	}
 
 	meta_t * find_meta(myvi::string_t id, meta_t **metas) {
+		meta_t *ret = try_find_meta(id, metas);
+		_MY_ASSERT(ret, return 0);
+		return ret;
+	}
+
+	meta_t * try_find_meta(myvi::string_t id, meta_t **metas) {
 		meta_t **p = metas;
 		while (*p) {
 			if ((*p)->match_id(id)) {
@@ -118,7 +123,6 @@ private:
 			}
 			p++;
 		}
-		_MY_ASSERT(0, return 0);
 		return 0;
 	}
 
@@ -136,7 +140,7 @@ public:
 		return (parameter_meta_t *) find_meta(id, (meta_t**)parameters);
 	}
 	type_meta_t * find_type_meta(myvi::string_t id) {
-		return (type_meta_t *) find_meta(id, (meta_t**)types);
+		return (type_meta_t *) try_find_meta(id, (meta_t**)types);
 	}
 	view_meta_t * find_view_meta(myvi::string_t id) {
 		return (view_meta_t *) find_meta(id, (meta_t**)views);
@@ -187,87 +191,6 @@ public:
 };
 
 
-// фабрика дочерних видов. Её задача создать вид и связать его с контроллерм
-class view_factory_t {
-public:
-	static void build_child_views(gobject_t *view, gen::view_meta_t * meta) {
-
-		for (s32 i=0; ;i++) {
-			gen::view_meta_t *child_meta = meta->get_child(i);
-			if (!child_meta) break;
-			gobject_t *child_view = child_meta->build_view();
-			view->add_child(child_view);
-		}
-	}
-
-	static void build_child_views(gobject_t *view, gen::menu_meta_t * meta) {
-
-		for (s32 i=0; ;i++) {
-			gen::parameter_meta_t *child_meta = meta->get_child(i);
-			if (!child_meta) break;
-			gobject_t *child_view = child_meta->build_view();
-			view->add_child(child_view);
-		}
-	}
-
-	static void build_child_views(gobject_t *view, gen::parameter_meta_t * meta) {
-
-		string_t type_id = meta->get_string_param("type");
-
-		// если тип определен отдельно - строим по типу
-		if (!type_id.is_empty()) {
-			gen::type_meta_t *type_meta = gen::meta_registry_t::instance().find_type_meta(type_id);
-			// строим виды только для составных типов, виды простых типов предопределены и конструируются сразу в meta_t::build_view()
-			_MY_ASSERT(type_meta, return);
-
-			string_t type_of_type = type_meta->get_string_param("type");
-			_MY_ASSERT(type_of_type == "complex", return);
-
-			build_type_child_views(view, type_meta);
-
-		} else {
-			// строим по inline - типу
-			build_type_child_views(view, meta);
-		}
-	}
-
-private:
-	static void build_type_child_views(gobject_t *view, gen::composite_meta_t<gen::parameter_meta_t> * meta) {
-		for (s32 i=0; ;i++) {
-			gen::parameter_meta_t *child_meta = meta->get_child(i);
-			if (!child_meta) break;
-			gobject_t *child_view = child_meta->build_view();
-			view->add_child(child_view);
-		}
-	}
-
-
-};
-
-
-// вид с фоном
-class background_view_t : public gobject_t {
-public:
-	surface_context_t ctx;
-	bool hasBorder;
-public:
-	background_view_t() {
-		hasBorder = false;
-	}
-
-	virtual void render(surface_t &dst) OVERRIDE {
-		s32 ax, ay;
-		translate(ax,ay);
-		dst.ctx = ctx;
-
-		if (ctx.alfa) {
-			dst.fill(ax,ay,w,h);
-		}
-		if (hasBorder) {
-			dst.rect(ax,ay,w,h);
-		}
-	}
-};
 
 
 // менеджер размещения с заранее заданными размерами
@@ -351,6 +274,22 @@ public:
 			child = iter.next();
 		}
 	}
+};
+
+// интерфейс фабрики видов - выделен для компилируемости
+class view_factory_t {
+protected:
+	static view_factory_t * _instance;
+public:
+	static view_factory_t * instance() {
+		return _instance;
+	}
+	// called from menu_controller_t
+	virtual void append_menu_view(gobject_t *view, gen::menu_meta_t *meta) = 0;
+	// метод фабрики вида по умолчанию для составного вида
+	virtual gobject_t * build_view(gen::view_meta_t * meta) = 0;
+	// Метод фабрики вида для параметра
+	virtual gobject_t * build_menu_view(gen::parameter_meta_t * meta) = 0;
 };
 
 } // ns myvi

@@ -5,7 +5,6 @@
 #include "generator_common.h"
 #include <sstream>
 
-
 namespace myvi {
 
 
@@ -82,6 +81,21 @@ public:
 	//textbox*
 	//combobox*
 public:
+	void init( gobject_t *view,  gen::parameter_meta_t *meta)  {
+	}
+};
+
+
+// контроллер комбобокса
+class cbox_controller_t  {
+public:
+	//units
+	//validators
+	//textbox*
+	//combobox*
+public:
+	void init(gobject_t *view,  gen::parameter_meta_t *meta)  {
+	}
 };
 
 
@@ -94,6 +108,7 @@ public:
 //	input_controller_t controller;
 public:
 	tbox_cbox_view_t() {
+
 		stack_layout.vertical = false;
 		stack_layout.preferred_item_size = true;
 		layout = &stack_layout;
@@ -279,8 +294,40 @@ class menu_controller_t : public view_controller_t {
 public:
 public:
 	virtual void init(gobject_t *view, gen::view_meta_t *view_meta) OVERRIDE {
+
+		string_t menu_id = view_meta->get_string_param("menuRef");
+		gen::menu_meta_t *menu_meta = gen::meta_registry_t::instance().find_menu_meta(menu_id);
+		// вставляем элементы меню в данный нам вид
+		view_factory_t::instance()->append_menu_view(view, menu_meta);
 	}
 };
+
+
+
+// вид с фоном
+class background_view_t : public gobject_t {
+public:
+	surface_context_t ctx;
+	bool hasBorder;
+public:
+	background_view_t() {
+		hasBorder = false;
+	}
+
+	virtual void render(surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		translate(ax,ay);
+		dst.ctx = ctx;
+
+		if (ctx.alfa) {
+			dst.fill(ax,ay,w,h);
+		}
+		if (hasBorder) {
+			dst.rect(ax,ay,w,h);
+		}
+	}
+};
+
 
 }  // ns
 #endif

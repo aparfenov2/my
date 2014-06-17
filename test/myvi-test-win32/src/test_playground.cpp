@@ -120,6 +120,7 @@ public:
 
 		w = TFT_WIDTH;
 		h = TFT_HEIGHT;
+		rasterizer_t::debug = true;
 
 		button_context_t bctx1;
 		bctx1.bk_sel_color = 0x292929; // gray
