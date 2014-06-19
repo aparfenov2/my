@@ -13,10 +13,6 @@
 namespace gen {
 
 
-/*
- * =================== ÏÀÐÀÌÅÒÐÛ ==========================
-*/
-
 class ch_parameter_meta_t : public parameter_meta_t {
 public:
 
@@ -48,7 +44,7 @@ public:
 			bool go = !prev;
 
 			for (s32 i=0; ;i++) {
-				parameter_meta_t *child_meta = type_meta->get_enum_child(i);
+				parameter_meta_t *child_meta = type_meta->get_child(i);
 				if (!child_meta) {
 					return 0;
 				}
@@ -116,7 +112,7 @@ public:
 		return 0;
 	}
 
-	virtual parameter_meta_t * get_enum_child(s32 i) OVERRIDE {
+	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
 		switch (i) {
 		case 0 : return &X_parameter_meta;
 		case 1 : return &Y_parameter_meta;
@@ -143,6 +139,9 @@ public:
 
 class dme_t_type_meta_t : public type_meta_t {
 public:
+	ch_parameter_meta_t ch_parameter_meta;
+	sfx_parameter_meta_t sfx_parameter_meta;
+public:
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
 		if (key == "id") return "dme_t";
 		if (key == "name") return "Ïàðàìåòðû DME";
@@ -150,10 +149,10 @@ public:
 		return 0;
 	}
 
-	virtual myvi::string_t get_parameter_child(s32 i) OVERRIDE {
+	virtual parameter_meta_t * get_child(s32 i) OVERRIDE {
 		switch(i) {
-		case 0 : return "ch";
-		case 1 : return "sfx";
+		case 0 : return &ch_parameter_meta;
+		case 1 : return &sfx_parameter_meta;
 		}
 		return 0;
 	}
@@ -179,22 +178,10 @@ public:
 };
 
 
-
+// ---------------------- predefined views --------------------------------
 /*
- * =================== ÂÈÄÛ ==========================
+<view id="dme" kind="predefined"/>
 */
-
-class lab_view_meta_t : public view_meta_t {
-public:
-
-	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
-		if (key == "id") return "lab";
-		if (key == "kind") return "predefined";
-		return 0;
-	}
-
-};
-
 class dme_view_meta_t : public view_meta_t {
 public:
 
@@ -202,6 +189,102 @@ public:
 		if (key == "id") return "dme";
 		if (key == "kind") return "predefined";
 		return 0;
+	}
+
+	virtual myvi::gobject_t * build_predefined_view() OVERRIDE {
+		return new custom::dme_view_t();
+	}
+
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::dme_controller_t();
+	}
+
+};
+
+/*
+<view id="tbox" kind="predefined"/>
+*/
+class tbox_view_meta_t : public view_meta_t {
+public:
+
+	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+		if (key == "id") return "tbox";
+		if (key == "kind") return "predefined";
+		return 0;
+	}
+
+	virtual myvi::gobject_t * build_predefined_view() OVERRIDE {
+		return new custom::tbox_view_t();
+	}
+
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::tbox_controller_t();
+	}
+
+};
+
+/*
+<view id="cbox" kind="predefined"/>
+*/
+class cbox_view_meta_t : public view_meta_t {
+public:
+
+	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+		if (key == "id") return "cbox";
+		if (key == "kind") return "predefined";
+		return 0;
+	}
+
+	virtual myvi::gobject_t * build_predefined_view() OVERRIDE {
+		return new custom::cbox_view_t();
+	}
+
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::cbox_controller_t();
+	}
+
+};
+
+/*
+<view id="tbox_cbox" kind="predefined"/>
+*/
+class tbox_cbox_view_meta_t : public view_meta_t {
+public:
+
+	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+		if (key == "id") return "tbox_cbox";
+		if (key == "kind") return "predefined";
+		return 0;
+	}
+
+	virtual myvi::gobject_t * build_predefined_view() OVERRIDE {
+		return new custom::tbox_cbox_view_t();
+	}
+
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::tbox_cbox_controller_t();
+	}
+
+};
+
+/*
+<view id="tbox_label" kind="predefined"/>
+*/
+class tbox_label_view_meta_t : public view_meta_t {
+public:
+
+	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
+		if (key == "id") return "tbox_label";
+		if (key == "kind") return "predefined";
+		return 0;
+	}
+
+	virtual myvi::gobject_t * build_predefined_view() OVERRIDE {
+		return new custom::tbox_label_view_t();
+	}
+
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::tbox_label_controller_t();
 	}
 
 };
@@ -218,29 +301,16 @@ public:
 		if (key == "layout") return "stack";
 		if (key == "vertical") return "true";
 		if (key == "controller") return "menu";
-		if (key == "itemTemplateView") return "item_template";
 		return 0;
 	}
 
-};
-
-class item_template_view_meta_t : public view_meta_t {
-public:
-
-	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
-		if (key == "id") return "item_template";
-		if (key == "layout") return "menu";
-		if (key == "controller") return "menu_item";
-		return 0;
+	virtual gen::view_controller_t  * build_predefined_controller() OVERRIDE {
+		return new custom::menu_controller_t();
 	}
 
-	virtual myvi::string_t get_view_child(s32 i)  OVERRIDE {
-		switch(i) {
-		case 0 : return "lab";
-		}
-		return 0;
+	virtual myvi::layout_t * build_layout() OVERRIDE {
+		return new custom::stack_meta_layout_t(this);
 	}
-
 
 };
 
@@ -250,6 +320,8 @@ public:
 */
 class root_view_meta_t : public view_meta_t {
 public:
+	menu_view_meta_t menu_view_meta;
+public:
 
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
 		if (key == "id") return "root";
@@ -257,28 +329,27 @@ public:
 		return 0;
 	}
 
-	virtual myvi::string_t get_view_child(s32 i)  OVERRIDE {
+	virtual view_meta_t * get_child(s32 i)  OVERRIDE {
 		switch(i) {
-		case 0 : return "menu";
+		case 0 : return &menu_view_meta;
 		}
 		return 0;
 	}
 
+	virtual myvi::layout_t * build_layout() OVERRIDE {
+		return new custom::stretch_meta_layout_t(this);
+	}
+
 };
-
-
-/*
- * =================== ÌÅÍÞ ==========================
-*/
 
 /*
 <menu id="main" name="Ãëàâíîå">
 */
 class menu_menu_meta_t : public menu_meta_t {
 public:
-	virtual  myvi::string_t get_parameter_child(s32 i)  OVERRIDE {
+	virtual  parameter_meta_t * get_child(s32 i)  OVERRIDE {
 		switch(i) {
-		case 0 : return "dme";
+		case 0 : return meta_registry_t::instance().find_parameter_meta("dme");
 		}
 		return 0;
 	}

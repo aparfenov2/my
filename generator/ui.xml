@@ -51,24 +51,33 @@
 		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
 	</parameters>
 	
+<!-- предопределенные контроллеры -->	
+	<controllers>
+		<controller id="menu"/>
+		<controller id="menu_item"/>
+	</controllers>
 	
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="dme" kind="predefined"/> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
+		<view id="dme" kind="predefined" /> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
 		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
 		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->
 		<view id="tbox_cbox" kind="predefined" /> <!-- label{param_name} + textbox + combobox -->
 		<view id="tbox_label" kind="predefined" /> <!-- label{param_name} + textbox + label -->
+		<view id="lab" kind="predefined" /> <!-- label -->
 <!-- генерируемые виды -->
 		<view id="root" kind="generated" layout="stretch">
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
 		<!-- w=-1, h=-1 - значения взять из parent -->
-			<view id="menu" kind="generated" menuRef="menu" layout="stack" vertical="true" controller="menu" />
+			<view id="menu" kind="generated" menuRef="menu" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
 <!-- view reference -->			
 <!--			<view id="&cbox" x="0" y="0" w="w" h="h" /> -->
 		</view>
-		
+		<view id="item_template" layout="stack" vertical="false" controller="menu_item">
+			<viewRef id="lab" ref="lab">
+			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
+		</view>
 	</views>
 	
 	<menus>

@@ -2,6 +2,7 @@
 #define _GENERATOR_COMMON_H
 
 #include "widgets.h"
+#include <unordered_map>
 
 namespace gen {
 
@@ -27,6 +28,10 @@ public:
 		return get_string_param("id") == id;
 	}
 
+	myvi::string_t get_id() {
+		return get_string_param("id");
+	}
+
 	myvi::string_t get_name() {
 		return get_string_param("name");
 	}
@@ -41,14 +46,6 @@ public:
 	}
 };
 
-template<typename T>
-class composite_meta_t : public meta_t {
-public:
-// дочерние параметры комплексного параметра 
-	virtual T * get_child(s32 i) {
-		return 0;
-	}
-};
 
 // метаинфа о параметре
 class parameter_meta_t : public meta_t {
@@ -57,10 +54,17 @@ public:
 };
 
 // метаинфа о типе
-class type_meta_t : public composite_meta_t<parameter_meta_t> {
+class type_meta_t : public meta_t {
 public:
 	// итератор Enum для combobx-a
 	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() {
+		return 0;
+	}
+
+	virtual myvi::string_t get_parameter_child(s32 i) {
+		return 0;
+	}
+	virtual parameter_meta_t * get_enum_child(s32 i) {
 		return 0;
 	}
 
@@ -81,16 +85,31 @@ public:
 */
 };
 
+
+
+
 // метаинфа о виде
-class view_meta_t : public composite_meta_t<view_meta_t> {
+class view_meta_t : public meta_t {
 public:
 // метод фабрики вида. Создает вид и привязывает к нему контроллер
-	myvi::gobject_t * build_view();
+	myvi::gobject_t * build_view(parameter_meta_t *parameter_meta = 0);
+
+	virtual myvi::string_t get_view_child(s32 i) {
+		return 0;
+	}
+
+	bool is_predefined() {
+		return this->get_string_param("kind") == "predefined";
+	}
+
 };
 
 // матаинфа о меню
-class menu_meta_t : public composite_meta_t<parameter_meta_t> {
+class menu_meta_t : public meta_t {
 public:
+	virtual myvi::string_t get_parameter_child(s32 i) {
+		return 0;
+	}
 };
 
 
@@ -148,11 +167,8 @@ public:
 };
 
 
-} // ns
 
 // ====================================== контроллеры, итп ===================================================
-
-namespace myvi {
 
 
 class model_t {
@@ -162,23 +178,40 @@ public:
 };
 
 
-// view mixin
-class meta_provider_t {
+// C++ requirements:
+// must be a function object type that is default_constructible, copy_assignable and swappable
+// must have the nested types 'argument_type' and 'result_type' (std::size_t)
+class string_t_hash_t : std::unary_function< const myvi::string_t&, std::size_t > {
 public:
-	virtual gen::meta_t * get_meta() = 0;
+	// should not throw any exceptions
+	std::size_t operator() ( const myvi::string_t& key ) const /* can add noexcept or throw() here */
+	{
+		std::size_t hash = 0U ;
+		const std::size_t mask = 0xF0000000 ;
+		for( std::string::size_type i = 0 ; i < (std::string::size_type)key.length() ; ++i ) {
+			hash = ( hash << 4U ) + key[i] ;
+			std::size_t x = hash & mask ;
+			if( x != 0 ) hash ^= ( x >> 24 ) ;
+			hash &= ~x ;
+		}
+		return hash;
+	}
 };
 
-
-class dynamic_view_t : public gobject_t, public meta_provider_t {
-	gen::meta_t * meta;
+class dynamic_view_t : public myvi::gobject_t {
+	typedef myvi::gobject_t super;
 public:
-
-	dynamic_view_t (gen::meta_t * _meta) {
-		meta = _meta;
+	std::unordered_map<myvi::string_t, myvi::gobject_t *, string_t_hash_t> id_map;
+public:
+	// добавляет дочерний вид с привязкой идентификатора
+	void add_child(myvi::gobject_t *child, myvi::string_t id) {
+		_MY_ASSERT(child, return);
+		super::add_child(child);
+		id_map[id] = child;
 	}
 
-	virtual gen::meta_t * get_meta() OVERRIDE {
-		return meta;
+	myvi::gobject_t *get_child(myvi::string_t id) {
+		return id_map[id];
 	}
 };
 
@@ -187,94 +220,14 @@ class view_controller_t {
 public:
 public:
 	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
-	virtual void init( gobject_t *view,  gen::view_meta_t *meta) = 0;
+	virtual void init( myvi::gobject_t *view,  gen::view_meta_t *meta, gen::parameter_meta_t *parameter_meta) {
+	}
+
 };
 
 
 
 
-// менеджер размещения с заранее заданными размерами
-// ожидает от инстанса вида поддержки meta_provider_t
-class absolute_layout_t : public layout_t {
-private:
-	s32 check_w(gobject_t *parent, gobject_t *child, s32 w) {
-		_MY_ASSERT(w != _NAN, return _NAN);
-
-		if (child->x + w > parent->w) w = parent->w - child->x;
-		if (w <= 0) {
-			w = _NAN;
-		}
-		return w;
-	}
-	s32 check_h(gobject_t *parent, gobject_t *child, s32 h) {
-		_MY_ASSERT(h != _NAN, return _NAN);
-
-		if (child->y + h > parent->h) h = parent->h - child->y;
-		if (h <= 0) {
-			h = _NAN;
-		}
-		return h;
-	}
-
-public:
-	virtual void get_preferred_size(gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
-
-		gobject_t::iterator_visible_t iter = parent->iterator_visible();
-		gobject_t * child = iter.next();
-
-		pw = 0;
-		ph = 0;
-
-		while (child) {
-			meta_provider_t *meta_provider = dynamic_cast<meta_provider_t *>(child);
-			if (meta_provider) {
-				gen::meta_t *meta = meta_provider->get_meta();
-				s32 x = meta->get_int_param("x");
-				_WEAK_ASSERT(x != _NAN, continue);
-				s32 y = meta->get_int_param("y");
-				_WEAK_ASSERT(y != _NAN, continue);
-				s32 w = meta->get_int_param("w");
-				_WEAK_ASSERT(w != _NAN, continue);
-				s32 h = meta->get_int_param("h");
-				_WEAK_ASSERT(h != _NAN, continue);
-
-				if (pw < x+w) pw = x+w;
-				if (ph < y+h) ph = y+h;
-			}
-			child = iter.next();
-		}
-		
-	}
-
-	virtual void layout(gobject_t *parent) OVERRIDE {
-
-		gobject_t::iterator_visible_t iter = parent->iterator_visible();
-		gobject_t * child = iter.next();
-
-		while (child) {
-			meta_provider_t *meta_provider = dynamic_cast<meta_provider_t *>(child);
-			if (meta_provider) {
-				gen::meta_t *meta = meta_provider->get_meta();
-
-				s32 x = meta->get_int_param("x");
-				_WEAK_ASSERT(x != _NAN, continue);
-				s32 y = meta->get_int_param("y");
-				_WEAK_ASSERT(y != _NAN, continue);
-				s32 w = meta->get_int_param("w");
-				_WEAK_ASSERT(w != _NAN, continue);
-				s32 h = meta->get_int_param("h");
-				_WEAK_ASSERT(h != _NAN, continue);
-
-				child->x = x;
-				child->y = y;
-				child->w = check_w(parent, child, w);
-				child->h = check_h(parent, child, h);
-
-			}
-			child = iter.next();
-		}
-	}
-};
 
 // интерфейс фабрики видов - выделен для компилируемости
 class view_factory_t {
@@ -285,12 +238,13 @@ public:
 		return _instance;
 	}
 	// called from menu_controller_t
-	virtual void append_menu_view(gobject_t *view, gen::menu_meta_t *meta) = 0;
+//	virtual void append_menu_view(myvi::gobject_t *view, gen::menu_meta_t *meta) = 0;
 	// метод фабрики вида по умолчанию для составного вида
-	virtual gobject_t * build_view(gen::view_meta_t * meta) = 0;
+	virtual myvi::gobject_t * build_view(gen::view_meta_t * meta, gen::parameter_meta_t * parameter_meta) = 0;
 	// Метод фабрики вида для параметра
-	virtual gobject_t * build_menu_view(gen::parameter_meta_t * meta) = 0;
+	virtual myvi::gobject_t * build_menu_view(gen::parameter_meta_t * meta) = 0;
 };
+
 
 } // ns myvi
 #endif
