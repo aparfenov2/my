@@ -32,6 +32,7 @@
 #include "widgets.h"
 #include "exported2_impl.h"
 
+
 //void testPins();
 
 extern "C" void SSD1963_InitHW();
@@ -77,7 +78,6 @@ int main(void)
 
 
     key_t::key_t lk;
-
 	while(1) {
 		s16 enc_cnt = enc_reset_counter();
 		key_t::key_t k = kbd_get_key();

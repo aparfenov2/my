@@ -67,7 +67,7 @@ typedef struct {
 
 #endif
 
-STATIC_ASSERT(sizeof(rgb565_t) == sizeof(u16), sa_rgb565);
+STATIC_ASSERT(sizeof(rgb565_t) == sizeof(u16), sa_rgb565)
 
 #define RGB2U32(r,g,b) ((((u32)(r) << 16) & 0x00ff0000) | (((u32)(g) << 8) & 0x0000ff00) | ((u32)(b) & 0x000000ff))
 #define U32R(v) (((v) >> 16) & 0xff)
