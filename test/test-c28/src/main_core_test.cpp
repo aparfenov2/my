@@ -70,7 +70,7 @@ void drawScene(gobject_t *obj, surface_t &s1) {
 	key_t::key_t key = kbd_get_key();
 
 	focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(obj);
-	_MY_ASSERT(focus_aware, obj);
+	_MY_ASSERT(focus_aware, return);
 
 	if (key != last_key) {
 		last_key = key;
@@ -80,10 +80,10 @@ void drawScene(gobject_t *obj, surface_t &s1) {
 	while (enc_cnt) {
 		if (enc_cnt > 0) {
 			enc_cnt--;
-			focus_aware->key_event(key_t::K_RIGHT);
+			focus_aware->key_event(key != key_t::K_SAVE ? key_t::K_RIGHT : key_t::K_DOWN);
 		} else if (enc_cnt < 0) {
 			enc_cnt++;
-			focus_aware->key_event(key_t::K_LEFT);
+			focus_aware->key_event(key != key_t::K_SAVE ? key_t::K_LEFT : key_t::K_UP);
 		}
 	}
 	if (rasterizer_t::render(obj, s1))

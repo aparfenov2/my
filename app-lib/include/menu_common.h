@@ -11,12 +11,13 @@ public:
 	label_context_t lctx1;
 	label_context_t lctxg;
 private:
+	static menu_context_t _instance;
+
 	menu_context_t() {
 	}
 public:
 	static menu_context_t & instance() {
-		static menu_context_t instance;
-		return instance;
+		return _instance;
 	}
 };
 

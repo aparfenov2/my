@@ -4,22 +4,38 @@
 #include "disp_def.h"
 #include "menu_common.h"
 #include "resources.h"
+#include "widgets.h"
 
 #include <vector>
 #include <sstream>
 #include <string>
 
-class suffixes_t : public myvi::iterator_t<myvi::string_t> {
+
+class suffixes_t : public myvi::iterator_t<myvi::combobox_item_t> {
+	class combobox_item_impl_t : public myvi::combobox_item_t {
+	public:
+		myvi::string_t str;
+	public:
+		combobox_item_impl_t() {
+		}
+		combobox_item_impl_t(myvi::string_t _str) {
+			str = _str;
+		}
+		virtual myvi::string_t get_string_value() OVERRIDE {
+			return str;
+		}
+	};
+
 public:
-	myvi::string_t str1;
-	myvi::string_t str2;
+	combobox_item_impl_t str1;
+	combobox_item_impl_t str2;
 public:
 	suffixes_t() {
 		str1 = myvi::string_t("A");
 		str2 = myvi::string_t("B");
 	}
 
-	virtual myvi::string_t* next(void* prev) OVERRIDE {
+	virtual myvi::combobox_item_t* next(void* prev) OVERRIDE {
 		if (!prev) return &str1;
 		if (prev == &str1) return &str2;
 		return 0;
@@ -119,7 +135,7 @@ public:
 
 		row->valbox.lval.value = "Value";
 		row->valbox.lsfx.values = &suffixes;
-		row->valbox.lsfx.value = *suffixes.next(0);
+		row->valbox.lsfx.value = suffixes.next(0);
 		std::string *s = new std::string(str.str());
 		row->lname.text = (*s).c_str();
 	}
@@ -217,7 +233,7 @@ public:
 
 		hdr_box.lval.value = "Helo!";
 		hdr_box.lsfx.values = &suffixes;
-		hdr_box.lsfx.value = *suffixes.next(0);
+		hdr_box.lsfx.value = suffixes.next(0);
 
 		add_child(&hdr_box);
 
