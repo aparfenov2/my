@@ -20,7 +20,7 @@ static u32 last_sector = 0xffff;
 using namespace myvi;
 
 void exported_interface2_impl_t::key_event(key_t::key_t key) {
-	globals::modal_overlay.key_event(key);
+//	globals::modal_overlay.key_event(key);
 }
 
 void exported_interface2_impl_t::upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {

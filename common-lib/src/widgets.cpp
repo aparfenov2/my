@@ -101,8 +101,8 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 	gobject_t *selected_g = dynamic_cast<gobject_t*>(selected);
 	selected_g->translate(sx,sy);
 
-	float sxf = (float)sx, syf = (float)sy;
-	float ud,dd,ld,rd;
+	double sxf = (double)sx, syf = (double)sy;
+	double ud,dd,ld,rd;
 
 	gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
 	gobject_t *p =  iter.next();
@@ -114,9 +114,9 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 
 		s32 px,py;
 		p->translate(px,py);
-		float pxf = (float)px, pyf = (float)py;
-		float pxd = pxf-sxf, pyd = pyf-syf;
-		float pd = sqrtf(pxd*pxd + pyd*pyd);
+		double pxf = (double)px, pyf = (double)py;
+		double pxd = pxf-sxf, pyd = pyf-syf;
+		double pd = sqrt(pxd*pxd + pyd*pyd);
 
 		if (py < sy) {
 			if (!next_up || (next_up && (pd < ud))) {
