@@ -12,33 +12,31 @@ type_meta_t * meta_registry_t::types[] = {
 	0
 };
 
-// parameters complex
-ch_parameter_meta_t ch_parameter_meta;
-sfx_parameter_meta_t sfx_parameter_meta;
+// parameters
 dme_parameter_meta_t dme_parameter_meta;
 
 parameter_meta_t * meta_registry_t::parameters[] = {
-	&ch_parameter_meta,
-	&sfx_parameter_meta,
 	&dme_parameter_meta,
 	0
 };
 
 
-// views predefined
-lab_view_meta_t lab_view_meta;
-dme_view_meta_t dme_view_meta;
-// views custom
-menu_view_meta_t menu_view_meta;
+// views
+
 root_view_meta_t root_view_meta;
-item_template_view_meta_t item_template_view_meta;
+dme_view_meta_t dme_view_meta;
+tbox_view_meta_t tbox_view_meta;
+cbox_view_meta_t cbox_view_meta;
+tbox_cbox_view_meta_t tbox_cbox_view_meta;
+tbox_label_view_meta_t tbox_label_view_meta;
 
 view_meta_t * meta_registry_t::views[] = {
-	&lab_view_meta,
-	&dme_view_meta,
-	&menu_view_meta,
 	&root_view_meta,
-	&item_template_view_meta,
+	&dme_view_meta,
+	&tbox_view_meta,
+	&cbox_view_meta,
+	&tbox_cbox_view_meta,
+	&tbox_label_view_meta,
 	0
 };
 

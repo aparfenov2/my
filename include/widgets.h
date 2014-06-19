@@ -432,6 +432,7 @@ class rasterizer_t {
 public:
 	static u32 colors[4];
 	static u32 deepLevel;
+	static bool debug;
 public:
 
 	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
@@ -460,8 +461,10 @@ public:
 			pah = h1;
 			dst.set_allowed_area(pax,pay,paw,pah);
 // DEBUG DRAW:
-			dst.ctx.pen_color = colors[deepLevel & 0x03];
-//			dst.rect(x1,y1,p->w,p->h);
+			if (debug) {
+				dst.ctx.pen_color = colors[deepLevel & 0x03];
+				dst.rect(x1,y1,p->w,p->h);
+			}
 
 			p->render(dst);
 			clear_dirty(p);

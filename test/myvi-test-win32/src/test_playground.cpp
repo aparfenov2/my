@@ -110,8 +110,8 @@ logger_t *logger_t::instance = &logger_impl;
 class test_screen_t : public gobject_t, public focus_aware_t {
 
 public:
-	tedit_t hdr_box;
-	scrollable_menu_t scrollable;
+	custom::tedit_t hdr_box;
+	custom::scrollable_menu_t scrollable;
 
 
 public:
@@ -120,6 +120,7 @@ public:
 
 		w = TFT_WIDTH;
 		h = TFT_HEIGHT;
+		rasterizer_t::debug = true;
 
 		button_context_t bctx1;
 		bctx1.bk_sel_color = 0x292929; // gray

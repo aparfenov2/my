@@ -5,13 +5,12 @@
 #include "generator_common.h"
 #include <sstream>
 
-
-namespace myvi {
+namespace custom {
 
 
 // Строка из текстбокса и комбобокса с суффиксами
 
-class tedit_t : public inp_dlg_row_t {
+class tedit_t : public myvi::inp_dlg_row_t {
 public:
 
 	virtual void do_layout() OVERRIDE {
@@ -28,11 +27,11 @@ public:
 };
 
 // строка из названия и tedit-a справа
-class menu_row_t :  public gobject_t {
+class menu_row_t :  public myvi::gobject_t {
 public:
-	label_t lname;
+	myvi::label_t lname;
 	tedit_t valbox;
-	stack_layout_t stack_layout;
+	myvi::stack_layout_t stack_layout;
 public:
 
 	menu_row_t() {
@@ -45,11 +44,11 @@ public:
 	virtual void init() {
 		gobject_t::init();
 
-		menu_context_t &ctx = menu_context_t::instance();
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
 
 		lname.visible = true;
 		lname.ctx = ctx.lctx1;
-		lname.ctx.font_size = font_size_t::FS_20;
+		lname.ctx.font_size = myvi::font_size_t::FS_20;
 
 	}
 
@@ -74,78 +73,17 @@ public:
 };
 
 
-// контроллер вида с полем ввода и комбобоксом
-class tbox_cbox_controller_t  {
-public:
-	//units
-	//validators
-	//textbox*
-	//combobox*
-public:
-};
 
-
-// вид с полем ввода и комбобоксом
-class tbox_cbox_view_t : public gobject_t {
-public:
-	text_box_t lval;
-	combo_box_t lsfx;
-	stack_layout_t stack_layout;
-//	input_controller_t controller;
-public:
-	tbox_cbox_view_t() {
-		stack_layout.vertical = false;
-		stack_layout.preferred_item_size = true;
-		layout = &stack_layout;
-
-		add_child(&lval);
-		add_child(&lsfx);
-	}
-
-	virtual void init() {
-		gobject_t::init();
-
-		menu_context_t &ctx = menu_context_t::instance();
-
-		lval.visible = true;
-		lval.lab.ctx = ctx.lctx1;
-		lval.lab.ctx.font_size = font_size_t::FS_20;
-
-		lsfx.visible = true;
-		lsfx.lab.ctx = ctx.lctx1;
-		lsfx.lab.ctx.font_size = font_size_t::FS_20;
-	}
-
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		_MY_ASSERT(parent,return);
-		parent->dirty = dirty;
-	}
-
-
-	virtual void child_request_size_change(gobject_t *child, s32 aw, s32 ah) OVERRIDE {
-
-		get_preferred_size(aw,ah);
-
-		if (parent) {
-			parent->child_request_size_change(this, aw, ah);
-
-		} else {
-			do_layout();
-			dirty = true;
-		}
-	}
-
-};
 
 
 // ----------------- пример наследования окна с прокруткой --------------------------
 
 
 // наследник класса внутреннего окна
-class scrollable_menu_interior_t : public scrollable_interior_t {
+class scrollable_menu_interior_t : public myvi::scrollable_interior_t {
 	typedef scrollable_interior_t super;
 public:
-	stack_layout_t stack_layout;
+	myvi::stack_layout_t stack_layout;
 public:
 
 	scrollable_menu_interior_t() {
@@ -177,8 +115,8 @@ public:
 	virtual void init() OVERRIDE {
 		super::init();
 
-		gobject_t::iterator_visible_t iter = this->iterator_visible();
-		gobject_t *p = iter.next();
+		myvi::gobject_t::iterator_visible_t iter = this->iterator_visible();
+		myvi::gobject_t *p = iter.next();
 		int i = 0;
 		while (p) {
 			init_row((menu_row_t *)p, i++);
@@ -193,7 +131,7 @@ public:
 
 
 // наследник класса окна с прокруткой
-class scrollable_menu_t : public scrollable_window_t {
+class scrollable_menu_t : public myvi::scrollable_window_t {
 	typedef scrollable_window_t super;
 public:
 	scrollable_menu_interior_t interior;
@@ -202,7 +140,7 @@ public:
 	scrollable_menu_t(): super(&interior) {
 	}
 
-	virtual void render(surface_t &dst) OVERRIDE {
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
 		dst.ctx.alfa = 0xff;
 		dst.ctx.pen_color = 0x8a8a8a;
 		s32 ax,ay;
@@ -231,55 +169,444 @@ public:
 */
 
 
-// ----------------- DME - наследник вида с текстбоксом и комбобоксом ----------------------
 
 
-class dme_view_t : public gobject_t {
+class tbox_view_t : public myvi::text_box_t {
 public:
-	label_t menu_label;
-	tbox_cbox_view_t tbox_cbox;
+};
+
+class tbox_controller_t : public gen::view_controller_t {
 public:
-	dme_view_t() {
-		add_child(&menu_label);
-		add_child(&tbox_cbox);
+	myvi::label_t *lab;
+public:
+
+	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+	}
+
+};
+
+class cbox_view_t : public myvi::combo_box_t {
+public:
+};
+
+// контроллер комбобокса
+class cbox_controller_t : public gen::view_controller_t {
+public:
+	//units
+	//validators
+	//textbox*
+	//combobox*
+public:
+	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *meta) OVERRIDE  {
 	}
 };
 
 
+// вид с полем ввода и комбобоксом
+class tbox_cbox_view_t : public myvi::gobject_t {
+public:
+	myvi::text_box_t lval;
+	myvi::combo_box_t lsfx;
+	myvi::stack_layout_t stack_layout;
+//	input_controller_t controller;
+public:
+	tbox_cbox_view_t() {
 
-// -----------------------------------------
-// ----------- контроллеры -----------------
-// -----------------------------------------
+		stack_layout.vertical = false;
+		stack_layout.preferred_item_size = true;
+		layout = &stack_layout;
+
+		add_child(&lval);
+		add_child(&lsfx);
+	}
+
+	virtual void init() {
+		myvi::gobject_t::init();
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		lval.visible = true;
+		lval.lab.ctx = ctx.lctx1;
+		lval.lab.ctx.font_size = myvi::font_size_t::FS_20;
+
+		lsfx.visible = true;
+		lsfx.lab.ctx = ctx.lctx1;
+		lsfx.lab.ctx.font_size = myvi::font_size_t::FS_20;
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		_MY_ASSERT(parent,return);
+		parent->dirty = dirty;
+	}
+
+
+	virtual void child_request_size_change(gobject_t *child, s32 aw, s32 ah) OVERRIDE {
+
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw, ah);
+
+		} else {
+			do_layout();
+			dirty = true;
+		}
+	}
+
+};
+
+// контроллер вида с полем ввода и комбобоксом
+class tbox_cbox_controller_t : public gen::view_controller_t {
+public:
+	//units
+	//validators
+	//textbox*
+	//combobox*
+public:
+	virtual void init( myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *meta) OVERRIDE  {
+	}
+};
+
+
+class lab_view_t : public myvi::label_t {
+public:
+
+	virtual void init() OVERRIDE {
+		myvi::gobject_t::init();
+
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		visible = true;
+		this->ctx = ctx.lctx1;
+		this->ctx.font_size = myvi::font_size_t::FS_20;
+
+	}
+
+};
+
+class tbox_label_view_t : public myvi::gobject_t {
+public:
+	myvi::text_box_t lval;
+	myvi::label_t lsfx;
+	myvi::stack_layout_t stack_layout;
+//	input_controller_t controller;
+public:
+	tbox_label_view_t() {
+
+		stack_layout.vertical = false;
+		stack_layout.preferred_item_size = true;
+		layout = &stack_layout;
+
+		add_child(&lval);
+		add_child(&lsfx);
+	}
+
+	virtual void init() OVERRIDE {
+		myvi::gobject_t::init();
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		lval.visible = true;
+		lval.lab.ctx = ctx.lctx1;
+		lval.lab.ctx.font_size = myvi::font_size_t::FS_20;
+
+		lsfx.visible = true;
+		lsfx.ctx = ctx.lctx1;
+		lsfx.ctx.font_size = myvi::font_size_t::FS_20;
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		_MY_ASSERT(parent,return);
+		parent->dirty = dirty;
+	}
+
+
+	virtual void child_request_size_change(gobject_t *child, s32 aw, s32 ah) OVERRIDE {
+
+		get_preferred_size(aw,ah);
+
+		if (parent) {
+			parent->child_request_size_change(this, aw, ah);
+
+		} else {
+			do_layout();
+			dirty = true;
+		}
+	}
+
+};
+
+
+class tbox_label_controller_t : public gen::view_controller_t {
+public:
+	//units
+	//validators
+	//textbox*
+	//combobox*
+public:
+	virtual void init( myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *meta) OVERRIDE  {
+	}
+};
 
 
 // инициализирует поле названия элемента меню
 class label_controller_t {
 public:
-	label_t *lab;
+	myvi::label_t *lab;
 public:
-	void init(label_t *alab, gen::parameter_meta_t *parameter_meta) {
+	void init(myvi::label_t *alab, gen::parameter_meta_t *parameter_meta) {
 		lab = alab;
 	}
 };
 
 
+
+// ----------------- DME - наследник вида с текстбоксом и комбобоксом ----------------------
+
+
+class dme_view_t : public myvi::gobject_t {
+public:
+	myvi::label_t menu_label;
+	custom::tbox_cbox_view_t tbox_cbox;
+	myvi::stack_layout_t stack_layout;
+public:
+	dme_view_t() {
+		stack_layout.vertical = false;
+		layout = &stack_layout;
+
+		add_child(&menu_label);
+		add_child(&tbox_cbox);
+	}
+};
+
 // пример контроллера составного параметра
 // Контроллеры статически определены в коде до генерации
-class dme_controller_t {
+class dme_controller_t : public gen::view_controller_t {
 public:
 	label_controller_t lab_ctl;
 	tbox_cbox_controller_t tcb_ctl;
 public:
-	void init(dme_view_t *dme_view, gen::parameter_meta_t *parameter_meta) {
+	void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
 	}
 };
 
+
 // контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
-class menu_controller_t : public view_controller_t {
+class menu_controller_t : public gen::view_controller_t {
 public:
 public:
-	virtual void init(gobject_t *view, gen::view_meta_t *view_meta) OVERRIDE {
+	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+
+		myvi::string_t menu_id = view_meta->get_string_param("menuRef");
+		_MY_ASSERT(!menu_id.is_empty(), return);
+
+		myvi::string_t item_template_id = view_meta->get_string_param("itemTemplateView");
+		_MY_ASSERT(!item_template_id.is_empty(), return);
+
+		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
+
+		gen::menu_meta_t *menu_meta = gen::meta_registry_t::instance().find_menu_meta(menu_id);
+
+		// здесь view - конетейнер меню
+		// вставляем элементы меню в данный нам вид
+		for (s32 i=0; ;i++) {
+			myvi::string_t child_id = menu_meta->get_parameter_child(i);
+			if (child_id.is_empty()) break;
+
+			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
+			myvi::gobject_t *child_view = child_meta->build_menu_view();
+
+			// создаем обёртку для вида параметра на основе шаблона
+			myvi::gobject_t *child_wrapper = template_meta->build_view(child_meta);
+			child_wrapper->add_child(child_view);
+			view->add_child(child_wrapper);
+		}
+
+//		gen::view_factory_t::instance()->append_menu_view(view, menu_meta);
 	}
+};
+
+// контроллер элемента меню
+// заполняет label шаблона названием элемента
+class menu_item_controller_t : public gen::view_controller_t {
+public:
+public:
+	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+		// найдем метку lab в шаблоне вида элемнта меню
+		gen::dynamic_view_t *dynamic_view = dynamic_cast<gen::dynamic_view_t *>(view);
+		_MY_ASSERT(dynamic_view, return);
+
+		myvi::gobject_t *lab_obj = dynamic_view->get_child("lab");
+		_MY_ASSERT(lab_obj, return);
+		myvi::label_t *lab = dynamic_cast<myvi::label_t *>(lab_obj);
+		_MY_ASSERT(lab, return);
+		lab->text = parameter_meta->get_name();
+	}
+};
+
+
+// вид с фоном
+class background_view_t : public myvi::gobject_t {
+public:
+	myvi::surface_context_t ctx;
+	bool hasBorder;
+public:
+	background_view_t() {
+		hasBorder = false;
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		translate(ax,ay);
+		dst.ctx = ctx;
+
+		if (ctx.alfa) {
+			dst.fill(ax,ay,w,h);
+		}
+		if (hasBorder) {
+			dst.rect(ax,ay,w,h);
+		}
+	}
+};
+
+
+// менеджер размещения с заранее заданными размерами
+// ожидает от инстанса вида поддержки meta_provider_t
+/*
+class absolute_layout_t : public myvi::layout_t {
+private:
+	s32 check_w(myvi::gobject_t *parent, myvi::gobject_t *child, s32 w) {
+		_MY_ASSERT(w != _NAN, return _NAN);
+
+		if (child->x + w > parent->w) w = parent->w - child->x;
+		if (w <= 0) {
+			w = _NAN;
+		}
+		return w;
+	}
+	s32 check_h(myvi::gobject_t *parent, myvi::gobject_t *child, s32 h) {
+		_MY_ASSERT(h != _NAN, return _NAN);
+
+		if (child->y + h > parent->h) h = parent->h - child->y;
+		if (h <= 0) {
+			h = _NAN;
+		}
+		return h;
+	}
+
+public:
+
+	absolute_layout_t(gen::meta_t *meta) {
+	}
+
+	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t * child = iter.next();
+
+		pw = 0;
+		ph = 0;
+
+		while (child) {
+			gen::meta_provider_t *meta_provider = dynamic_cast<gen::meta_provider_t *>(child);
+			if (meta_provider) {
+				gen::meta_t *meta = meta_provider->get_meta();
+				s32 x = meta->get_int_param("x");
+				_WEAK_ASSERT(x != _NAN, continue);
+				s32 y = meta->get_int_param("y");
+				_WEAK_ASSERT(y != _NAN, continue);
+				s32 w = meta->get_int_param("w");
+				_WEAK_ASSERT(w != _NAN, continue);
+				s32 h = meta->get_int_param("h");
+				_WEAK_ASSERT(h != _NAN, continue);
+
+				if (pw < x+w) pw = x+w;
+				if (ph < y+h) ph = y+h;
+			}
+			child = iter.next();
+		}
+		
+	}
+
+	virtual void layout(myvi::gobject_t *parent) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t * child = iter.next();
+
+		while (child) {
+			gen::meta_provider_t *meta_provider = dynamic_cast<gen::meta_provider_t *>(child);
+			if (meta_provider) {
+				gen::meta_t *meta = meta_provider->get_meta();
+
+				s32 x = meta->get_int_param("x");
+				_WEAK_ASSERT(x != _NAN, continue);
+				s32 y = meta->get_int_param("y");
+				_WEAK_ASSERT(y != _NAN, continue);
+				s32 w = meta->get_int_param("w");
+				_WEAK_ASSERT(w != _NAN, continue);
+				s32 h = meta->get_int_param("h");
+				_WEAK_ASSERT(h != _NAN, continue);
+
+				child->x = x;
+				child->y = y;
+				child->w = check_w(parent, child, w);
+				child->h = check_h(parent, child, h);
+
+			}
+			child = iter.next();
+		}
+	}
+
+};
+*/
+
+class stretch_meta_layout_t : public myvi::stretch_layout_t {
+public:
+	stretch_meta_layout_t(gen::meta_t *meta) {
+	}
+};
+
+
+class stack_meta_layout_t : public myvi::stack_layout_t {
+public:
+	stack_meta_layout_t(gen::meta_t *meta) {
+		if (meta->get_string_param("vertical") == "true") {
+			this->vertical = true;
+		}
+	}
+};
+
+class menu_meta_layout_t : public myvi::layout_t {
+public:
+	menu_meta_layout_t(gen::meta_t *meta) {
+	}
+
+	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
+		_MY_ASSERT(0, return);
+	}
+
+	virtual void layout(myvi::gobject_t *parent) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		// 1st child
+		myvi::gobject_t *first  = iter.next();
+		_MY_ASSERT(first, return);
+		first->w = (s32)(parent->w * 0.7);
+		first->h = parent->h;
+		// 2st child
+		myvi::gobject_t *second  = iter.next();
+		_MY_ASSERT(second, return);
+
+		second->h = parent->h;
+		second->x = first->w + 5;
+		second->w = parent->w - second->x;
+
+		// none other children
+		_MY_ASSERT(!iter.next(), return);
+
+	}
+
 };
 
 }  // ns
