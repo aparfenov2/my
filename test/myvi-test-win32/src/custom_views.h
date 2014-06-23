@@ -172,7 +172,17 @@ public:
 
 
 class tbox_view_t : public myvi::text_box_t {
+	typedef myvi::text_box_t super;
 public:
+	virtual void init() OVERRIDE {
+		super::init();
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		this->visible = true;
+		this->lab.ctx = ctx.lctx1;
+		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
+	}
 };
 
 class tbox_controller_t : public gen::view_controller_t {
@@ -186,7 +196,17 @@ public:
 };
 
 class cbox_view_t : public myvi::combo_box_t {
+	typedef myvi::combo_box_t super;
 public:
+	virtual void init() OVERRIDE {
+		super::init();
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		this->visible = true;
+		this->lab.ctx = ctx.lctx1;
+		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
+	}
 };
 
 // контроллер комбобокса
@@ -364,7 +384,7 @@ public:
 
 // ----------------- DME - наследник вида с текстбоксом и комбобоксом ----------------------
 
-
+/*
 class dme_view_t : public myvi::gobject_t {
 public:
 	myvi::label_t menu_label;
@@ -373,21 +393,29 @@ public:
 public:
 	dme_view_t() {
 		stack_layout.vertical = false;
+		stack_layout.preferred_item_size = true;
 		layout = &stack_layout;
+
+		menu_label.text = "text";
 
 		add_child(&menu_label);
 		add_child(&tbox_cbox);
 	}
 };
+*/
 
 // пример контроллера составного параметра
 // Контроллеры статически определены в коде до генерации
 class dme_controller_t : public gen::view_controller_t {
 public:
-	label_controller_t lab_ctl;
-	tbox_cbox_controller_t tcb_ctl;
 public:
 	void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+
+		gen::dynamic_view_mixin_t *dv = dynamic_cast<gen::dynamic_view_mixin_t *>(view);
+		_MY_ASSERT(dv, return);
+		myvi::gobject_t *ch_view = dv->get_child("ch");
+//		_MY_ASSERT(ch_view, return);
+
 	}
 };
 
@@ -446,29 +474,6 @@ public:
 };
 
 
-// вид с фоном
-class background_view_t : public myvi::gobject_t {
-public:
-	myvi::surface_context_t ctx;
-	bool hasBorder;
-public:
-	background_view_t() {
-		hasBorder = false;
-	}
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		s32 ax, ay;
-		translate(ax,ay);
-		dst.ctx = ctx;
-
-		if (ctx.alfa) {
-			dst.fill(ax,ay,w,h);
-		}
-		if (hasBorder) {
-			dst.rect(ax,ay,w,h);
-		}
-	}
-};
 
 
 // менеджер размещения с заранее заданными размерами
@@ -571,9 +576,7 @@ public:
 class stack_meta_layout_t : public myvi::stack_layout_t {
 public:
 	stack_meta_layout_t(gen::meta_t *meta) {
-		if (meta->get_string_param("vertical") == "true") {
-			this->vertical = true;
-		}
+		this->vertical = meta->get_string_param("vertical") == "true";
 	}
 };
 
@@ -592,7 +595,7 @@ public:
 		// 1st child
 		myvi::gobject_t *first  = iter.next();
 		_MY_ASSERT(first, return);
-		first->w = (s32)(parent->w * 0.7);
+		first->w = (s32)(parent->w * 0.6);
 		first->h = parent->h;
 		// 2st child
 		myvi::gobject_t *second  = iter.next();
@@ -608,6 +611,39 @@ public:
 	}
 
 };
+
+
+// вид с фоном
+class background_drawer_t : public gen::drawer_t  {
+public:
+	myvi::surface_context_t ctx;
+	bool hasBorder;
+public:
+	background_drawer_t(gen::meta_t *meta) {
+
+		hasBorder = false;
+		ctx.alfa = 0;
+
+		this->ctx.pen_color = meta->get_int_param("background");
+		if (this->ctx.pen_color > 0) {
+			this->ctx.alfa = 0xff;
+		}
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		obj->translate(ax,ay);
+		dst.ctx = ctx;
+
+		if (ctx.alfa) {
+			dst.fill(ax,ay,obj->w,obj->h);
+		}
+		if (hasBorder) {
+			dst.rect(ax,ay,obj->w,obj->h);
+		}
+	}
+};
+
 
 }  // ns
 #endif
