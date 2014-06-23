@@ -381,6 +381,8 @@ public:
 	virtual myvi::gobject_t * build_menu_view(gen::parameter_meta_t * meta) = 0;
 	// фабрика отрисовщиков
 	virtual drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) = 0;
+
+	virtual u32 parse_color(myvi::string_t color) = 0;
 };
 
 

@@ -189,22 +189,13 @@ public:
 		return view;
 	}
 
-	// called from menu_controller_t
-	//virtual void append_menu_view(myvi::gobject_t *view, gen::menu_meta_t *meta) OVERRIDE {
-	//	build_child_views_of_composite(view, meta);
-	//}
-
-private:
-/*
-	void build_child_views_of_composite(myvi::gobject_t *view, gen::composite_meta_t<gen::parameter_meta_t> * meta) {
-		for (s32 i=0; ;i++) {
-			gen::parameter_meta_t *child_meta = meta->get_child(i);
-			if (!child_meta) break;
-			myvi::gobject_t *child_view = child_meta->build_menu_view();
-			view->add_child(child_view);
+	virtual u32 parse_color(myvi::string_t color) OVERRIDE {
+		if (color == "BACKGROUND_LIGHT") {
+			return 0xF9FFF4;
 		}
+		_MY_ASSERT(0, return 0);
+		return 0;
 	}
-*/
 
 };
 

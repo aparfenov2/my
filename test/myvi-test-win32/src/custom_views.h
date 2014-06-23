@@ -624,7 +624,9 @@ public:
 		hasBorder = false;
 		ctx.alfa = 0;
 
-		this->ctx.pen_color = meta->get_int_param("background");
+		myvi::string_t color = meta->get_string_param("background");
+
+		this->ctx.pen_color = gen::view_factory_t::instance()->parse_color(color);
 		if (this->ctx.pen_color > 0) {
 			this->ctx.alfa = 0xff;
 		}

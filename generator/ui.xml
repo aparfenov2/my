@@ -4,7 +4,7 @@
 
 <!-- Единицы измерения -->
 	<units>
-		<group id="mhz_ut">
+		<unit id="mhz_ut">
 			<unit multiplier="1000000" name="MHz"/>
 			<unit multiplier="1000" name="KHz"/>
 			<unit multiplier="1" name="Hz"/>
@@ -60,9 +60,9 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="dme" layout="stack" vertical="false" drawer="background" background="F9FFF4" /> <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
-			<view id="ch" inherited="tbox" controller="tbox" parameter="ch">
-			<view id="sfx" inherited="cbox" controller="cbox" parameter="sfx">
+		<view id="dme" layout="stack" vertical="false" drawer="background" background="BACKGROUND_LIGHT" > <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
+			<view id="ch" inherited="tbox" controller="tbox" parameter="ch" />
+			<view id="sfx" inherited="cbox" controller="cbox" parameter="sfx" />
 		</view>
 		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
 		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->
@@ -75,10 +75,10 @@
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
 		<!-- w=-1, h=-1 - значения взять из parent -->
-			<view id="menu" kind="generated" menuRef="menu" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+			<view id="menu" kind="generated" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
 		</view>
-		<view id="item_template" layout="stack" vertical="false" controller="menu_item">
-			<view id="lab" inherited="lab">
+		<view id="item_template" layout="menu" controller="menu_item">
+			<view id="lab" inherited="lab" />
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>
@@ -91,6 +91,6 @@
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
 -->			
-		</group>
-	</groups>
+		</menu>
+	</menus>
 </schema>

@@ -16,20 +16,11 @@
 
 
 <#macro enumerate_complex_type typedef>
-	<#if typedef?node_name == 'group'>
-		<#list typedef.parameterRef as pRef>
-			<#local parameter = find_parameter(pRef.@id) >
+	<#if typedef.@type == 'complex'>
+		<#list typedef.parameter as parameter>
 			<#nested parameter>
 		</#list>
-	<#elseif typedef?node_name == 'type'>	
-		<#if typedef.@type == 'complex'>
-			<#list typedef.parameter as parameter>
-				<#nested parameter>
-			</#list>
-		<#else>	
-			<#stop "complex type is not complex: "+typedef.@type>
-		</#if>
-	<#else>
-		<#stop "unknown complex type: "+typedef?node_name>
+	<#else>	
+		<#stop "complex type is not complex: "+typedef.@type>
 	</#if>
 </#macro>
