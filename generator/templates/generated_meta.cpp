@@ -1,50 +1,114 @@
+<#import "inc/common.ftl" as commons>
+
+<#macro emit_set_params meta tab="">
+	<#list meta.@@ as attr>
+		<#local isNum = true>
+		<#attempt>
+			<#local num = attr?number>
+		<#recover>
+			<#local isNum = false>
+		</#attempt>
+		<#if isNum>
+			<#lt>${tab}->set_int_param("${attr.@@qname}",${attr?string})
+		<#else>
+			<#lt>${tab}->set_string_param("${attr.@@qname}","${attr?string}")
+		</#if>
+	</#list>
+</#macro>
+
+<#macro emit_parameter_meta parameter tab="">
+	<#lt>${tab}(new dynamic_parameter_meta_t())
+	<@emit_set_params parameter tab+"\t"/>
+</#macro>
+
+<#macro emit_enum_meta enum tab="">
+	<#lt>${tab}(new dynamic_enum_meta_t())
+	<@emit_set_params enum tab+"\t"/>
+</#macro>
+
+<#macro emit_type_meta type tab="">
+	<#lt>${tab}(new dynamic_type_meta_t())
+	<@emit_set_params type tab+"\t"/>
+	<#if type.@type == 'complex'>
+		<#list type.parameter as parameter>
+			<#lt>${tab+"\t"}->add_parameter(
+			<@emit_parameter_meta parameter tab+"\t\t"/>
+			)
+		</#list>
+	<#elseif type.@type == 'enum'>
+		<#list type.enum as enum>
+			<#lt>${tab+"\t"}->add_enum_value(
+			<@emit_enum_meta enum tab+"\t\t"/>
+			)
+		</#list>
+	</#if>
+</#macro>
+
+<#macro emit_view_meta view tab="">
+	<#lt>${tab}(new dynamic_view_meta_t())
+	<@emit_set_params view tab+"\t" />
+	<#list view.view as child>
+	<#lt>${tab}->add_child(
+		<@emit_view_meta child tab+"\t"/>
+		)
+	</#list>
+</#macro>
+
+<#macro emit_menu_meta menu tab="">
+	<#lt>${tab}(new dynamic_menu_meta_t())
+	<@emit_set_params menu tab+"\t"/>
+	<#list menu.parameterRef as child>
+	<#lt>${tab}->add_child("${child.@id}")
+	</#list>
+</#macro>
+
 #include "generated_meta.h"
 
 using namespace gen;
 
-// types
-dme_t_type_meta_t dme_t_type_meta;
-dme_sfx_t_type_meta_t dme_sfx_t_type_meta;
+void meta_registry_t::init() {
 
-type_meta_t * meta_registry_t::types[] = {
-	&dme_t_type_meta,
-	&dme_sfx_t_type_meta,
-	0
-};
+/*
+ * =================== “»œ€ ==========================
+*/
+	
+<#list schema.schema.types.type as type>
+	// ${type.@id}
+	types.push_back(
+	<@emit_type_meta type "\t\t" />
+		);
+</#list>
+	
+/*
+ * =================== œ¿–¿Ã≈“–€ ==========================
+*/
+<#list schema.schema.parameters.parameter as parameter>
+	// ${parameter.@id}
+	parameters.push_back(
+	<@emit_parameter_meta parameter "\t\t" />
+		);
+</#list>
+	
+/*
+ * =================== ¬»ƒ€ ==========================
+*/
 
-// parameters
-dme_parameter_meta_t dme_parameter_meta;
+<#list schema.schema.views.view as view>
+	// ${view.@id}
+	views.push_back(
+	<@emit_view_meta view "\t\t"/>
+		);
+</#list>
 
-parameter_meta_t * meta_registry_t::parameters[] = {
-	&dme_parameter_meta,
-	0
-};
+/*
+ * =================== Ã≈Õﬁ ==========================
+*/
 
+<#list schema.schema.menus.menu as menu>
+	// ${menu.@id}
+	menus.push_back(
+	<@emit_menu_meta menu "\t\t"/>
+		);
+</#list>
 
-// views
-
-root_view_meta_t root_view_meta;
-dme_view_meta_t dme_view_meta;
-tbox_view_meta_t tbox_view_meta;
-cbox_view_meta_t cbox_view_meta;
-tbox_cbox_view_meta_t tbox_cbox_view_meta;
-tbox_label_view_meta_t tbox_label_view_meta;
-
-view_meta_t * meta_registry_t::views[] = {
-	&root_view_meta,
-	&dme_view_meta,
-	&tbox_view_meta,
-	&cbox_view_meta,
-	&tbox_cbox_view_meta,
-	&tbox_label_view_meta,
-	0
-};
-
-// menus
-menu_menu_meta_t menu_menu_meta;
-
-menu_meta_t * meta_registry_t::menus[] = {
-	&menu_menu_meta,
-	0
-};
-
+}
