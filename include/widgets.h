@@ -1078,6 +1078,7 @@ public:
 	combo_box_t() {
 		captured = false;
 		_values = 0;
+		_value = 0;
 		sprev = 0;
 		lab.ctx.sctx.pen_color = 0x00;
 		lab.visible = true;
@@ -1147,8 +1148,11 @@ lab_update_cbox:
 
 		if (sprev)
 			_value=(sprev);
-		_str_value = _value->get_string_value();;
-		lab.text = _str_value;
+
+		if (_value) {
+			_str_value = _value->get_string_value();;
+			lab.text = _str_value;
+		}
 		s32 aw,ah;
 		get_preferred_size(aw,ah);
 		if (parent)
