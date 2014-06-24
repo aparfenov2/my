@@ -110,8 +110,8 @@ logger_t *logger_t::instance = &logger_impl;
 class test_screen_t : public gobject_t, public focus_aware_t {
 
 public:
-	custom::tedit_t hdr_box;
-	custom::scrollable_menu_t scrollable;
+//	custom::tedit_t hdr_box;
+//	custom::scrollable_menu_t scrollable;
 
 
 public:
@@ -149,29 +149,6 @@ public:
 		root_view->y = 0;
 		root_view->w = w;
 		root_view->h = h;
-
-
-		//hdr_box.x = 0;
-		//hdr_box.y = 0;
-		//hdr_box.w = w;
-		//hdr_box.h = 20;
-
-		//hdr_box.lval.value = "Helo!";
-
-		//gen::type_meta_t *dme_sfx_meta = gen::meta_registry_t::instance().find_type_meta("dme_sfx_t");
-		//myvi::iterator_t<myvi::combobox_item_t> *suffixes = dme_sfx_meta->get_combobox_iterator();
-
-		//hdr_box.lsfx.values = suffixes;
-		//hdr_box.lsfx.value = suffixes->next(0);
-
-		//add_child(&hdr_box);
-
-		//scrollable.x = 0;
-		//scrollable.y = 20;
-		//scrollable.w = w;
-		//scrollable.h = h/4;
-
-		//add_child(&scrollable);
 
 
 		init_children();

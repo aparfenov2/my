@@ -38,6 +38,7 @@ public:
 		}
 		return hash;
 	}
+
 };
 
 
@@ -62,7 +63,7 @@ public:
 	virtual s32 get_int_param(myvi::string_t key) {
 		return 0;
 	}
-	virtual float get_float_param(myvi::string_t key) {
+	virtual double get_float_param(myvi::string_t key) {
 		return 0.0;
 	}
 };
@@ -73,6 +74,7 @@ class dynamic_meta_t : public TBase {
 public:
 	std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> string_param_map;
 	std::unordered_map<myvi::string_t, s32, string_t_hash_t> int_param_map;
+	std::unordered_map<myvi::string_t, double, string_t_hash_t> float_param_map;
 public:
 	TSelf * set_string_param(myvi::string_t id, myvi::string_t val) {
 		string_param_map[id] = val;
@@ -84,12 +86,21 @@ public:
 		return (TSelf *) this;
 	}
 
+	TSelf * set_float_param(myvi::string_t id, double val) {
+		float_param_map[id] = val;
+		return (TSelf *) this;
+	}
+
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
 		return string_param_map[key];
 	}
 
 	virtual s32 get_int_param(myvi::string_t key) OVERRIDE {
 		return int_param_map[key];
+	}
+
+	virtual double get_float_param(myvi::string_t key) OVERRIDE {
+		return float_param_map[key];
 	}
 
 };
@@ -105,10 +116,19 @@ public:
 	}
 };
 
+class type_meta_t;
+
 // метаинфа о параметре
 class parameter_meta_t : public meta_t {
 public:
 	myvi::gobject_t * build_menu_view();
+
+	myvi::string_t get_type() {
+		return this->get_string_param("type");
+	}
+
+	parameter_meta_t * find_child_meta(myvi::string_t child_id);
+	type_meta_t * get_type_meta();
 };
 
 class dynamic_parameter_meta_t : public dynamic_meta_t<dynamic_parameter_meta_t, parameter_meta_t> {
@@ -155,6 +175,33 @@ public:
 		}
 		_MY_ASSERT(0, return -1);
 		return -1;
+	}
+
+	bool is_basic() {
+		return this->get_string_param("type") == "base";
+	}
+
+	bool is_complex() {
+		return this->get_string_param("type") == "complex";
+	}
+
+	bool is_enum() {
+		return this->get_string_param("type") == "enum";
+	}
+
+	parameter_meta_t * find_child_meta(myvi::string_t child_id) {
+
+		_MY_ASSERT(this->is_complex(), return 0);
+
+		for (s32 i=0; ;i++) {
+			parameter_meta_t *child_meta = this->get_parameter_child(i);
+			if (!child_meta) break;
+			if (child_meta->match_id(child_id)) {
+				return child_meta;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
 	}
 };
 
@@ -217,6 +264,11 @@ public:
 		return enums[i];
 	}
 
+	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() OVERRIDE {
+		return &combobox_iterator;
+	}
+
+
 };
 
 
@@ -251,6 +303,24 @@ public:
 			return 0;
 		}
 		return children[i];
+	}
+
+
+	void mixin_params_from(const dynamic_view_meta_t &other) {
+
+		typedef std::unordered_map<myvi::string_t, myvi::string_t> _str_map;
+		typedef std::unordered_map<myvi::string_t, s32> _int_map;
+		typedef std::unordered_map<myvi::string_t, double> _float_map;
+
+		for (_str_map::const_iterator it = other.string_param_map.begin(); it != other.string_param_map.end(); it++) {
+			this->set_string_param((*it).first,(*it).second);
+		}
+		for (_int_map::const_iterator it = other.int_param_map.begin(); it != other.int_param_map.end(); it++) {
+			this->set_int_param((*it).first,(*it).second);
+		}
+		for (_float_map::const_iterator it = other.float_param_map.begin(); it != other.float_param_map.end(); it++) {
+			this->set_float_param((*it).first,(*it).second);
+		}
 	}
 
 };
@@ -322,7 +392,7 @@ public:
 		return find_meta<parameter_meta_t>(id, parameters);
 	}
 	type_meta_t * find_type_meta(myvi::string_t id) {
-		return try_find_meta<type_meta_t>(id, types);
+		return find_meta<type_meta_t>(id, types);
 	}
 	view_meta_t * find_view_meta(myvi::string_t id) {
 		return find_meta<view_meta_t>(id, views);
@@ -364,6 +434,8 @@ public:
 		return id_map[id];
 	}
 };
+
+
 
 // интерфейс фабрики видов - выделен для компилируемости
 class view_factory_t {

@@ -43,8 +43,14 @@ public:
 		} else if (controller_id == "menu_item") {
 			ret = new custom::menu_item_controller_t();
 
-		} else if (controller_id == "dme") {
-			ret = new custom::dme_controller_t();
+		} else if (controller_id == "cbox") {
+			ret = new custom::cbox_controller_t();
+
+		} else if (controller_id == "tbox") {
+			ret = new custom::tbox_controller_t();
+
+		//} else if (controller_id == "dme") {
+		//	ret = new custom::dme_controller_t();
 		}
 		_MY_ASSERT(controller_id.is_empty() || ret, return 0);
 		return ret;
@@ -61,12 +67,8 @@ public:
 
 	myvi::gobject_t * build_predefined_view(myvi::string_t view_id, gen::parameter_meta_t * meta) {
 		myvi::gobject_t *view = 0;
-		if (view_id == "tbox_cbox") {
-			view = new custom::tbox_label_view_t();
 
-		} else if (view_id == "tbox_label") {
-			view = new custom::tbox_cbox_view_t();
-		} else if (view_id == "cbox") {
+		if (view_id == "cbox") {
 			view = new custom::cbox_view_t();
 
 		} else if (view_id == "tbox") {
@@ -80,13 +82,28 @@ public:
 	}
 
 
+	gen::view_meta_t * combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited) {
+
+		gen::dynamic_view_meta_t *dyn_src = dynamic_cast<gen::dynamic_view_meta_t *>(src);
+		_MY_ASSERT(dyn_src, return 0);
+
+		gen::dynamic_view_meta_t *dyn_inherited = dynamic_cast<gen::dynamic_view_meta_t *>(inherited);
+		_MY_ASSERT(dyn_inherited, return 0);
+
+		gen::dynamic_view_meta_t * ret = new gen::dynamic_view_meta_t();
+
+		ret->mixin_params_from(*dyn_src);
+		ret->mixin_params_from(*dyn_inherited);
+
+		return ret;
+	}
+
 	// метод фабрики вида по умолчанию для составного вида
 	myvi::gobject_t * build_view(gen::view_meta_t * meta, gen::parameter_meta_t * parameter_meta) OVERRIDE {
 
 		if (meta->is_inherited()) {
 			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(meta->get_inherited());
-//			mixin_view_meta(meta,inherited_meta);
-			meta = inherited_meta;
+			meta = combine_view_meta(meta,inherited_meta);
 		}
 		myvi::gobject_t *view = 0;
 		if (meta->is_predefined()) {

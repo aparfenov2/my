@@ -60,9 +60,9 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="dme" layout="stack" vertical="false" drawer="background" background="BACKGROUND_LIGHT" > <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
-			<view id="ch" inherited="tbox" controller="tbox" parameter="ch" />
-			<view id="sfx" inherited="cbox" controller="cbox" parameter="sfx" />
+		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" > <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
+			<view id="ch" inherited="tbox" controller="tbox" childParameter="ch" />
+			<view id="sfx" inherited="cbox" controller="cbox" childParameter="sfx" />
 		</view>
 		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
 		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->

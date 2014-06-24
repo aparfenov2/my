@@ -190,20 +190,21 @@ void meta_registry_t::init() {
 			->set_string_param("drawer","background")
 			->set_string_param("id","dme")
 			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
 			->set_string_param("vertical","false")
 		->add_child(
 			(new dynamic_view_meta_t())
+				->set_string_param("childParameter","ch")
 				->set_string_param("controller","tbox")
 				->set_string_param("id","ch")
 				->set_string_param("inherited","tbox")
-				->set_string_param("parameter","ch")
 		)
 		->add_child(
 			(new dynamic_view_meta_t())
+				->set_string_param("childParameter","sfx")
 				->set_string_param("controller","cbox")
 				->set_string_param("id","sfx")
 				->set_string_param("inherited","cbox")
-				->set_string_param("parameter","sfx")
 		)
 		);
 	// tbox
