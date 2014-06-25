@@ -6,8 +6,12 @@ gen::view_factory_impl_t view_factory_impl;
 gen::view_factory_t * gen::view_factory_t::_instance;
 
 // метод фабрики вида по умолчанию для составного вида
-myvi::gobject_t * view_meta_t::build_view(parameter_meta_t *parameter_meta) {
-	return gen::view_factory_t::instance()->build_view(this, parameter_meta);
+myvi::gobject_t * view_meta_t::build_view_no_ctx() {
+	return build_view(gen::view_build_context_t(0,this, 0));
+}
+myvi::gobject_t * view_meta_t::build_view(gen::view_build_context_t ctx) {
+	ctx.view_meta = this;
+	return gen::view_factory_t::instance()->build_view(ctx);
 }
 
 // метод фабрики вида по умолчанию для составного параметра

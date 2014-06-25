@@ -40,8 +40,8 @@ public:
 		if (controller_id == "menu") {
 			ret = new custom::menu_controller_t();
 
-		} else if (controller_id == "menu_item") {
-			ret = new custom::menu_item_controller_t();
+		} else if (controller_id == "lab") {
+			ret = new custom::label_controller_t();
 
 		} else if (controller_id == "cbox") {
 			ret = new custom::cbox_controller_t();
@@ -82,61 +82,67 @@ public:
 	}
 
 
-	gen::view_meta_t * combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited) {
+	void combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited, gen::dynamic_view_meta_t &combined) {
 
 		gen::dynamic_view_meta_t *dyn_src = dynamic_cast<gen::dynamic_view_meta_t *>(src);
-		_MY_ASSERT(dyn_src, return 0);
+		_MY_ASSERT(dyn_src, return );
 
 		gen::dynamic_view_meta_t *dyn_inherited = dynamic_cast<gen::dynamic_view_meta_t *>(inherited);
-		_MY_ASSERT(dyn_inherited, return 0);
+		_MY_ASSERT(dyn_inherited, return );
 
 		gen::dynamic_view_meta_t * ret = new gen::dynamic_view_meta_t();
 
-		ret->mixin_params_from(*dyn_src);
-		ret->mixin_params_from(*dyn_inherited);
+		combined.mixin_params_from(*dyn_src);
+		combined.mixin_params_from(*dyn_inherited);
 
-		return ret;
 	}
 
 	// метод фабрики вида по умолчанию для составного вида
-	myvi::gobject_t * build_view(gen::view_meta_t * meta, gen::parameter_meta_t * parameter_meta) OVERRIDE {
+	myvi::gobject_t * build_view(gen::view_build_context_t ctx) OVERRIDE {
 
-		if (meta->is_inherited()) {
-			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(meta->get_inherited());
-			meta = combine_view_meta(meta,inherited_meta);
+		gen::dynamic_view_meta_t combined_meta;
+
+		if (ctx.view_meta->is_inherited()) {
+			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.view_meta->get_inherited());
+
+			combine_view_meta(ctx.view_meta,inherited_meta, combined_meta);
+			// временная мета, размещена на стеке !!!
+			ctx.view_meta = &combined_meta;
 		}
-		myvi::gobject_t *view = 0;
-		if (meta->is_predefined()) {
-			view = build_predefined_view(meta->get_id(), parameter_meta);
+		ctx.view = 0;
+		if (ctx.view_meta->is_predefined()) {
+			ctx.view = build_predefined_view(ctx.view_meta->get_id(), ctx.parameter_meta);
 
 		} else {
-			view = new dynamic_view_t(meta);
+			ctx.view = new custom::dynamic_view_t(ctx.view_meta);
 		}
 
-		myvi::layout_t *layout = build_layout(meta);
+		myvi::layout_t *layout = build_layout(ctx.view_meta);
 		if (layout) {
-			view->layout = layout;
+			ctx.view->layout = layout;
 		}
-		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(view);
+		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.view);
 		if (dvmx) {
-			build_child_views_of_view(dvmx, meta, parameter_meta);
+			build_child_views_of_view(ctx);
 		}
 
-		view_controller_t * view_controller = build_controller(meta);
+		view_controller_t * view_controller = build_controller(ctx.view_meta);
 		if (view_controller) {
-			view_controller->init(view, meta, parameter_meta);
+			view_controller->init(ctx);
 		}
 
-		return view;
+		return ctx.view;
 	}
 
-	void build_child_views_of_view(dynamic_view_mixin_t *view, gen::view_meta_t * meta, gen::parameter_meta_t * parameter_meta) {
+	void build_child_views_of_view(gen::view_build_context_t ctx) {
+		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.view);
+		_MY_ASSERT(dvmx, return);
 
 		for (s32 i=0; ;i++) {
-			gen::view_meta_t *child_meta = meta->get_view_child(i);
+			gen::view_meta_t *child_meta = ctx.view_meta->get_view_child(i);
 			if (!child_meta) break;
-			myvi::gobject_t *child_view = child_meta->build_view(parameter_meta);
-			view->add_child(child_view,child_meta->get_id());
+			myvi::gobject_t *child_view = child_meta->build_view(ctx);
+			dvmx->add_child(child_view,child_meta->get_id());
 		}
 	}
 
@@ -163,7 +169,7 @@ public:
 	myvi::gobject_t * build_default_view_for_complex_type(gen::parameter_meta_t * meta, myvi::string_t type_id) {
 
 		gen::view_meta_t *view_template_meta = gen::meta_registry_t::instance().find_view_meta("default_composite_template");
-		myvi::gobject_t * view = build_view(view_template_meta, meta);
+		myvi::gobject_t * view = build_view(gen::view_build_context_t(0,view_template_meta, meta));
 		// строим виды только для составных типов, виды простых типов предопределены и конструируются сразу в meta_t::build_view()
 		gen::type_meta_t *type_meta = gen::meta_registry_t::instance().find_type_meta(type_id);
 		_MY_ASSERT(type_meta, return 0);
@@ -192,7 +198,7 @@ public:
 		}
 		if (!view_id.is_empty()) {
 			gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
-			view = view_meta->build_view(meta);
+			view = view_meta->build_view(gen::view_build_context_t(0,0,meta));
 		}
 //		_MY_ASSERT(view, return 0);
 //		 вид может быть и не указан, тогда

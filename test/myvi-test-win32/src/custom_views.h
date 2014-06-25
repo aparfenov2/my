@@ -12,6 +12,59 @@ namespace custom {
 */
 
 
+class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t {
+	typedef myvi::gobject_t super;
+public:
+	gen::drawer_t *drawer;
+public:
+	dynamic_view_t(gen::meta_t *meta) {
+		drawer = 0;
+
+		myvi::string_t drawer_id = meta->get_string_param("drawer");
+		if (!drawer_id.is_empty()) {
+			drawer = gen::view_factory_t::instance()->build_drawer(drawer_id, meta);
+		}
+	}
+
+	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
+		dynamic_view_mixin_t::add_child(child, id);
+		super::add_child(child);
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		if (drawer) {
+			drawer->render(this, dst);
+		}
+	}
+	
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty && parent && !drawer) {
+			parent->dirty = true;
+		}
+	}
+
+};
+
+
+class view_controller_impl_base_t : public gen::view_controller_t {
+public:
+
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+
+		myvi::string_t child_param_id = ctx.view_meta->get_string_param("childParameter");
+
+		if (!child_param_id.is_empty()) {
+			gen::parameter_meta_t *child_parameter_meta = ctx.parameter_meta->find_child_meta(child_param_id);
+			ctx.parameter_meta = child_parameter_meta;
+		}
+		_MY_ASSERT(ctx.parameter_meta, return);
+
+	}
+
+};
+
+
 class lab_view_t : public myvi::label_t {
 public:
 
@@ -30,6 +83,29 @@ public:
 };
 
 
+class label_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
+public:
+	myvi::label_t *lab;
+public:
+
+	label_controller_t() {
+		lab = 0;
+	}
+
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
+
+		lab = dynamic_cast<myvi::label_t *>(ctx.view);
+		_MY_ASSERT(lab, return);
+
+		lab->text = ctx.parameter_meta->get_name();
+	}
+
+};
+
+
+
 class tbox_view_t : public myvi::text_box_t {
 	typedef myvi::text_box_t super;
 public:
@@ -44,7 +120,8 @@ public:
 	}
 };
 
-class tbox_controller_t : public gen::view_controller_t {
+class tbox_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
 public:
 	myvi::text_box_t *tb;
 public:
@@ -53,17 +130,11 @@ public:
 		tb = 0;
 	}
 
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
 
-		myvi::string_t child_param_id = view_meta->get_string_param("childParameter");
 
-		if (!child_param_id.is_empty()) {
-			gen::parameter_meta_t *child_parameter_meta = parameter_meta->find_child_meta(child_param_id);
-			parameter_meta = child_parameter_meta;
-		}
-		_MY_ASSERT(parameter_meta, return);
-
-		tb = dynamic_cast<myvi::text_box_t *>(view);
+		tb = dynamic_cast<myvi::text_box_t *>(ctx.view);
 		_MY_ASSERT(tb, return);
 
 		tb->value = "123";
@@ -86,7 +157,8 @@ public:
 };
 
 // контроллер комбобокса
-class cbox_controller_t : public gen::view_controller_t {
+class cbox_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
 public:
 	//units
 	//validators
@@ -98,21 +170,13 @@ public:
 		cb = 0;
 	}
 
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE  {
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE  {
+		super::init(ctx);
 
-		myvi::string_t child_param_id = view_meta->get_string_param("childParameter");
-
-		if (!child_param_id.is_empty()) {
-			gen::parameter_meta_t *child_parameter_meta = parameter_meta->find_child_meta(child_param_id);
-			parameter_meta = child_parameter_meta;
-		}
-
-		_MY_ASSERT(parameter_meta, return);
-
-		cb = dynamic_cast<myvi::combo_box_t *>(view);
+		cb = dynamic_cast<myvi::combo_box_t *>(ctx.view);
 		_MY_ASSERT(cb, return);
 
-		gen::type_meta_t * type_meta = parameter_meta->get_type_meta();
+		gen::type_meta_t * type_meta = ctx.parameter_meta->get_type_meta();
 		_MY_ASSERT(type_meta->is_enum(), return);
 
 
@@ -128,12 +192,12 @@ public:
 class menu_controller_t : public gen::view_controller_t {
 public:
 public:
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
 
-		myvi::string_t menu_id = view_meta->get_string_param("menuRef");
+		myvi::string_t menu_id = ctx.view_meta->get_string_param("menuRef");
 		_MY_ASSERT(!menu_id.is_empty(), return);
 
-		myvi::string_t item_template_id = view_meta->get_string_param("itemTemplateView");
+		myvi::string_t item_template_id = ctx.view_meta->get_string_param("itemTemplateView");
 		_MY_ASSERT(!item_template_id.is_empty(), return);
 
 		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
@@ -147,18 +211,19 @@ public:
 			if (child_id.is_empty()) break;
 
 			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
-			myvi::gobject_t *child_view = child_meta->build_menu_view();
+			myvi::gobject_t *child_view = gen::view_factory_t::instance()->build_menu_view(child_meta);
 
 			// создаем обёртку для вида параметра на основе шаблона
-			myvi::gobject_t *child_wrapper = template_meta->build_view(child_meta);
+			
+			myvi::gobject_t *child_wrapper = gen::view_factory_t::instance()->build_view(gen::view_build_context_t(0,template_meta,child_meta));
 			child_wrapper->add_child(child_view);
-			view->add_child(child_wrapper);
+			ctx.view->add_child(child_wrapper);
 		}
 
 //		gen::view_factory_t::instance()->append_menu_view(view, menu_meta);
 	}
 };
-
+/*
 // контроллер элемента меню
 // заполняет label шаблона названием элемента
 class menu_item_controller_t : public gen::view_controller_t {
@@ -177,7 +242,7 @@ public:
 	}
 };
 
-
+*/
 
 /*
 * ====================== ЛАЙОУТЫ И ПРОЧ. =======================

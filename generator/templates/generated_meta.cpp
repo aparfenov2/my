@@ -58,7 +58,7 @@
 	<#lt>${tab}(new dynamic_menu_meta_t())
 	<@emit_set_params menu tab+"\t"/>
 	<#list menu.parameterRef as child>
-	<#lt>${tab}->add_child("${child.@id}")
+		<#lt>${tab+"\t"}->add_child("${child.@id}")
 	</#list>
 </#macro>
 

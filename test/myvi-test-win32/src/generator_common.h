@@ -272,12 +272,28 @@ public:
 };
 
 
+class view_meta_t;
+
+class view_build_context_t {
+public:
+	myvi::gobject_t *view;
+	view_meta_t *view_meta;
+	parameter_meta_t *parameter_meta;
+public:
+	view_build_context_t(myvi::gobject_t *_view,  view_meta_t *_view_meta, parameter_meta_t *_parameter_meta) {
+		view = _view;
+		view_meta = _view_meta;
+		parameter_meta = _parameter_meta;
+	}
+};
+
 
 // метаинфа о виде
 class view_meta_t : public meta_t {
 public:
 // метод фабрики вида. Создает вид и привязывает к нему контроллер
-	myvi::gobject_t * build_view(parameter_meta_t *parameter_meta = 0);
+	myvi::gobject_t * build_view(view_build_context_t ctx);
+	myvi::gobject_t * build_view_no_ctx();
 
 	virtual view_meta_t * get_view_child(s32 i) {
 		return 0;
@@ -436,7 +452,6 @@ public:
 };
 
 
-
 // интерфейс фабрики видов - выделен для компилируемости
 class view_factory_t {
 protected:
@@ -448,7 +463,7 @@ public:
 	// called from menu_controller_t
 //	virtual void append_menu_view(myvi::gobject_t *view, gen::menu_meta_t *meta) = 0;
 	// метод фабрики вида по умолчанию для составного вида
-	virtual myvi::gobject_t * build_view(gen::view_meta_t * meta, gen::parameter_meta_t * parameter_meta) = 0;
+	virtual myvi::gobject_t * build_view(view_build_context_t ctx) = 0;
 	// Метод фабрики вида для параметра
 	virtual myvi::gobject_t * build_menu_view(gen::parameter_meta_t * meta) = 0;
 	// фабрика отрисовщиков
@@ -458,39 +473,13 @@ public:
 };
 
 
-class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t {
-	typedef myvi::gobject_t super;
-public:
-	drawer_t *drawer;
-public:
-	dynamic_view_t(meta_t *meta) {
-		drawer = 0;
-
-		myvi::string_t drawer_id = meta->get_string_param("drawer");
-		if (!drawer_id.is_empty()) {
-			drawer = view_factory_t::instance()->build_drawer(drawer_id, meta);
-		}
-	}
-
-	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
-		dynamic_view_mixin_t::add_child(child, id);
-		super::add_child(child);
-	}
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		if (drawer) {
-			drawer->render(this, dst);
-		}
-	}
-	
-};
 
 // интерфейс контроллера вида
 class view_controller_t {
 public:
 public:
 	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
-	virtual void init( myvi::gobject_t *view,  gen::view_meta_t *meta, gen::parameter_meta_t *parameter_meta) {
+	virtual void init(view_build_context_t &ctx) {
 	}
 
 };

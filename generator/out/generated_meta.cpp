@@ -183,11 +183,67 @@ void meta_registry_t::init() {
  * =================== ÂÈÄÛ ==========================
 */
 
+	// tbox
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("controller","tbox")
+			->set_string_param("id","tbox")
+			->set_string_param("kind","predefined")
+		);
+	// cbox
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("controller","cbox")
+			->set_string_param("id","cbox")
+			->set_string_param("kind","predefined")
+		);
+	// lab
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("controller","lab")
+			->set_string_param("id","lab")
+			->set_string_param("kind","predefined")
+		);
+	// tbox_cbox
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("id","tbox_cbox")
+			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
+			->set_string_param("vertical","false")
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","tbox")
+				->set_string_param("inherited","tbox")
+		)
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","cbox")
+				->set_string_param("inherited","cbox")
+		)
+		);
+	// tbox_label
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("id","tbox_label")
+			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
+			->set_string_param("vertical","false")
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","tbox")
+				->set_string_param("inherited","tbox")
+		)
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","lab")
+				->set_string_param("inherited","lab")
+				->set_string_param("labelSource","label")
+		)
+		);
 	// dme
 	views.push_back(
 		(new dynamic_view_meta_t())
-			->set_string_param("background","BACKGROUND_LIGHT")
-			->set_string_param("drawer","background")
 			->set_string_param("id","dme")
 			->set_string_param("layout","stack")
 			->set_string_param("preferred_item_size","true")
@@ -195,47 +251,15 @@ void meta_registry_t::init() {
 		->add_child(
 			(new dynamic_view_meta_t())
 				->set_string_param("childParameter","ch")
-				->set_string_param("controller","tbox")
 				->set_string_param("id","ch")
 				->set_string_param("inherited","tbox")
 		)
 		->add_child(
 			(new dynamic_view_meta_t())
 				->set_string_param("childParameter","sfx")
-				->set_string_param("controller","cbox")
 				->set_string_param("id","sfx")
 				->set_string_param("inherited","cbox")
 		)
-		);
-	// tbox
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("id","tbox")
-			->set_string_param("kind","predefined")
-		);
-	// cbox
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("id","cbox")
-			->set_string_param("kind","predefined")
-		);
-	// tbox_cbox
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("id","tbox_cbox")
-			->set_string_param("kind","predefined")
-		);
-	// tbox_label
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("id","tbox_label")
-			->set_string_param("kind","predefined")
-		);
-	// lab
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("id","lab")
-			->set_string_param("kind","predefined")
 		);
 	// default_composite_template
 	views.push_back(
@@ -248,14 +272,12 @@ void meta_registry_t::init() {
 	views.push_back(
 		(new dynamic_view_meta_t())
 			->set_string_param("id","root")
-			->set_string_param("kind","generated")
 			->set_string_param("layout","stretch")
 		->add_child(
 			(new dynamic_view_meta_t())
 				->set_string_param("controller","menu")
 				->set_string_param("id","menu")
 				->set_string_param("itemTemplateView","item_template")
-				->set_string_param("kind","generated")
 				->set_string_param("layout","stack")
 				->set_string_param("menuRef","main")
 				->set_string_param("vertical","true")
@@ -264,7 +286,8 @@ void meta_registry_t::init() {
 	// item_template
 	views.push_back(
 		(new dynamic_view_meta_t())
-			->set_string_param("controller","menu_item")
+			->set_string_param("background","BACKGROUND_LIGHT")
+			->set_string_param("drawer","background")
 			->set_string_param("id","item_template")
 			->set_string_param("layout","menu")
 		->add_child(
@@ -283,7 +306,10 @@ void meta_registry_t::init() {
 		(new dynamic_menu_meta_t())
 			->set_string_param("id","main")
 			->set_string_param("name","Ãëàâíîå")
-		->add_child("dme")
+			->add_child("dme")
+			->add_child("measure_ctl")
+			->add_child("output_mode")
+			->add_child("out_level")
 		);
 
 }

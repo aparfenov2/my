@@ -994,7 +994,9 @@ lab_update_input:
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
-		parent->dirty = true;
+		if (dirty && parent) {
+			parent->dirty = true;
+		}
 		super::set_dirty(dirty);
 	}
 
@@ -1091,7 +1093,9 @@ public:
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
-		parent->dirty = true;
+		if (dirty && parent) {
+			parent->dirty = true;
+		}
 		super::set_dirty(dirty);
 	}
 

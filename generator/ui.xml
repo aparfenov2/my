@@ -60,24 +60,39 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" > <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
-			<view id="ch" inherited="tbox" controller="tbox" childParameter="ch" />
-			<view id="sfx" inherited="cbox" controller="cbox" childParameter="sfx" />
+		<view id="tbox" controller="tbox" kind="predefined" /> <!-- textbox -->
+		<view id="cbox" controller="cbox" kind="predefined" /> <!-- combobox -->
+		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
+		
+<!-- textbox + combobox -->		
+		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true"> 
+			<view id="tbox" inherited="tbox" />
+			<view id="cbox" inherited="cbox" />
 		</view>
-		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
-		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->
-		<view id="tbox_cbox" kind="predefined" /> <!-- label{param_name} + textbox + combobox -->
-		<view id="tbox_label" kind="predefined" /> <!-- label{param_name} + textbox + label -->
-		<view id="lab" kind="predefined" /> <!-- label -->
-		<view id="default_composite_template" layout="stack" vertical="true"/>
+<!-- textbox + label -->
+		<view id="tbox_label" layout="stack" vertical="false" preferred_item_size="true">
+			<view id="tbox" inherited="tbox" />
+			<view id="lab" inherited="lab" labelSource="label" /> <!-- взять значение label из аттрибута label, а не name -->
+		</view>
+
+		
 <!-- генерируемые виды -->
-		<view id="root" kind="generated" layout="stretch">
+		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" > 
+			<view id="ch" inherited="tbox" childParameter="ch" />
+			<view id="sfx" inherited="cbox" childParameter="sfx" />
+		</view>
+
+		
+		<view id="default_composite_template" layout="stack" vertical="true"/>
+		
+		<view id="root" layout="stretch" >
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
 		<!-- w=-1, h=-1 - значения взять из parent -->
-			<view id="menu" kind="generated" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+			<view id="menu" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
 		</view>
-		<view id="item_template" layout="menu" controller="menu_item">
+		
+		<view id="item_template" layout="menu" drawer="background" background="BACKGROUND_LIGHT">
 			<view id="lab" inherited="lab" />
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
@@ -86,11 +101,9 @@
 	<menus>
 		<menu id="main" name="Главное">
 			<parameterRef id="dme" />
-<!--			
 			<parameterRef id="measure_ctl" />
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
--->			
 		</menu>
 	</menus>
 </schema>
