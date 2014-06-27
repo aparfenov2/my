@@ -49,8 +49,6 @@ public:
 		} else if (controller_id == "tbox") {
 			ret = new custom::tbox_controller_t();
 
-		//} else if (controller_id == "dme") {
-		//	ret = new custom::dme_controller_t();
 		}
 		_MY_ASSERT(controller_id.is_empty() || ret, return 0);
 		return ret;
@@ -90,8 +88,6 @@ public:
 		gen::dynamic_view_meta_t *dyn_inherited = dynamic_cast<gen::dynamic_view_meta_t *>(inherited);
 		_MY_ASSERT(dyn_inherited, return );
 
-		gen::dynamic_view_meta_t * ret = new gen::dynamic_view_meta_t();
-
 		combined.mixin_params_from(*dyn_src);
 		combined.mixin_params_from(*dyn_inherited);
 
@@ -102,44 +98,46 @@ public:
 
 		gen::dynamic_view_meta_t combined_meta;
 
-		if (ctx.view_meta->is_inherited()) {
-			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.view_meta->get_inherited());
+		if (ctx.get_view_meta()->is_inherited()) {
+			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.get_view_meta()->get_inherited());
 
-			combine_view_meta(ctx.view_meta,inherited_meta, combined_meta);
+			combine_view_meta(ctx.get_view_meta(),inherited_meta, combined_meta);
 			// временная мета, размещена на стеке !!!
-			ctx.view_meta = &combined_meta;
+			ctx.set_view_meta(&combined_meta);
 		}
-		ctx.view = 0;
-		if (ctx.view_meta->is_predefined()) {
-			ctx.view = build_predefined_view(ctx.view_meta->get_id(), ctx.parameter_meta);
+		ctx.set_view(0);
+		if (ctx.get_view_meta()->is_predefined()) {
+			ctx.set_view(
+				build_predefined_view(ctx.get_view_meta()->get_id(), ctx.get_parameter_meta())
+				);
 
 		} else {
-			ctx.view = new custom::dynamic_view_t(ctx.view_meta);
+			ctx.set_view (new custom::dynamic_view_t(ctx.get_view_meta()));
 		}
 
-		myvi::layout_t *layout = build_layout(ctx.view_meta);
+		myvi::layout_t *layout = build_layout(ctx.get_view_meta());
 		if (layout) {
-			ctx.view->layout = layout;
+			ctx.get_view()->layout = layout;
 		}
-		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.view);
+		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.get_view());
 		if (dvmx) {
 			build_child_views_of_view(ctx);
 		}
 
-		view_controller_t * view_controller = build_controller(ctx.view_meta);
+		view_controller_t * view_controller = build_controller(ctx.get_view_meta());
 		if (view_controller) {
 			view_controller->init(ctx);
 		}
 
-		return ctx.view;
+		return ctx.get_view();
 	}
 
 	void build_child_views_of_view(gen::view_build_context_t ctx) {
-		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.view);
+		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.get_view());
 		_MY_ASSERT(dvmx, return);
 
 		for (s32 i=0; ;i++) {
-			gen::view_meta_t *child_meta = ctx.view_meta->get_view_child(i);
+			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(i);
 			if (!child_meta) break;
 			myvi::gobject_t *child_view = child_meta->build_view(ctx);
 			dvmx->add_child(child_view,child_meta->get_id());
@@ -166,47 +164,46 @@ public:
 		return 0;
 	}
 
-	myvi::gobject_t * build_default_view_for_complex_type(gen::parameter_meta_t * meta, myvi::string_t type_id) {
+	myvi::gobject_t * build_default_view_for_complex_type(gen::view_build_context_t ctx) {
 
+		myvi::string_t type_id = ctx.get_parameter_meta()->get_type_id();
 		gen::view_meta_t *view_template_meta = gen::meta_registry_t::instance().find_view_meta("default_composite_template");
-		myvi::gobject_t * view = build_view(gen::view_build_context_t(0,view_template_meta, meta));
+		ctx.set_view_meta(view_template_meta);
+		myvi::gobject_t * view = build_view(ctx);
 		// строим виды только для составных типов, виды простых типов предопределены и конструируются сразу в meta_t::build_view()
 		gen::type_meta_t *type_meta = gen::meta_registry_t::instance().find_type_meta(type_id);
 		_MY_ASSERT(type_meta, return 0);
 
-		myvi::string_t type_of_type = type_meta->get_string_param("type");
-		_MY_ASSERT(type_of_type == "complex", return 0);
+		_MY_ASSERT(type_meta->is_complex(), return 0);
 
 		for (s32 i=0; ;i++) {
 			gen::parameter_meta_t *child_meta = type_meta->get_parameter_child(i);
 			if (!child_meta) break;
-			myvi::gobject_t *child_view = child_meta->build_menu_view();
+			myvi::gobject_t *child_view = child_meta->build_menu_view(ctx);
 			view->add_child(child_view);
 		}
 		return view;
 	}
 
 	// Метод фабрики вида для параметра
-	myvi::gobject_t * build_menu_view(gen::parameter_meta_t * meta) OVERRIDE {
+	myvi::gobject_t * build_menu_view(gen::view_build_context_t ctx) OVERRIDE {
 
 		myvi::gobject_t *view = 0;
-		myvi::string_t view_id = meta->get_string_param("view");
-		myvi::string_t type_id = meta->get_string_param("type");
+		myvi::string_t view_id = ctx.get_parameter_meta()->get_view_id();
 
 		if (view_id.is_empty()) {
-			view_id = match_default_view_for_type(type_id);
+			view_id = match_default_view_for_type(ctx.get_parameter_meta()->get_type_id());
 		}
+
 		if (!view_id.is_empty()) {
 			gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
-			view = view_meta->build_view(gen::view_build_context_t(0,0,meta));
+			view = view_meta->build_view(ctx);
 		}
 //		_MY_ASSERT(view, return 0);
 //		 вид может быть и не указан, тогда
 //		 строим вид для составного типа
 		if (!view) {
-			// тип всегда должен быть указан. Составных параемтров нет
-			_MY_ASSERT(!type_id.is_empty(), return 0);
-			view = build_default_view_for_complex_type(meta, type_id);
+			view = build_default_view_for_complex_type(ctx);
 		}
 
 		return view;

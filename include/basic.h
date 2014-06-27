@@ -318,6 +318,7 @@ private:
 	T _data[_max_str_len+1];
 public:
 	string_impl_tt() : volatile_string_tt<T>(_data, 0,_max_str_len) {
+		reset();
 	}
 
 	string_impl_tt & operator =(const volatile_string_tt<T> &other) {

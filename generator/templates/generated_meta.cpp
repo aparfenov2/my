@@ -9,7 +9,11 @@
 			<#local isNum = false>
 		</#attempt>
 		<#if isNum>
-			<#lt>${tab}->set_int_param("${attr.@@qname}",${attr?string})
+			<#if attr?string?contains(".")>
+				<#lt>${tab}->set_float_param("${attr.@@qname}",${attr?string})
+			<#else>
+				<#lt>${tab}->set_int_param("${attr.@@qname}",${attr?string})
+			</#if>	
 		<#else>
 			<#lt>${tab}->set_string_param("${attr.@@qname}","${attr?string}")
 		</#if>

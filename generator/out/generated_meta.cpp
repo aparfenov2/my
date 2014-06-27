@@ -173,7 +173,7 @@ void meta_registry_t::init() {
 			->set_string_param("label","dBm")
 			->set_int_param("lo",-70)
 			->set_string_param("name","Уровень")
-			->set_int_param("precision",0.1)
+			->set_float_param("precision",0.1)
 			->set_string_param("type","float")
 			->set_string_param("validators","range")
 			->set_string_param("view","tbox_label")
@@ -250,15 +250,15 @@ void meta_registry_t::init() {
 			->set_string_param("vertical","false")
 		->add_child(
 			(new dynamic_view_meta_t())
-				->set_string_param("childParameter","ch")
 				->set_string_param("id","ch")
 				->set_string_param("inherited","tbox")
+				->set_string_param("parameterPath",".ch")
 		)
 		->add_child(
 			(new dynamic_view_meta_t())
-				->set_string_param("childParameter","sfx")
 				->set_string_param("id","sfx")
 				->set_string_param("inherited","cbox")
+				->set_string_param("parameterPath",".sfx")
 		)
 		);
 	// default_composite_template

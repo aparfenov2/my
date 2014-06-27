@@ -75,11 +75,11 @@
 			<view id="lab" inherited="lab" labelSource="label" /> <!-- взять значение label из аттрибута label, а не name -->
 		</view>
 
-		
+
 <!-- генерируемые виды -->
 		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" > 
-			<view id="ch" inherited="tbox" childParameter="ch" />
-			<view id="sfx" inherited="cbox" childParameter="sfx" />
+			<view id="ch" inherited="tbox" parameterPath=".ch" /> <!-- относительный путь внутри параметра dme -->
+			<view id="sfx" inherited="cbox" parameterPath=".sfx" />
 		</view>
 
 		
