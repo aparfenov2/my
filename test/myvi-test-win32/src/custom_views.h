@@ -3,13 +3,400 @@
 
 #include "menu_common.h"
 #include "generator_common.h"
-#include <sstream>
+//#include <sstream>
+#include <cstdio>
 
 namespace custom {
+
+
+template <typename T>
+class variant_tt {
+public:
+	gen::variant_type_t::variant_type_t type;
+	T sval;
+	s32 ival;
+	double fval;
+public:
+	variant_tt() {
+		type = gen::variant_type_t::STRING;
+		ival = 0;
+		fval = 0;
+	}
+
+	variant_tt(myvi::string_t _sval) {
+		set_value(_sval);
+	}
+
+	variant_tt(s32 _ival) {
+		set_value(_ival);
+	}
+
+	variant_tt(double _fval) {
+		set_value(_fval);
+	}
+
+	void set_value(myvi::string_t _sval) {
+		sval = _sval;
+		type = gen::variant_type_t::STRING;
+	}
+
+	void set_value(s32 _ival) {
+		ival = _ival;
+		type = gen::variant_type_t::INT;
+	}
+
+	void set_value(double _fval) {
+		fval = _fval;
+		type = gen::variant_type_t::FLOAT;
+	}
+
+	myvi::string_t get_string_value() {
+		_MY_ASSERT(type == gen::variant_type_t::STRING, return 0);
+		return sval;
+	}
+
+	s32 get_int_value() {
+		_MY_ASSERT(type == gen::variant_type_t::INT, return 0);
+		return ival;
+	}
+
+	double get_float_value() {
+		_MY_ASSERT(type == gen::variant_type_t::FLOAT, return 0);
+		return fval;
+	}
+
+};
+
+// служит только для передачи, но не для хранения значения !
+typedef variant_tt<myvi::string_t> variant_t;
+
+
+
+class variant_holder_t : public variant_tt<gen::volatile_string_impl_t> {
+public:
+	variant_holder_t (gen::variant_type_t::variant_type_t expected_type) {
+		this->type = expected_type;
+	}
+
+	void assign(variant_t &other) {
+		_MY_ASSERT(this->type == other.type, return);
+		switch(other.type) {
+		case gen::variant_type_t::STRING  : this->set_value(other.get_string_value()); break;
+		case gen::variant_type_t::INT  : this->set_value(other.get_int_value()); break;
+		case gen::variant_type_t::FLOAT  : this->set_value(other.get_float_value()); break;
+		}
+	}
+
+	variant_t get_value() {
+		variant_t ret;
+
+		switch(this->type) {
+		case gen::variant_type_t::STRING  : ret.set_value(this->get_string_value()); break;
+		case gen::variant_type_t::INT  : ret.set_value(this->get_int_value()); break;
+		case gen::variant_type_t::FLOAT  : ret.set_value(this->get_float_value()); break;
+		}
+
+		return ret;
+	}
+};
+
+
+
+
+
+// резолвер пути до меты параметра
+// используется в контроллерах для разрешения parameterPath
+class parameter_path_resolver_t {
+public:
+	gen::meta_path_t & meta_path;
+public:
+	parameter_path_resolver_t(gen::meta_path_t &_meta_path)
+		:meta_path(_meta_path) {
+	}
+	// resolve absolute path
+	gen::parameter_meta_t * resolve() {
+
+		_MY_ASSERT(!meta_path.is_relative(), return 0);
+
+		gen::meta_path_t::iterator_t iter = meta_path.iterator();
+
+		myvi::string_t root_id = iter.next();
+		gen::parameter_meta_t *root_meta = gen::meta_registry_t::instance().find_parameter_meta(root_id);
+
+		return resolve(iter, root_meta);
+	}
+
+	// resolve path relative to root_meta
+	gen::parameter_meta_t * resolve(gen::parameter_meta_t *root_meta) {
+		_MY_ASSERT(meta_path.is_relative(), return 0);
+		gen::meta_path_t::iterator_t iter = meta_path.iterator();
+		return resolve(iter, root_meta);
+	}
+
+
+private:
+	gen::parameter_meta_t * resolve(gen::meta_path_t::iterator_t &iter,  gen::parameter_meta_t *root_meta) {
+
+		for (;;) {
+			myvi::string_t child_id = iter.next();
+			if (child_id.is_empty()) break;
+			root_meta = root_meta->find_child_meta(child_id);
+		}
+		return root_meta;
+	}
+};
+
+
+/*
+class model_t {
+public:
+	// обновление модели
+	virtual void update(myvi::string_t parameter_path, variant_t &value) = 0;
+	// ожидает правильного типа значения до вызова !
+	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
+
+};
+*/
+
+
+class model_message_t {
+public:
+	myvi::string_t path;
+public:
+	model_message_t(myvi::string_t _path) : path(_path) {
+	}
+};
+
+#define _MODEL_MAX_SUBSCRIBERS 128
+
+class dynamic_model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> { 
+
+public:
+	std::unordered_map<myvi::string_t, variant_holder_t *, gen::string_t_hash_t> children;
+	static dynamic_model_t _instance;
+public:
+	static dynamic_model_t & instance() {
+		return _instance;
+	}
+
+	void update(myvi::string_t parameter_path, variant_t &value)  {
+		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
+		holder->assign(value);
+		notify(model_message_t(parameter_path));
+	}
+
+	void read(myvi::string_t parameter_path, variant_t &value, gen::variant_type_t::variant_type_t expected_type)  {
+		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
+		value = holder->get_value();
+		_MY_ASSERT(value.type == expected_type, return);
+	}
+
+	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, gen::variant_type_t::variant_type_t expected_type)  {
+
+		_MY_ASSERT(initial_value.type == expected_type, return);
+
+		variant_holder_t *ret = children[parameter_path];
+		_MY_ASSERT(!ret, return);
+		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
+		holder->assign(initial_value);
+	}
+
+private:
+	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, gen::variant_type_t::variant_type_t expected_type) {
+		variant_holder_t *ret = children[parameter_path];
+		if (!ret) {
+			ret = new variant_holder_t(expected_type);
+			children[parameter_path] = ret;
+		}
+		return ret;
+	}
+};
+
+
+// интерфейс конвертера значения в строку и обратно
+class converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) = 0;
+	virtual bool from_string(myvi::string_t &str, variant_t &value) = 0;
+};
+
+class string_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+		str = value.get_string_value();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		value.set_value(str);
+		return true;
+	}
+};
+
+class int_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {		
+		std::sprintf((char *)str.c_str(), "%d", value.get_int_value());
+		str.update_length();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		char *end;
+		s32 ival = std::strtol(str.c_str(), &end, 10);
+		if (!*end) {
+			value.set_value(ival);
+		}
+		return !*end;
+	}
+};
+
+class float_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+		std::sprintf((char *)str.c_str(), "%f", value.get_float_value());
+		str.update_length();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		char *end;
+		double fval = std::strtod(str.c_str(), &end);
+		if (!*end) {
+			value.set_value(fval);
+		}
+		return !*end;
+	}
+};
+
+class converter_factory_t {
+public:
+	static converter_factory_t _instance;
+
+	string_converter_t string_converter;
+	int_converter_t int_converter;
+	float_converter_t float_converter;
+public:
+	static converter_factory_t instance() {
+		return _instance;
+	}
+	converter_t * for_type(gen::variant_type_t::variant_type_t expected_type) {
+		switch (expected_type) {
+		case gen::variant_type_t::STRING : return &string_converter;
+		case gen::variant_type_t::INT : return &int_converter;
+		case gen::variant_type_t::FLOAT : return &float_converter;
+		}
+		_MY_ASSERT(0, return 0); // not found
+		return 0;
+	}
+};
 
 /*
 * ====================== ПРЕДОПРЕДЕЛЕННЫЕ ВИДЫ =======================
 */
+
+
+class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t {
+	typedef myvi::gobject_t super;
+public:
+	gen::drawer_t *drawer;
+public:
+	dynamic_view_t(gen::meta_t *meta) {
+		drawer = 0;
+
+		myvi::string_t drawer_id = meta->get_string_param("drawer");
+		if (!drawer_id.is_empty()) {
+			drawer = gen::view_factory_t::instance()->build_drawer(drawer_id, meta);
+		}
+	}
+
+	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
+		dynamic_view_mixin_t::add_child(child, id);
+		super::add_child(child);
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		if (drawer) {
+			drawer->render(this, dst);
+		}
+	}
+	
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty && parent && !drawer) {
+			parent->dirty = true;
+		}
+	}
+
+};
+
+
+class view_controller_impl_base_t : public gen::view_controller_t {
+public:
+	gen::volatile_string_impl_t parameter_path;
+	gen::variant_type_t::variant_type_t type;
+public:
+	view_controller_impl_base_t() {
+		type = gen::variant_type_t::STRING;
+	}
+
+	void set_initial(gen::view_build_context_t &ctx, variant_t &value) {
+
+		myvi::string_t initial_str = ctx.get_view_meta()->get_string_param("initial");
+		if (!initial_str.is_empty()) {
+			_MY_ASSERT(type == gen::variant_type_t::STRING, return);
+			value.set_value(initial_str);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+
+		s32 initial_int = ctx.get_view_meta()->get_int_param("initial");
+		if (initial_int != _NAN) {
+			_MY_ASSERT(type == gen::variant_type_t::INT, return);
+			value.set_value(initial_int);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+
+		double initial_float = ctx.get_view_meta()->get_float_param("initial");
+		if (initial_float != _NANF) {
+			_MY_ASSERT(type == gen::variant_type_t::FLOAT, return);
+			value.set_value(initial_float);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+	}
+
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+
+
+		myvi::string_t parameter_path = ctx.get_view_meta()->get_string_param("parameterPath");
+
+		if (!parameter_path.is_empty()) {
+			gen::meta_path_t path = gen::meta_path_t(parameter_path);
+			parameter_path_resolver_t resolver(path);
+
+			gen::parameter_meta_t *child_parameter_meta = resolver.resolve(ctx.get_parameter_meta());
+			ctx.set_parameter_meta(child_parameter_meta);
+		}
+
+		_MY_ASSERT(ctx.get_parameter_meta(), return);
+
+//		_LOG1(ctx.get_parameter_path().path.c_str());
+
+// 0. Регистрирует поле в модели , если его ещё там нет
+	}
+
+	// вызывается из контроллера texbox/combobox
+	void register_in_model(gen::view_build_context_t &ctx) {
+
+		gen::type_meta_t *type_meta = ctx.get_parameter_meta()->get_type_meta();
+		_MY_ASSERT(!type_meta->is_complex(), return);
+
+		variant_t value;
+		this->parameter_path = ctx.get_parameter_path().path;
+		this->type = ctx.get_parameter_meta()->match_value_type();
+
+		dynamic_model_t::instance().read(ctx.get_parameter_path().path, value, type);
+		set_initial(ctx, value);
+
+	}
+
+};
 
 
 class lab_view_t : public myvi::label_t {
@@ -30,6 +417,29 @@ public:
 };
 
 
+class label_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
+public:
+	myvi::label_t *lab;
+public:
+
+	label_controller_t() {
+		lab = 0;
+	}
+
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
+
+		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
+		_MY_ASSERT(lab, return);
+
+		lab->text = ctx.get_parameter_meta()->get_name();
+	}
+
+};
+
+
+
 class tbox_view_t : public myvi::text_box_t {
 	typedef myvi::text_box_t super;
 public:
@@ -44,30 +454,78 @@ public:
 	}
 };
 
-class tbox_controller_t : public gen::view_controller_t {
+
+/*
+Контроллер редактируемого строкового поля
+
+0. Регистрирует поле в модели , если его ещё там нет
+1. Заполняет поле начальным значением из модели
+2. Подписывается на изменения в модели и обновления поля
+3. Подписывается на изменения поля и обновления модели
+
+4. использует конвертор для преобразования значения параметра из строки и в строку
+
+*/
+class tbox_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<model_message_t>, public myvi::subscriber_t<myvi::string_t> {
+	typedef view_controller_impl_base_t super;
 public:
 	myvi::text_box_t *tb;
+	gen::volatile_string_impl_t string_value;
 public:
 
 	tbox_controller_t() {
 		tb = 0;
 	}
 
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
 
-		myvi::string_t child_param_id = view_meta->get_string_param("childParameter");
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+// 0. Регистрирует поле в модели , если его ещё там нет
+		super::init(ctx);
+		register_in_model(ctx);
+// 1. Заполняет поле начальным значением из модели
 
-		if (!child_param_id.is_empty()) {
-			gen::parameter_meta_t *child_parameter_meta = parameter_meta->find_child_meta(child_param_id);
-			parameter_meta = child_parameter_meta;
-		}
-		_MY_ASSERT(parameter_meta, return);
+		variant_t value;
+		dynamic_model_t::instance().read(this->parameter_path, value, type);
 
-		tb = dynamic_cast<myvi::text_box_t *>(view);
+		this->tb = dynamic_cast<myvi::text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
 
-		tb->value = "123";
+		converter_t *conv = converter_factory_t::instance().for_type(type);
+		conv->to_string(value, string_value);
+		this->tb->value = string_value;
+
+// 2. Подписывается на изменения в модели и обновления поля
+		dynamic_model_t::instance().subscribe(this);
+
+// 3. Подписывается на изменения поля и обновления модели
+		tb->subscribe(this);
 	}
+
+	// обновление от модели
+	virtual void accept(model_message_t &msg) OVERRIDE {
+
+		if (!(msg.path == this->parameter_path)) {
+			return;
+		}
+		variant_t value;
+		dynamic_model_t::instance().read(this->parameter_path, value, this->type);
+
+		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+		conv->to_string(value, string_value);
+		this->tb->value = string_value;
+	}
+
+	// обновление от виджета
+	virtual void accept(myvi::string_t &str) OVERRIDE {
+		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+
+		variant_t value;
+		bool ret = conv->from_string(str, value);
+		if (ret) {
+			dynamic_model_t::instance().update(this->parameter_path, value);
+		}
+	}
+
 
 };
 
@@ -85,8 +543,20 @@ public:
 	}
 };
 
-// контроллер комбобокса
-class cbox_controller_t : public gen::view_controller_t {
+
+/*
+Контроллер комбобокса
+
+1. Заполняет поле начальным значением из модели
+2. Подписывается на изменения в модели и обновления поля
+3. Подписывается на изменения поля и обновления модели
+
+4. использует конвертор для преобразования значения параметра из combobox_item_t в число и обратно
+
+*/
+
+class cbox_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
 public:
 	//units
 	//validators
@@ -98,21 +568,13 @@ public:
 		cb = 0;
 	}
 
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE  {
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE  {
+		super::init(ctx);
 
-		myvi::string_t child_param_id = view_meta->get_string_param("childParameter");
-
-		if (!child_param_id.is_empty()) {
-			gen::parameter_meta_t *child_parameter_meta = parameter_meta->find_child_meta(child_param_id);
-			parameter_meta = child_parameter_meta;
-		}
-
-		_MY_ASSERT(parameter_meta, return);
-
-		cb = dynamic_cast<myvi::combo_box_t *>(view);
+		cb = dynamic_cast<myvi::combo_box_t *>(ctx.get_view());
 		_MY_ASSERT(cb, return);
 
-		gen::type_meta_t * type_meta = parameter_meta->get_type_meta();
+		gen::type_meta_t * type_meta = ctx.get_parameter_meta()->get_type_meta();
 		_MY_ASSERT(type_meta->is_enum(), return);
 
 
@@ -128,12 +590,12 @@ public:
 class menu_controller_t : public gen::view_controller_t {
 public:
 public:
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
 
-		myvi::string_t menu_id = view_meta->get_string_param("menuRef");
+		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menuRef");
 		_MY_ASSERT(!menu_id.is_empty(), return);
 
-		myvi::string_t item_template_id = view_meta->get_string_param("itemTemplateView");
+		myvi::string_t item_template_id = ctx.get_view_meta()->get_string_param("itemTemplateView");
 		_MY_ASSERT(!item_template_id.is_empty(), return);
 
 		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
@@ -147,37 +609,21 @@ public:
 			if (child_id.is_empty()) break;
 
 			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
-			myvi::gobject_t *child_view = child_meta->build_menu_view();
+			myvi::gobject_t *child_view = child_meta->build_menu_view(ctx);
 
 			// создаем обёртку для вида параметра на основе шаблона
-			myvi::gobject_t *child_wrapper = template_meta->build_view(child_meta);
+			gen::view_build_context_t child_ctx = ctx;
+			child_ctx.set_view_meta(template_meta);
+			child_ctx.set_parameter_meta(child_meta);
+
+			myvi::gobject_t *child_wrapper = template_meta->build_view(child_ctx);
 			child_wrapper->add_child(child_view);
-			view->add_child(child_wrapper);
+			ctx.get_view()->add_child(child_wrapper);
 		}
 
 //		gen::view_factory_t::instance()->append_menu_view(view, menu_meta);
 	}
 };
-
-// контроллер элемента меню
-// заполняет label шаблона названием элемента
-class menu_item_controller_t : public gen::view_controller_t {
-public:
-public:
-	virtual void init(myvi::gobject_t *view, gen::view_meta_t *view_meta, gen::parameter_meta_t *parameter_meta) OVERRIDE {
-		// найдем метку lab в шаблоне вида элемнта меню
-		gen::dynamic_view_t *dynamic_view = dynamic_cast<gen::dynamic_view_t *>(view);
-		_MY_ASSERT(dynamic_view, return);
-
-		myvi::gobject_t *lab_obj = dynamic_view->get_child("lab");
-		_MY_ASSERT(lab_obj, return);
-		myvi::label_t *lab = dynamic_cast<myvi::label_t *>(lab_obj);
-		_MY_ASSERT(lab, return);
-		lab->text = parameter_meta->get_name();
-	}
-};
-
-
 
 /*
 * ====================== ЛАЙОУТЫ И ПРОЧ. =======================

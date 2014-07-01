@@ -872,7 +872,7 @@ public:
 #define COLOR_SELECTED 0xAFBFCF
 #define COLOR_CAPTURED 0x267F00
 
-class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
+class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<myvi::string_t, 1> {
 	typedef gobject_t super;
 public:
 	property_t<string_t , text_box_t> value;
@@ -991,10 +991,13 @@ lab_update_input:
 			parent->child_request_size_change(this, aw,ah);
 		}
 		dirty = true;
+		notify(_value);
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
-		parent->dirty = true;
+		if (dirty && parent) {
+			parent->dirty = true;
+		}
 		super::set_dirty(dirty);
 	}
 
@@ -1035,7 +1038,7 @@ public:
 };
 
 // метка с функцией выбора из списка значений
-class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t {
+class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<combobox_item_t *, 1> {
 	typedef gobject_t super;
 
 	class empty_iterator_t : public iterator_t<combobox_item_t> {
@@ -1091,7 +1094,9 @@ public:
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
-		parent->dirty = true;
+		if (dirty && parent) {
+			parent->dirty = true;
+		}
 		super::set_dirty(dirty);
 	}
 
@@ -1158,6 +1163,8 @@ lab_update_cbox:
 		if (parent)
 			parent->child_request_size_change(this, aw,ah);
 		dirty = true;
+
+		notify(_value);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE {

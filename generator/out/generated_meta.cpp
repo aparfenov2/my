@@ -9,6 +9,12 @@ void meta_registry_t::init() {
  * =================== ТИПЫ ==========================
 */
 	
+	// string
+	types.push_back(
+		(new dynamic_type_meta_t())
+			->set_string_param("id","string")
+			->set_string_param("type","base")
+		);
 	// float
 	types.push_back(
 		(new dynamic_type_meta_t())
@@ -80,6 +86,7 @@ void meta_registry_t::init() {
 				(new dynamic_parameter_meta_t())
 					->set_int_param("hi",128)
 					->set_string_param("id","ch")
+					->set_int_param("initial",127)
 					->set_int_param("lo",-127)
 					->set_string_param("name","Канал DME")
 					->set_string_param("type","u8")
@@ -88,6 +95,7 @@ void meta_registry_t::init() {
 			->add_parameter(
 				(new dynamic_parameter_meta_t())
 					->set_string_param("id","sfx")
+					->set_int_param("initial",0)
 					->set_string_param("name","Суффикс DME")
 					->set_string_param("type","dme_sfx_t")
 			)
@@ -155,6 +163,7 @@ void meta_registry_t::init() {
 	parameters.push_back(
 		(new dynamic_parameter_meta_t())
 			->set_string_param("id","measure_ctl")
+			->set_int_param("initial",0)
 			->set_string_param("name","Измерение")
 			->set_string_param("type","measure_ctl_t")
 		);
@@ -162,6 +171,7 @@ void meta_registry_t::init() {
 	parameters.push_back(
 		(new dynamic_parameter_meta_t())
 			->set_string_param("id","output_mode")
+			->set_int_param("initial",0)
 			->set_string_param("name","Выход")
 			->set_string_param("type","output_mode_t")
 		);
@@ -173,7 +183,7 @@ void meta_registry_t::init() {
 			->set_string_param("label","dBm")
 			->set_int_param("lo",-70)
 			->set_string_param("name","Уровень")
-			->set_int_param("precision",0.1)
+			->set_float_param("precision",0.1)
 			->set_string_param("type","float")
 			->set_string_param("validators","range")
 			->set_string_param("view","tbox_label")
@@ -183,59 +193,83 @@ void meta_registry_t::init() {
  * =================== ВИДЫ ==========================
 */
 
-	// dme
-	views.push_back(
-		(new dynamic_view_meta_t())
-			->set_string_param("background","BACKGROUND_LIGHT")
-			->set_string_param("drawer","background")
-			->set_string_param("id","dme")
-			->set_string_param("layout","stack")
-			->set_string_param("preferred_item_size","true")
-			->set_string_param("vertical","false")
-		->add_child(
-			(new dynamic_view_meta_t())
-				->set_string_param("childParameter","ch")
-				->set_string_param("controller","tbox")
-				->set_string_param("id","ch")
-				->set_string_param("inherited","tbox")
-		)
-		->add_child(
-			(new dynamic_view_meta_t())
-				->set_string_param("childParameter","sfx")
-				->set_string_param("controller","cbox")
-				->set_string_param("id","sfx")
-				->set_string_param("inherited","cbox")
-		)
-		);
 	// tbox
 	views.push_back(
 		(new dynamic_view_meta_t())
+			->set_string_param("controller","tbox")
 			->set_string_param("id","tbox")
 			->set_string_param("kind","predefined")
 		);
 	// cbox
 	views.push_back(
 		(new dynamic_view_meta_t())
+			->set_string_param("controller","cbox")
 			->set_string_param("id","cbox")
+			->set_string_param("kind","predefined")
+		);
+	// lab
+	views.push_back(
+		(new dynamic_view_meta_t())
+			->set_string_param("controller","lab")
+			->set_string_param("id","lab")
 			->set_string_param("kind","predefined")
 		);
 	// tbox_cbox
 	views.push_back(
 		(new dynamic_view_meta_t())
 			->set_string_param("id","tbox_cbox")
-			->set_string_param("kind","predefined")
+			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
+			->set_string_param("vertical","false")
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","tbox")
+				->set_string_param("inherited","tbox")
+		)
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","cbox")
+				->set_string_param("inherited","cbox")
+		)
 		);
 	// tbox_label
 	views.push_back(
 		(new dynamic_view_meta_t())
 			->set_string_param("id","tbox_label")
-			->set_string_param("kind","predefined")
+			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
+			->set_string_param("vertical","false")
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","tbox")
+				->set_string_param("inherited","tbox")
+		)
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","lab")
+				->set_string_param("inherited","lab")
+				->set_string_param("labelSource","label")
+		)
 		);
-	// lab
+	// dme
 	views.push_back(
 		(new dynamic_view_meta_t())
-			->set_string_param("id","lab")
-			->set_string_param("kind","predefined")
+			->set_string_param("id","dme")
+			->set_string_param("layout","stack")
+			->set_string_param("preferred_item_size","true")
+			->set_string_param("vertical","false")
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","ch")
+				->set_string_param("inherited","tbox")
+				->set_string_param("parameterPath",".ch")
+		)
+		->add_child(
+			(new dynamic_view_meta_t())
+				->set_string_param("id","sfx")
+				->set_string_param("inherited","cbox")
+				->set_string_param("parameterPath",".sfx")
+		)
 		);
 	// default_composite_template
 	views.push_back(
@@ -248,14 +282,12 @@ void meta_registry_t::init() {
 	views.push_back(
 		(new dynamic_view_meta_t())
 			->set_string_param("id","root")
-			->set_string_param("kind","generated")
 			->set_string_param("layout","stretch")
 		->add_child(
 			(new dynamic_view_meta_t())
 				->set_string_param("controller","menu")
 				->set_string_param("id","menu")
 				->set_string_param("itemTemplateView","item_template")
-				->set_string_param("kind","generated")
 				->set_string_param("layout","stack")
 				->set_string_param("menuRef","main")
 				->set_string_param("vertical","true")
@@ -264,7 +296,8 @@ void meta_registry_t::init() {
 	// item_template
 	views.push_back(
 		(new dynamic_view_meta_t())
-			->set_string_param("controller","menu_item")
+			->set_string_param("background","BACKGROUND_LIGHT")
+			->set_string_param("drawer","background")
 			->set_string_param("id","item_template")
 			->set_string_param("layout","menu")
 		->add_child(
@@ -283,7 +316,10 @@ void meta_registry_t::init() {
 		(new dynamic_menu_meta_t())
 			->set_string_param("id","main")
 			->set_string_param("name","Главное")
-		->add_child("dme")
+			->add_child("dme")
+			->add_child("measure_ctl")
+			->add_child("output_mode")
+			->add_child("out_level")
 		);
 
 }

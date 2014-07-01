@@ -14,6 +14,7 @@
 
 	<types>
 <!-- опишем простые типы, чтобы их можно было найти -->	
+		<type id="string" type="base" />
 		<type id="float" type="base" />
 		<type id="u8" type="base" />
 		<type id="s8" type="base" />
@@ -30,8 +31,8 @@
 		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
 		<!-- поэтому здесь для полей вид не указан -->
 		<type id="dme_t" name="Параметры DME" type="complex">
-			<parameter id="ch" name="Канал DME" type="u8" validators="range" lo="-127" hi="128" />
-			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" />
+			<parameter id="ch" name="Канал DME" type="u8" validators="range" initial="127" lo="-127" hi="128" />
+			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" initial="0" />
 		</type>
 		<type id="measure_ctl_t" name="Измерение" type="enum">
 			<enum id="START" name="Старт" value="0" />
@@ -46,8 +47,8 @@
 	
 	<parameters>
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
-		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение"  />
-		<parameter id="output_mode" type="output_mode_t"  name="Выход"  />
+		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
+		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
 		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
 	</parameters>
 	
@@ -60,24 +61,39 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" > <!-- label{Параметры DME} \n label{Канал DME} texbox \n label{Суффикс DME} combobox   -->
-			<view id="ch" inherited="tbox" controller="tbox" childParameter="ch" />
-			<view id="sfx" inherited="cbox" controller="cbox" childParameter="sfx" />
+		<view id="tbox" controller="tbox" kind="predefined" /> <!-- textbox -->
+		<view id="cbox" controller="cbox" kind="predefined" /> <!-- combobox -->
+		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
+		
+<!-- textbox + combobox -->		
+		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true"> 
+			<view id="tbox" inherited="tbox" />
+			<view id="cbox" inherited="cbox" />
 		</view>
-		<view id="tbox" kind="predefined" /> <!-- label{param_name} + textbox -->
-		<view id="cbox" kind="predefined" /> <!-- label{param_name} + combobox -->
-		<view id="tbox_cbox" kind="predefined" /> <!-- label{param_name} + textbox + combobox -->
-		<view id="tbox_label" kind="predefined" /> <!-- label{param_name} + textbox + label -->
-		<view id="lab" kind="predefined" /> <!-- label -->
-		<view id="default_composite_template" layout="stack" vertical="true"/>
+<!-- textbox + label -->
+		<view id="tbox_label" layout="stack" vertical="false" preferred_item_size="true">
+			<view id="tbox" inherited="tbox" />
+			<view id="lab" inherited="lab" labelSource="label" /> <!-- взять значение label из аттрибута label, а не name -->
+		</view>
+
+
 <!-- генерируемые виды -->
-		<view id="root" kind="generated" layout="stretch">
+		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" > 
+			<view id="ch" inherited="tbox" parameterPath=".ch" /> <!-- относительный путь внутри параметра dme -->
+			<view id="sfx" inherited="cbox" parameterPath=".sfx" />
+		</view>
+
+		
+		<view id="default_composite_template" layout="stack" vertical="true"/>
+		
+		<view id="root" layout="stretch" >
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
 		<!-- w=-1, h=-1 - значения взять из parent -->
-			<view id="menu" kind="generated" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+			<view id="menu" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
 		</view>
-		<view id="item_template" layout="menu" controller="menu_item">
+		
+		<view id="item_template" layout="menu" drawer="background" background="BACKGROUND_LIGHT">
 			<view id="lab" inherited="lab" />
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
@@ -86,11 +102,9 @@
 	<menus>
 		<menu id="main" name="Главное">
 			<parameterRef id="dme" />
-<!--			
 			<parameterRef id="measure_ctl" />
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
--->			
 		</menu>
 	</menus>
 </schema>

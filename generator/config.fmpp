@@ -5,4 +5,4 @@ outputRoot: out
 data: {
 	schema: xml(../ui.xml)	
 } 
-logFile: fmpp.log
+logFile: ../../fmpp.log

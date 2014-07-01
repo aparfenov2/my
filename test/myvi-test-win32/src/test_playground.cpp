@@ -38,8 +38,10 @@ public:
 	s32 kx;
 	s32 ky;
 	gobject_t *gobj;
+	bool drawFlag;
 public:
 	my_test_drawer_t(gobject_t *agobj) {
+		drawFlag = false;
 		gobj = agobj;
 		w = TFT_WIDTH * 2;
 		h = TFT_HEIGHT * 2;
@@ -57,7 +59,12 @@ public:
 				focus_aware->key_event((key_t::key_t)key);
 			}
 		}
-		return rasterizer_t::render(gobj, s1);
+		bool ret = rasterizer_t::render(gobj, s1);
+		if (ret) {
+			drawFlag = !drawFlag;
+			s1.putpx(0,0, drawFlag ? 0x00ff00 : 0xff0000);
+		}
+		return ret;
 	}
 
 };
@@ -108,7 +115,7 @@ logger_t *logger_t::instance = &logger_impl;
 
 // ------------------------------- весь экран ------------------------------------
 class test_screen_t : public gobject_t, public focus_aware_t {
-
+	typedef gobject_t super;
 public:
 //	custom::tedit_t hdr_box;
 //	custom::scrollable_menu_t scrollable;
@@ -141,7 +148,7 @@ public:
 		menu_context_t::instance().lctxg = lctxg;
 
 		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
-		gobject_t *root_view = root_view_meta->build_view();
+		gobject_t *root_view = root_view_meta->build_view_no_ctx();
 
 		add_child(root_view);
 
@@ -168,6 +175,14 @@ public:
 	}
 
 
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty) {
+			int i = 0;
+		}
+	}
+
+
 };
 
 
@@ -181,6 +196,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	res.init();
 
 	gen::meta_registry_t::instance().init();
+
 
 	test_screen_t test_screen;
 	test_screen.init(); // init whole tree

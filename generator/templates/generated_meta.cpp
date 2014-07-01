@@ -9,7 +9,11 @@
 			<#local isNum = false>
 		</#attempt>
 		<#if isNum>
-			<#lt>${tab}->set_int_param("${attr.@@qname}",${attr?string})
+			<#if attr?string?contains(".")>
+				<#lt>${tab}->set_float_param("${attr.@@qname}",${attr?string})
+			<#else>
+				<#lt>${tab}->set_int_param("${attr.@@qname}",${attr?string})
+			</#if>	
 		<#else>
 			<#lt>${tab}->set_string_param("${attr.@@qname}","${attr?string}")
 		</#if>
@@ -58,7 +62,7 @@
 	<#lt>${tab}(new dynamic_menu_meta_t())
 	<@emit_set_params menu tab+"\t"/>
 	<#list menu.parameterRef as child>
-	<#lt>${tab}->add_child("${child.@id}")
+		<#lt>${tab+"\t"}->add_child("${child.@id}")
 	</#list>
 </#macro>
 
