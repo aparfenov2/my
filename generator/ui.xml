@@ -14,6 +14,7 @@
 
 	<types>
 <!-- опишем простые типы, чтобы их можно было найти -->	
+		<type id="string" type="base" />
 		<type id="float" type="base" />
 		<type id="u8" type="base" />
 		<type id="s8" type="base" />
@@ -30,8 +31,8 @@
 		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
 		<!-- поэтому здесь для полей вид не указан -->
 		<type id="dme_t" name="Параметры DME" type="complex">
-			<parameter id="ch" name="Канал DME" type="u8" validators="range" lo="-127" hi="128" />
-			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" />
+			<parameter id="ch" name="Канал DME" type="u8" validators="range" initial="127" lo="-127" hi="128" />
+			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" initial="0" />
 		</type>
 		<type id="measure_ctl_t" name="Измерение" type="enum">
 			<enum id="START" name="Старт" value="0" />
@@ -46,8 +47,8 @@
 	
 	<parameters>
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
-		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение"  />
-		<parameter id="output_mode" type="output_mode_t"  name="Выход"  />
+		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
+		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
 		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
 	</parameters>
 	

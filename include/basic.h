@@ -178,7 +178,7 @@ public:
         return string_tt(data + start, len);
     }
 
-private:
+protected:
     static s32 strlen(const T* p) {
         if(p == null) return 0;
 
@@ -225,6 +225,12 @@ public:
 
 	s32 capacity() {
 		return max_str_len;
+	}
+
+	// обновляет счетчик
+	void update_length() {
+		_MY_ASSERT(data, return);
+		count = strlen(data);
 	}
 
 	// used in itoa

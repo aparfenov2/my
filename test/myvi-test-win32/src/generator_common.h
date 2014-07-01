@@ -18,7 +18,8 @@ public:
 
 // ======================================= меты =============================================
 
-#define _NAN 0xffffffff
+#define _NAN 0x8fffffff
+#define _NANF (double)_NAN
 
 // C++ requirements:
 // must be a function object type that is default_constructible, copy_assignable and swappable
@@ -41,6 +42,9 @@ public:
 
 };
 
+// все изменяемые строки здесь и далее длиной 255
+typedef myvi::string_impl_t<255> volatile_string_impl_t;
+
 
 // базовый класс меты
 class meta_t {
@@ -61,20 +65,23 @@ public:
 	virtual myvi::string_t get_string_param(myvi::string_t key) = 0;
 	// карта численных параметров
 	virtual s32 get_int_param(myvi::string_t key) {
-		return 0;
+		return _NAN;
 	}
 	virtual double get_float_param(myvi::string_t key) {
-		return 0.0;
+		return _NANF;
 	}
 };
 
 
 template<typename TSelf, typename TBase>
 class dynamic_meta_t : public TBase {
+	typedef std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> smap_t;
+	typedef std::unordered_map<myvi::string_t, s32, string_t_hash_t> imap_t;
+	typedef std::unordered_map<myvi::string_t, double, string_t_hash_t> fmap_t;
 public:
-	std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> string_param_map;
-	std::unordered_map<myvi::string_t, s32, string_t_hash_t> int_param_map;
-	std::unordered_map<myvi::string_t, double, string_t_hash_t> float_param_map;
+	smap_t string_param_map;
+	imap_t int_param_map;
+	fmap_t float_param_map;
 public:
 	TSelf * set_string_param(myvi::string_t id, myvi::string_t val) {
 		string_param_map[id] = val;
@@ -92,15 +99,21 @@ public:
 	}
 
 	virtual myvi::string_t get_string_param(myvi::string_t key) OVERRIDE {
-		return string_param_map[key];
+		smap_t::iterator iter = string_param_map.find(key);
+		if(iter != string_param_map.end()) return iter->second;
+		return myvi::string_t();
 	}
 
 	virtual s32 get_int_param(myvi::string_t key) OVERRIDE {
-		return int_param_map[key];
+		imap_t::iterator iter = int_param_map.find(key);
+		if(iter != int_param_map.end()) return iter->second;
+		return _NAN;
 	}
 
 	virtual double get_float_param(myvi::string_t key) OVERRIDE {
-		return float_param_map[key];
+		fmap_t::iterator iter = float_param_map.find(key);
+		if(iter != float_param_map.end()) return iter->second;
+		return _NANF;
 	}
 
 };
@@ -214,13 +227,13 @@ public:
 };
 
 
-#define _MAX_PARAM_PATH_LENGTH 100
+
 
 // изменяемый путь
 class volatile_path_t : public meta_path_base_t {
 	typedef meta_path_base_t super;
 public:
-	myvi::string_impl_t<_MAX_PARAM_PATH_LENGTH> path;
+	volatile_string_impl_t path;
 public:
 	volatile_path_t() : super(path) {
 	}
@@ -323,6 +336,16 @@ public:
 
 class type_meta_t;
 
+
+namespace variant_type_t {
+	typedef enum {
+		STRING,
+		INT,
+		FLOAT
+	} variant_type_t;
+}
+
+
 // метаинфа о параметре
 class parameter_meta_t : public meta_t {
 public:
@@ -338,6 +361,9 @@ public:
 
 	parameter_meta_t * find_child_meta(myvi::string_t child_id);
 	type_meta_t * get_type_meta();
+
+	variant_type_t::variant_type_t match_value_type();
+
 };
 
 class dynamic_parameter_meta_t : public dynamic_meta_t<dynamic_parameter_meta_t, parameter_meta_t> {

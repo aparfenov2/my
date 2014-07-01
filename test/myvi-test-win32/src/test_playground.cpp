@@ -197,6 +197,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	gen::meta_registry_t::instance().init();
 
+
 	test_screen_t test_screen;
 	test_screen.init(); // init whole tree
 

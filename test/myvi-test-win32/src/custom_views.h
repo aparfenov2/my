@@ -3,29 +3,22 @@
 
 #include "menu_common.h"
 #include "generator_common.h"
-#include <sstream>
+//#include <sstream>
+#include <cstdio>
 
 namespace custom {
 
 
-namespace variant_type_t {
-	typedef enum {
-		STRING,
-		INT,
-		FLOAT
-	} variant_type_t;
-}
-
 template <typename T>
 class variant_tt {
 public:
-	variant_type_t::variant_type_t type;
+	gen::variant_type_t::variant_type_t type;
 	T sval;
 	s32 ival;
 	double fval;
 public:
 	variant_tt() {
-		type = variant_type_t::STRING;
+		type = gen::variant_type_t::STRING;
 		ival = 0;
 		fval = 0;
 	}
@@ -44,31 +37,31 @@ public:
 
 	void set_value(myvi::string_t _sval) {
 		sval = _sval;
-		type = variant_type_t::STRING;
+		type = gen::variant_type_t::STRING;
 	}
 
 	void set_value(s32 _ival) {
 		ival = _ival;
-		type = variant_type_t::INT;
+		type = gen::variant_type_t::INT;
 	}
 
 	void set_value(double _fval) {
 		fval = _fval;
-		type = variant_type_t::FLOAT;
+		type = gen::variant_type_t::FLOAT;
 	}
 
 	myvi::string_t get_string_value() {
-		_MY_ASSERT(type == variant_type_t::STRING, return 0);
+		_MY_ASSERT(type == gen::variant_type_t::STRING, return 0);
 		return sval;
 	}
 
 	s32 get_int_value() {
-		_MY_ASSERT(type == variant_type_t::INT, return 0);
+		_MY_ASSERT(type == gen::variant_type_t::INT, return 0);
 		return ival;
 	}
 
 	double get_float_value() {
-		_MY_ASSERT(type == variant_type_t::FLOAT, return 0);
+		_MY_ASSERT(type == gen::variant_type_t::FLOAT, return 0);
 		return fval;
 	}
 
@@ -77,20 +70,20 @@ public:
 // служит только дл€ передачи, но не дл€ хранени€ значени€ !
 typedef variant_tt<myvi::string_t> variant_t;
 
-#define _MAX_STRING_LEN 100
 
-class variant_holder_t : public variant_tt<myvi::string_impl_t<_MAX_STRING_LEN>> {
+
+class variant_holder_t : public variant_tt<gen::volatile_string_impl_t> {
 public:
-	variant_holder_t (variant_type_t::variant_type_t expected_type) {
+	variant_holder_t (gen::variant_type_t::variant_type_t expected_type) {
 		this->type = expected_type;
 	}
 
 	void assign(variant_t &other) {
 		_MY_ASSERT(this->type == other.type, return);
 		switch(other.type) {
-		case variant_type_t::STRING  : this->set_value(other.get_string_value()); break;
-		case variant_type_t::INT  : this->set_value(other.get_int_value()); break;
-		case variant_type_t::FLOAT  : this->set_value(other.get_float_value()); break;
+		case gen::variant_type_t::STRING  : this->set_value(other.get_string_value()); break;
+		case gen::variant_type_t::INT  : this->set_value(other.get_int_value()); break;
+		case gen::variant_type_t::FLOAT  : this->set_value(other.get_float_value()); break;
 		}
 	}
 
@@ -98,9 +91,9 @@ public:
 		variant_t ret;
 
 		switch(this->type) {
-		case variant_type_t::STRING  : ret.set_value(this->get_string_value()); break;
-		case variant_type_t::INT  : ret.set_value(this->get_int_value()); break;
-		case variant_type_t::FLOAT  : ret.set_value(this->get_float_value()); break;
+		case gen::variant_type_t::STRING  : ret.set_value(this->get_string_value()); break;
+		case gen::variant_type_t::INT  : ret.set_value(this->get_int_value()); break;
+		case gen::variant_type_t::FLOAT  : ret.set_value(this->get_float_value()); break;
 		}
 
 		return ret;
@@ -154,7 +147,7 @@ private:
 };
 
 
-
+/*
 class model_t {
 public:
 	// обновление модели
@@ -163,32 +156,135 @@ public:
 	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
 
 };
+*/
 
 
-class dynamic_model_t : public model_t  { // , public publisher_t<msg>
+class model_message_t {
+public:
+	myvi::string_t path;
+public:
+	model_message_t(myvi::string_t _path) : path(_path) {
+	}
+};
+
+#define _MODEL_MAX_SUBSCRIBERS 128
+
+class dynamic_model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> { 
 
 public:
 	std::unordered_map<myvi::string_t, variant_holder_t *, gen::string_t_hash_t> children;
+	static dynamic_model_t _instance;
 public:
-
-	virtual void update(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
-		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
-		holder->assign(value);
+	static dynamic_model_t & instance() {
+		return _instance;
 	}
 
-	virtual void read(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
+	void update(myvi::string_t parameter_path, variant_t &value)  {
 		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
+		holder->assign(value);
+		notify(model_message_t(parameter_path));
+	}
+
+	void read(myvi::string_t parameter_path, variant_t &value, gen::variant_type_t::variant_type_t expected_type)  {
+		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
 		value = holder->get_value();
+		_MY_ASSERT(value.type == expected_type, return);
+	}
+
+	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, gen::variant_type_t::variant_type_t expected_type)  {
+
+		_MY_ASSERT(initial_value.type == expected_type, return);
+
+		variant_holder_t *ret = children[parameter_path];
+		_MY_ASSERT(!ret, return);
+		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
+		holder->assign(initial_value);
 	}
 
 private:
-	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, variant_type_t::variant_type_t expected_type) {
+	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, gen::variant_type_t::variant_type_t expected_type) {
 		variant_holder_t *ret = children[parameter_path];
 		if (!ret) {
 			ret = new variant_holder_t(expected_type);
 			children[parameter_path] = ret;
 		}
 		return ret;
+	}
+};
+
+
+// интерфейс конвертера значени€ в строку и обратно
+class converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) = 0;
+	virtual bool from_string(myvi::string_t &str, variant_t &value) = 0;
+};
+
+class string_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+		str = value.get_string_value();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		value.set_value(str);
+		return true;
+	}
+};
+
+class int_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {		
+		std::sprintf((char *)str.c_str(), "%d", value.get_int_value());
+		str.update_length();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		char *end;
+		s32 ival = std::strtol(str.c_str(), &end, 10);
+		if (!*end) {
+			value.set_value(ival);
+		}
+		return !*end;
+	}
+};
+
+class float_converter_t : public converter_t {
+public:
+	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+		std::sprintf((char *)str.c_str(), "%f", value.get_float_value());
+		str.update_length();
+	}
+
+	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
+		char *end;
+		double fval = std::strtod(str.c_str(), &end);
+		if (!*end) {
+			value.set_value(fval);
+		}
+		return !*end;
+	}
+};
+
+class converter_factory_t {
+public:
+	static converter_factory_t _instance;
+
+	string_converter_t string_converter;
+	int_converter_t int_converter;
+	float_converter_t float_converter;
+public:
+	static converter_factory_t instance() {
+		return _instance;
+	}
+	converter_t * for_type(gen::variant_type_t::variant_type_t expected_type) {
+		switch (expected_type) {
+		case gen::variant_type_t::STRING : return &string_converter;
+		case gen::variant_type_t::INT : return &int_converter;
+		case gen::variant_type_t::FLOAT : return &float_converter;
+		}
+		_MY_ASSERT(0, return 0); // not found
+		return 0;
 	}
 };
 
@@ -234,6 +330,36 @@ public:
 
 class view_controller_impl_base_t : public gen::view_controller_t {
 public:
+	gen::volatile_string_impl_t parameter_path;
+	gen::variant_type_t::variant_type_t type;
+public:
+	view_controller_impl_base_t() {
+		type = gen::variant_type_t::STRING;
+	}
+
+	void set_initial(gen::view_build_context_t &ctx, variant_t &value) {
+
+		myvi::string_t initial_str = ctx.get_view_meta()->get_string_param("initial");
+		if (!initial_str.is_empty()) {
+			_MY_ASSERT(type == gen::variant_type_t::STRING, return);
+			value.set_value(initial_str);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+
+		s32 initial_int = ctx.get_view_meta()->get_int_param("initial");
+		if (initial_int != _NAN) {
+			_MY_ASSERT(type == gen::variant_type_t::INT, return);
+			value.set_value(initial_int);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+
+		double initial_float = ctx.get_view_meta()->get_float_param("initial");
+		if (initial_float != _NANF) {
+			_MY_ASSERT(type == gen::variant_type_t::FLOAT, return);
+			value.set_value(initial_float);
+			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+		}
+	}
 
 	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
 
@@ -250,7 +376,23 @@ public:
 
 		_MY_ASSERT(ctx.get_parameter_meta(), return);
 
-		_LOG1(ctx.get_parameter_path().path.c_str());
+//		_LOG1(ctx.get_parameter_path().path.c_str());
+
+// 0. –егистрирует поле в модели , если его ещЄ там нет
+	}
+
+	// вызываетс€ из контроллера texbox/combobox
+	void register_in_model(gen::view_build_context_t &ctx) {
+
+		gen::type_meta_t *type_meta = ctx.get_parameter_meta()->get_type_meta();
+		_MY_ASSERT(!type_meta->is_complex(), return);
+
+		variant_t value;
+		this->parameter_path = ctx.get_parameter_path().path;
+		this->type = ctx.get_parameter_meta()->match_value_type();
+
+		dynamic_model_t::instance().read(ctx.get_parameter_path().path, value, type);
+		set_initial(ctx, value);
 
 	}
 
@@ -324,25 +466,66 @@ public:
 4. использует конвертор дл€ преобразовани€ значени€ параметра из строки и в строку
 
 */
-class tbox_controller_t : public view_controller_impl_base_t {
+class tbox_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<model_message_t>, public myvi::subscriber_t<myvi::string_t> {
 	typedef view_controller_impl_base_t super;
 public:
 	myvi::text_box_t *tb;
+	gen::volatile_string_impl_t string_value;
 public:
 
 	tbox_controller_t() {
 		tb = 0;
 	}
 
+
 	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+// 0. –егистрирует поле в модели , если его ещЄ там нет
 		super::init(ctx);
+		register_in_model(ctx);
+// 1. «аполн€ет поле начальным значением из модели
 
+		variant_t value;
+		dynamic_model_t::instance().read(this->parameter_path, value, type);
 
-		tb = dynamic_cast<myvi::text_box_t *>(ctx.get_view());
+		this->tb = dynamic_cast<myvi::text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
 
-		tb->value = "123";
+		converter_t *conv = converter_factory_t::instance().for_type(type);
+		conv->to_string(value, string_value);
+		this->tb->value = string_value;
+
+// 2. ѕодписываетс€ на изменени€ в модели и обновлени€ пол€
+		dynamic_model_t::instance().subscribe(this);
+
+// 3. ѕодписываетс€ на изменени€ пол€ и обновлени€ модели
+		tb->subscribe(this);
 	}
+
+	// обновление от модели
+	virtual void accept(model_message_t &msg) OVERRIDE {
+
+		if (!(msg.path == this->parameter_path)) {
+			return;
+		}
+		variant_t value;
+		dynamic_model_t::instance().read(this->parameter_path, value, this->type);
+
+		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+		conv->to_string(value, string_value);
+		this->tb->value = string_value;
+	}
+
+	// обновление от виджета
+	virtual void accept(myvi::string_t &str) OVERRIDE {
+		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+
+		variant_t value;
+		bool ret = conv->from_string(str, value);
+		if (ret) {
+			dynamic_model_t::instance().update(this->parameter_path, value);
+		}
+	}
+
 
 };
 

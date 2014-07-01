@@ -9,6 +9,12 @@ void meta_registry_t::init() {
  * =================== ТИПЫ ==========================
 */
 	
+	// string
+	types.push_back(
+		(new dynamic_type_meta_t())
+			->set_string_param("id","string")
+			->set_string_param("type","base")
+		);
 	// float
 	types.push_back(
 		(new dynamic_type_meta_t())
@@ -80,6 +86,7 @@ void meta_registry_t::init() {
 				(new dynamic_parameter_meta_t())
 					->set_int_param("hi",128)
 					->set_string_param("id","ch")
+					->set_int_param("initial",127)
 					->set_int_param("lo",-127)
 					->set_string_param("name","Канал DME")
 					->set_string_param("type","u8")
@@ -88,6 +95,7 @@ void meta_registry_t::init() {
 			->add_parameter(
 				(new dynamic_parameter_meta_t())
 					->set_string_param("id","sfx")
+					->set_int_param("initial",0)
 					->set_string_param("name","Суффикс DME")
 					->set_string_param("type","dme_sfx_t")
 			)
@@ -155,6 +163,7 @@ void meta_registry_t::init() {
 	parameters.push_back(
 		(new dynamic_parameter_meta_t())
 			->set_string_param("id","measure_ctl")
+			->set_int_param("initial",0)
 			->set_string_param("name","Измерение")
 			->set_string_param("type","measure_ctl_t")
 		);
@@ -162,6 +171,7 @@ void meta_registry_t::init() {
 	parameters.push_back(
 		(new dynamic_parameter_meta_t())
 			->set_string_param("id","output_mode")
+			->set_int_param("initial",0)
 			->set_string_param("name","Выход")
 			->set_string_param("type","output_mode_t")
 		);
