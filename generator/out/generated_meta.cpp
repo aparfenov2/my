@@ -180,6 +180,7 @@ void meta_registry_t::init() {
 		(new dynamic_parameter_meta_t())
 			->set_int_param("hi",70)
 			->set_string_param("id","out_level")
+			->set_float_param("initial",72.3)
 			->set_string_param("label","dBm")
 			->set_int_param("lo",-70)
 			->set_string_param("name","Уровень")

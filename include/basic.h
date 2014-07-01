@@ -234,11 +234,11 @@ public:
 	}
 
 	// used in itoa
-	//void set_length(s32 len) {
-	//	_MY_ASSERT(len <= max_str_len);
-	//	this->count = len;
-	//	data[count] = 0;
-	//}
+	void set_length(s32 len) {
+		_MY_ASSERT(len <= max_str_len, return);
+		this->count = len;
+		data[count] = 0;
+	}
 
     volatile_string_tt<T>& operator = (const string_tt<T> &cstr) {
 		_MY_ASSERT(cstr.length() <= max_str_len, return *this);

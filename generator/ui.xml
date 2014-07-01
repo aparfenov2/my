@@ -49,7 +49,7 @@
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
 		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
 		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
-		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70"  name="Уровень" label="dBm" view="tbox_label" />
+		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70" initial="72.3"  name="Уровень" label="dBm" view="tbox_label" />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	
