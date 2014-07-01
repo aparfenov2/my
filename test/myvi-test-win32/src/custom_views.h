@@ -252,8 +252,14 @@ public:
 class float_converter_t : public converter_t {
 public:
 	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
-		std::sprintf((char *)str.c_str(), "%f", value.get_float_value());
-		str.update_length();
+
+		char *buf = (char *)str.c_str();
+		s32 len = std::sprintf(buf, "%.6f", value.get_float_value());
+
+		while (len > 1 && (buf[len-1] == '0' || buf[len-1] == '.')) {
+			--len;
+		}
+		str.set_length(len);
 	}
 
 	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
@@ -325,6 +331,11 @@ public:
 		}
 	}
 
+	virtual void child_request_size_change(myvi::gobject_t *child, s32 aw, s32 ah) OVERRIDE {
+		do_layout();
+	}
+
+
 };
 
 
@@ -339,21 +350,21 @@ public:
 
 	void set_initial(gen::view_build_context_t &ctx, variant_t &value) {
 
-		myvi::string_t initial_str = ctx.get_view_meta()->get_string_param("initial");
+		myvi::string_t initial_str = ctx.get_parameter_meta()->get_string_param("initial");
 		if (!initial_str.is_empty()) {
 			_MY_ASSERT(type == gen::variant_type_t::STRING, return);
 			value.set_value(initial_str);
 			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
 		}
 
-		s32 initial_int = ctx.get_view_meta()->get_int_param("initial");
+		s32 initial_int = ctx.get_parameter_meta()->get_int_param("initial");
 		if (initial_int != _NAN) {
 			_MY_ASSERT(type == gen::variant_type_t::INT, return);
 			value.set_value(initial_int);
 			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
 		}
 
-		double initial_float = ctx.get_view_meta()->get_float_param("initial");
+		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
 			_MY_ASSERT(type == gen::variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
@@ -452,6 +463,7 @@ public:
 		this->lab.ctx = ctx.lctx1;
 		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
 	}
+
 };
 
 
@@ -466,7 +478,11 @@ public:
 4. использует конвертор для преобразования значения параметра из строки и в строку
 
 */
-class tbox_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<model_message_t>, public myvi::subscriber_t<myvi::string_t> {
+class tbox_controller_t 
+	: public view_controller_impl_base_t, 
+	public myvi::subscriber_t<model_message_t>, 
+	public myvi::subscriber_t<myvi::textbox_msg_t> {
+
 	typedef view_controller_impl_base_t super;
 public:
 	myvi::text_box_t *tb;
@@ -516,11 +532,15 @@ public:
 	}
 
 	// обновление от виджета
-	virtual void accept(myvi::string_t &str) OVERRIDE {
+	virtual void accept(myvi::textbox_msg_t &msg) OVERRIDE {
+
+		if (msg.state != myvi::textbox_msg_t::COMPLETE) {
+			return; // в режиме редактирования ниче не меняем
+		}
 		converter_t *conv = converter_factory_t::instance().for_type(this->type);
 
 		variant_t value;
-		bool ret = conv->from_string(str, value);
+		bool ret = conv->from_string(msg.value, value);
 		if (ret) {
 			dynamic_model_t::instance().update(this->parameter_path, value);
 		}

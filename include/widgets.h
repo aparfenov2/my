@@ -872,7 +872,19 @@ public:
 #define COLOR_SELECTED 0xAFBFCF
 #define COLOR_CAPTURED 0x267F00
 
-class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<myvi::string_t, 1> {
+class textbox_msg_t {
+public:
+	enum state_t {
+		EDIT, // значенеие еще редактируется
+		COMPLETE // пользователь нажал Enter и мы вышли из режима редактирования
+	} state;
+	myvi::string_t value;
+public:
+	textbox_msg_t(state_t _state, myvi::string_t _value) : state(_state), value(_value) {
+	}
+};
+
+class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<textbox_msg_t, 1> {
 	typedef gobject_t super;
 public:
 	property_t<string_t , text_box_t> value;
@@ -941,6 +953,7 @@ public:
 			} else {
 				this->release_focus();
 				cursor_visible = false;
+				notify(textbox_msg_t(textbox_msg_t::COMPLETE, _value));
 			}
 			goto lab_update_input;
 		}
@@ -991,7 +1004,7 @@ lab_update_input:
 			parent->child_request_size_change(this, aw,ah);
 		}
 		dirty = true;
-		notify(_value);
+		notify(textbox_msg_t(textbox_msg_t::EDIT, _value));
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
