@@ -460,13 +460,16 @@ public:
 			paw = w1;
 			pah = h1;
 			dst.set_allowed_area(pax,pay,paw,pah);
+
+			p->render(dst);
 // DEBUG DRAW:
 			if (debug) {
 				dst.ctx.pen_color = colors[deepLevel & 0x03];
-				dst.rect(x1,y1,p->w,p->h);
+				if (x1 >=0 && y1>=0 && (x1+p->w-1 < dst.w) && (y1+p->h-1 < dst.h)) {
+					dst.rect(x1,y1,p->w,p->h);
+				}
 			}
 
-			p->render(dst);
 			clear_dirty(p);
 			force_redreaw = true;
 			ret = true;
@@ -711,16 +714,28 @@ public:
 		s32 py = 0;
 		while (child) {
 			_WEAK_ASSERT(child->visible,return);
+
 			if (vertical) {
 				child->x = 0;
 				child->y = py;
+
 				if (preferred_item_size) {
 					s32 cw, ch;
 					child->get_preferred_size(cw,ch);
 					child->h = ch;
 				} else child->h = bh;
+
 				child->w = parent->w;
 				py += child->h + spy;
+
+				if (py > parent->h && preferred_item_size) {
+					// пробуем урезать последний элемент (случай со скроллом внизу стека)
+					_WEAK_ASSERT(!iter.next(), break); 
+					py -= child->h + spy; // rewind py
+					child->h = parent->h - py;
+					_MY_ASSERT(child->h > 0, break);
+					break;
+				}
 			} else {
 				child->x = px;
 				child->y = 0;
@@ -741,26 +756,30 @@ public:
 };
 
 
-// раст€гивает дочерние виджеты на весь размер текущего
+// раст€гивает дочерний виджет на весь размер текущего
 class stretch_layout_t : public layout_t {
 public:
 public:
 	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
-		_MY_ASSERT(0, return);
+		gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		gobject_t *child = iter.next();
+		_MY_ASSERT(child,return);
+
+		child->get_preferred_size(aw, ah);
+		_MY_ASSERT(!iter.next(),return); // нельз€ раст€нуть все обьекты
 	}
 
 	virtual void layout(gobject_t *parent) OVERRIDE {
 		gobject_t::iterator_visible_t iter = parent->iterator_visible();
 		gobject_t *child = iter.next();
-		while (child) {
-			child->x = 0;
-			child->y = 0;
-			child->h = parent->h;
-			child->w = parent->w;
+		_MY_ASSERT(child,return);
 
-			child = iter.next();
-			_WEAK_ASSERT(!child,return); // нельз€ раст€нуть все обьекты
-		}
+		child->x = 0;
+		child->y = 0;
+		child->h = parent->h;
+		child->w = parent->w;
+
+		_MY_ASSERT(!iter.next(),return); // нельз€ раст€нуть все обьекты
 	}
 };
 

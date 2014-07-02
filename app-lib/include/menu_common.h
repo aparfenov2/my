@@ -79,60 +79,58 @@ public:
 // окно с прокруткой. Состоит из viewport и virtual окна. Для прокрутки сдвигаем virtual. 
 
 // интерфейс interior-окна
+/*
 class scrollable_interior_t : public gobject_t {
 public:
 public:
 };
+*/
 
 // окно с прокруткой.
 class scrollable_window_t : public gobject_t, public subscriber_t<focus_client_t *>, public focus_master_t {
 	typedef gobject_t super;
 public:
-	scrollable_interior_t *interior;
 public:
-	scrollable_window_t(scrollable_interior_t *ainterior) {
-		interior = ainterior;
+	scrollable_window_t() {
 		focus_manager_t::instance.subscribe(this);
-
-		add_child(interior);
 	}
 
+	gobject_t * get_interior() {
+		_MY_ASSERT(this->children.size() == 1, return 0);
+		return this->children[0];
+	}
 
 	// оповещение от focus_manager о выбранном объекте
 	// обьект не наш, а interior !!!
 
 	virtual void accept(focus_client_t* &sel) OVERRIDE {
 		// если это наш объект (или одно из детей наших детей)
-		gobject_t::iterator_selectable_deep_t iter = this->iterator_selectable_deep();
-		gobject_t *p = iter.next();
+		gobject_t *p = dynamic_cast<gobject_t *>(sel);
 		gobject_t *our = 0;
 		while (p) {
-			if (p == dynamic_cast<gobject_t *>(sel)) {
-				our = p;
+			if (p == this) {
+				our = dynamic_cast<gobject_t *>(sel);
 				break;
 			}
-			p = iter.next();
+			p = p->parent;
 		}
 		// то пытаемся скрыть крайние дочерние объекты чтобы объект в фокусе оставался видимым
 		if (our) {
-			// находим непосредственного childrena
-			gobject_t *p = our;
-			gobject_t *our_child = 0;
-
-			while (p && p != this && p != this->interior) {
-				our_child = p;
-				p = p->parent;
-			}
-			_MY_ASSERT(our_child && our_child->parent == this->interior, return);
-			
-			scroll_to(our_child);
+			scroll_to(our);
 		}
 	}
 
 	// прокрутить чтобы выбранный children стал виден
 	void scroll_to(gobject_t *interior_child) {
 
-		_MY_ASSERT(interior_child->parent == this->interior, return);
+		gobject_t *p = interior_child->parent;
+		while (p) {
+			if (p == this) {
+				break;
+			}
+			p = p->parent;
+		}
+		_MY_ASSERT(p, return); // проверим что дитё находится в нашей ветви
 
 		s32 ix,iy, ax,ay;
 		interior_child->translate(ix,iy);
@@ -156,34 +154,35 @@ public:
 		}
 
 		if (dx || dy) {
-			interior->x += dx;
-			interior->y += dy;
+			get_interior()->x += dx;
+			get_interior()->y += dy;
 			this->dirty = true;
 		}
 	}
 
 	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
-		_MY_ASSERT(interior,return);
-		interior->get_preferred_size(pw,ph);
+		_MY_ASSERT(get_interior(),return);
+		get_interior()->get_preferred_size(pw,ph);
 	}
 
 	virtual void do_layout() OVERRIDE {
 		_MY_ASSERT(w && h, return);
 
 		s32 ipw,iph;
-		interior->get_preferred_size(ipw,iph);
+		get_interior()->get_preferred_size(ipw,iph);
 
-		interior->w = w;
-		interior->h = h;
+		this->get_interior()->w = w;
+		this->get_interior()->h = h;
 
-		if (ipw > interior->w) {
-			interior->w = ipw;
+		// пока только вертикальный скролл
+		//if (ipw > this->get_interior()->w) {
+		//	this->get_interior()->w = ipw;
+		//}
+		if (iph > this->get_interior()->h) {
+			this->get_interior()->h = iph;
 		}
-		if (iph > interior->h) {
-			interior->h = iph;
-		}
 
-		interior->do_layout();
+		this->get_interior()->do_layout();
 	}
 
 	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE {
@@ -192,18 +191,18 @@ public:
 		if (!intention.next) return;
 
 		gobject_t *p = dynamic_cast<gobject_t*>(intention.current);
-		while (p && p->parent != interior) {
+		while (p && p->parent != get_interior()) {
 			p = p->parent;
 		}
 		_MY_ASSERT(p, return );
 
 		p = dynamic_cast<gobject_t*>(intention.next);
-		while (p && p->parent != interior) {
+		while (p && p->parent != get_interior()) {
 			p = p->parent;
 		}
 		if (!p) { // менеджер фокуса собирается перейти на чужой объект
 			// проверим, есть ли возможность перейти на обьект внутри нашего inerior
-			focus_client_t *next = focus_manager_t::instance.locate_next(intention.direction, interior);
+			focus_client_t *next = focus_manager_t::instance.locate_next(intention.direction, this->get_interior());
 			if (next) {
 				intention.next = next;
 			}
