@@ -43,13 +43,31 @@
 			<enum id="ATTEN" name="Аттен." value="1" glyph="B" />
 			<enum id="CALIB" name="Калибр." value="2" glyph="C" />
 		</type>
+		<type id="start_ctl_t" name="Запуск" type="enum">
+			<enum id="HIP" name="ХИП" value="0" glyph="A" />
+			<enum id="CALIB" name="Пачка" value="1" glyph="B" />
+			<enum id="EXT" name="Внеш" value="2" glyph="C" />
+		</type>
+		<type id="mode_ctl_t" name="Режим" type="enum">
+			<enum id="REQESTER" name="Запросчик" value="0" glyph="A" />
+			<enum id="RESPONDER" name="Ответчик" value="1" glyph="B" />
+		</type>
 	</types>
 	
 	<parameters>
+<!-- Главное -->	
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
 		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
 		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
 		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70" initial="72.3"  name="Уровень" label="dBm" view="tbox_label" />
+		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" initial="0"  />
+		
+<!-- Параметры -->	
+		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" label="Имп. пар\с" view="tbox_label" />
+		<parameter id="req_freq" type="float" name="Частота запроса" initial="1050.20" label="Мгц" view="tbox_label" />
+		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" label="мкс" view="tbox_label" />
+		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" label="мкс" view="tbox_label" />
+		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" initial="0"  />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	
@@ -86,11 +104,22 @@
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 		
-		<view id="root" layout="stretch" >
+		<view id="root" layout="stack" vertical="true" preferred_item_size="true" >
+			<view id="header" layout="stack" vertical="true" preferred_item_size="true">
+				<view id="lab1" inherited="lab" staticText="Статичный заголовок 1" />
+				<view id="lab2" inherited="lab" staticText="Статичный заголовок 2" />
+				<view id="lab3" inherited="lab" staticText="Статичный заголовок 3" />
+				<view id="lab4" inherited="lab" staticText="Статичный заголовок 4" />
+				<view id="lab5" inherited="lab" staticText="Статичный заголовок 5" />
+			</view>
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
 		<!-- w=-1, h=-1 - значения взять из parent -->
-			<view id="menu" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+			<view id="scroll_window" kind="predefined" >
+				<view id="scroll_interior" layout="stretch" drawer="background" background="BACKGROUND_LIGHT">
+					<view id="menu" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+				</view>
+			</view>
 		</view>
 		
 		<view id="item_template" layout="menu" drawer="background" background="BACKGROUND_LIGHT">
@@ -101,10 +130,20 @@
 	
 	<menus>
 		<menu id="main" name="Главное">
-			<parameterRef id="dme" />
 			<parameterRef id="measure_ctl" />
+			<parameterRef id="dme" />
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
+			<parameterRef id="start_ctl" />
+			
+			<parameterRef id="req_period" />
+			<parameterRef id="req_freq" />
+			<parameterRef id="req_span" />
+			<parameterRef id="rsp_span" />
+			<parameterRef id="mode_ctl" />
+			
+		</menu>
+		<menu id="parameters" name="Параметры">
 		</menu>
 	</menus>
 </schema>

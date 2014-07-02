@@ -385,7 +385,7 @@ public:
 			ctx.set_parameter_meta(child_parameter_meta);
 		}
 
-		_MY_ASSERT(ctx.get_parameter_meta(), return);
+//		_MY_ASSERT(ctx.get_parameter_meta(), return); - меты параметра может и не быть
 
 //		_LOG1(ctx.get_parameter_path().path.c_str());
 
@@ -444,7 +444,19 @@ public:
 		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
 		_MY_ASSERT(lab, return);
 
-		lab->text = ctx.get_parameter_meta()->get_name();
+		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("staticText");
+		if (!static_text.is_empty()) {
+			lab->text = static_text;
+			return;
+		}
+
+		myvi::string_t label_source = ctx.get_view_meta()->get_string_param("labelSource");
+		if (label_source.is_empty()) {
+			label_source = "name";
+		}
+
+
+		lab->text = ctx.get_parameter_meta()->get_string_param(label_source);
 	}
 
 };
@@ -645,6 +657,9 @@ public:
 	}
 };
 
+
+typedef myvi::scrollable_window_t scroll_window_view_t;
+
 /*
 * ====================== ЛАЙОУТЫ И ПРОЧ. =======================
 */
@@ -664,13 +679,39 @@ public:
 	}
 };
 
+#define _META_LAYOUT_PERCENTAGE 0.6
+
 class menu_meta_layout_t : public myvi::layout_t {
+
 public:
 	menu_meta_layout_t(gen::meta_t *meta) {
 	}
 
 	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
-		_MY_ASSERT(0, return);
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		// 1st child
+		myvi::gobject_t *first  = iter.next();
+		_MY_ASSERT(first, return);
+
+		s32 w1, h1;
+		first->get_preferred_size(w1, h1);
+		pw = w1 / _META_LAYOUT_PERCENTAGE;
+		ph = h1;
+
+		// 2st child
+		s32 w2, h2;
+		myvi::gobject_t *second  = iter.next();
+		_MY_ASSERT(second, return);
+		second->get_preferred_size(w2, h2);
+		if (ph < h2) {
+			ph = h2;
+		}
+		pw += w2 + 5;
+
+		// none other children
+		_MY_ASSERT(!iter.next(), return);
+		
 	}
 
 	virtual void layout(myvi::gobject_t *parent) OVERRIDE {
@@ -679,7 +720,7 @@ public:
 		// 1st child
 		myvi::gobject_t *first  = iter.next();
 		_MY_ASSERT(first, return);
-		first->w = (s32)(parent->w * 0.6);
+		first->w = (s32)(parent->w * _META_LAYOUT_PERCENTAGE);
 		first->h = parent->h;
 		// 2st child
 		myvi::gobject_t *second  = iter.next();

@@ -318,6 +318,10 @@ public:
 		return parameter_meta;
 	}
 
+	parameter_meta_t * try_get_parameter_meta() {
+		return parameter_meta;
+	}
+
 	meta_path_t get_parameter_path() {
 		return parameter_path;
 	}

@@ -63,6 +63,7 @@ public:
 		return ret;
 	}
 
+	// gen::parameter_meta_t * meta otional
 	myvi::gobject_t * build_predefined_view(myvi::string_t view_id, gen::parameter_meta_t * meta) {
 		myvi::gobject_t *view = 0;
 
@@ -74,6 +75,10 @@ public:
 
 		} else if (view_id == "lab") {
 			view = new custom::lab_view_t();
+
+		} else if (view_id == "scroll_window") {
+			view = new custom::scroll_window_view_t();
+
 		}
 		_MY_ASSERT(view, return 0);
 		return view;
@@ -108,7 +113,7 @@ public:
 		ctx.set_view(0);
 		if (ctx.get_view_meta()->is_predefined()) {
 			ctx.set_view(
-				build_predefined_view(ctx.get_view_meta()->get_id(), ctx.get_parameter_meta())
+				build_predefined_view(ctx.get_view_meta()->get_id(), ctx.try_get_parameter_meta())
 				);
 
 		} else {
@@ -119,10 +124,8 @@ public:
 		if (layout) {
 			ctx.get_view()->layout = layout;
 		}
-		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.get_view());
-		if (dvmx) {
-			build_child_views_of_view(ctx);
-		}
+
+		build_child_views_of_view(ctx);
 
 		view_controller_t * view_controller = build_controller(ctx.get_view_meta());
 		if (view_controller) {
@@ -134,13 +137,16 @@ public:
 
 	void build_child_views_of_view(gen::view_build_context_t ctx) {
 		dynamic_view_mixin_t * dvmx = dynamic_cast<dynamic_view_mixin_t *>(ctx.get_view());
-		_MY_ASSERT(dvmx, return);
 
 		for (s32 i=0; ;i++) {
 			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(i);
 			if (!child_meta) break;
 			myvi::gobject_t *child_view = child_meta->build_view(ctx);
-			dvmx->add_child(child_view,child_meta->get_id());
+			if (dvmx) {
+				dvmx->add_child(child_view,child_meta->get_id());
+			} else {
+				ctx.get_view()->add_child(child_view);
+			}
 		}
 	}
 
