@@ -108,12 +108,14 @@ void meta_registry_t::init() {
 			->set_string_param("type","enum")
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
+					->set_string_param("glyph","A")
 					->set_string_param("id","START")
 					->set_string_param("name","Старт")
 					->set_int_param("value",0)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
+					->set_string_param("glyph","B")
 					->set_string_param("id","STOP")
 					->set_string_param("name","Стоп")
 					->set_int_param("value",1)
@@ -127,21 +129,18 @@ void meta_registry_t::init() {
 			->set_string_param("type","enum")
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","A")
 					->set_string_param("id","ANT")
 					->set_string_param("name","Антенна")
 					->set_int_param("value",0)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","B")
 					->set_string_param("id","ATTEN")
 					->set_string_param("name","Аттен.")
 					->set_int_param("value",1)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","C")
 					->set_string_param("id","CALIB")
 					->set_string_param("name","Калибр.")
 					->set_int_param("value",2)
@@ -155,21 +154,18 @@ void meta_registry_t::init() {
 			->set_string_param("type","enum")
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","A")
 					->set_string_param("id","HIP")
 					->set_string_param("name","ХИП")
 					->set_int_param("value",0)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","B")
 					->set_string_param("id","CALIB")
 					->set_string_param("name","Пачка")
 					->set_int_param("value",1)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","C")
 					->set_string_param("id","EXT")
 					->set_string_param("name","Внеш")
 					->set_int_param("value",2)
@@ -183,17 +179,46 @@ void meta_registry_t::init() {
 			->set_string_param("type","enum")
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","A")
 					->set_string_param("id","REQESTER")
 					->set_string_param("name","Запросчик")
 					->set_int_param("value",0)
 			)
 			->add_enum_value(
 				(new dynamic_enum_meta_t())
-					->set_string_param("glyph","B")
 					->set_string_param("id","RESPONDER")
 					->set_string_param("name","Ответчик")
 					->set_int_param("value",1)
+			)
+		);
+	// dsp_onoff_t
+	types.push_back(
+		(new dynamic_type_meta_t())
+			->set_string_param("id","dsp_onoff_t")
+			->set_string_param("name","Отключение дисплея")
+			->set_string_param("type","enum")
+			->add_enum_value(
+				(new dynamic_enum_meta_t())
+					->set_string_param("id","NO")
+					->set_string_param("name","НЕТ")
+					->set_int_param("value",0)
+			)
+			->add_enum_value(
+				(new dynamic_enum_meta_t())
+					->set_string_param("id","1_MIN")
+					->set_string_param("name","1 МИНУТА")
+					->set_int_param("value",0)
+			)
+			->add_enum_value(
+				(new dynamic_enum_meta_t())
+					->set_string_param("id","5_MIN")
+					->set_string_param("name","5 МИНУТ")
+					->set_int_param("value",1)
+			)
+			->add_enum_value(
+				(new dynamic_enum_meta_t())
+					->set_string_param("id","10_MIN")
+					->set_string_param("name","10 МИНУТ")
+					->set_int_param("value",2)
 			)
 		);
 	
@@ -293,6 +318,24 @@ void meta_registry_t::init() {
 			->set_int_param("initial",0)
 			->set_string_param("name","Режим")
 			->set_string_param("type","mode_ctl_t")
+		);
+	// brightness
+	parameters.push_back(
+		(new dynamic_parameter_meta_t())
+			->set_string_param("id","brightness")
+			->set_int_param("initial",100)
+			->set_string_param("label","%")
+			->set_string_param("name","Яркость")
+			->set_string_param("type","u8")
+			->set_string_param("view","tbox_label")
+		);
+	// dsp_onoff
+	parameters.push_back(
+		(new dynamic_parameter_meta_t())
+			->set_string_param("id","dsp_onoff")
+			->set_int_param("initial",0)
+			->set_string_param("name","Отключение дисплея")
+			->set_string_param("type","dsp_onoff_t")
 		);
 	
 /*
@@ -395,52 +438,9 @@ void meta_registry_t::init() {
 			->set_string_param("vertical","true")
 		->add_child(
 			(new dynamic_view_meta_t())
-				->set_string_param("id","header")
-				->set_string_param("layout","stack")
-				->set_string_param("preferred_item_size","true")
-				->set_string_param("vertical","true")
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab1")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 1")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab2")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 2")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab3")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 3")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab4")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 4")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab5")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 5")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab5")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 6")
-		)
-			->add_child(
-				(new dynamic_view_meta_t())
-					->set_string_param("id","lab5")
-					->set_string_param("inherited","lab")
-					->set_string_param("staticText","Статичный заголовок 7")
-		)
+				->set_string_param("id","menu_name_lab")
+				->set_string_param("inherited","lab")
+				->set_string_param("staticText","menu_name")
 		)
 		->add_child(
 			(new dynamic_view_meta_t())
@@ -456,7 +456,7 @@ void meta_registry_t::init() {
 						->set_string_param("id","window_selector")
 						->set_string_param("initial","main")
 						->set_string_param("layout","stack")
-						->set_string_param("nameLabelPath","root.header.lab1")
+						->set_string_param("nameLabelPath","root.menu_name_lab")
 						->set_string_param("preferred_item_size","true")
 						->set_string_param("vertical","true")
 					->add_child(
@@ -477,6 +477,16 @@ void meta_registry_t::init() {
 							->set_string_param("layout","stack")
 							->set_string_param("menuRef","parameters")
 							->set_string_param("name","Параметры")
+							->set_string_param("vertical","true")
+		)
+					->add_child(
+						(new dynamic_view_meta_t())
+							->set_string_param("controller","menu")
+							->set_string_param("id","screen")
+							->set_string_param("itemTemplateView","menu_item")
+							->set_string_param("layout","stack")
+							->set_string_param("menuRef","screen")
+							->set_string_param("name","Экран")
 							->set_string_param("vertical","true")
 		)
 		)
@@ -520,6 +530,14 @@ void meta_registry_t::init() {
 			->add_child("req_span")
 			->add_child("rsp_span")
 			->add_child("mode_ctl")
+		);
+	// screen
+	menus.push_back(
+		(new dynamic_menu_meta_t())
+			->set_string_param("id","screen")
+			->set_string_param("name","Экран")
+			->add_child("brightness")
+			->add_child("dsp_onoff")
 		);
 
 }
