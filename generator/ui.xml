@@ -35,22 +35,28 @@
 			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" initial="0" />
 		</type>
 		<type id="measure_ctl_t" name="Измерение" type="enum">
-			<enum id="START" name="Старт" value="0" />
-			<enum id="STOP" name="Стоп" value="1" />
+			<enum id="START" name="Старт" value="0" glyph="A" />
+			<enum id="STOP" name="Стоп" value="1" glyph="B" />
 		</type>
 		<type id="output_mode_t" name="Выход" type="enum">
-			<enum id="ANT" name="Антенна" value="0" glyph="A" />
-			<enum id="ATTEN" name="Аттен." value="1" glyph="B" />
-			<enum id="CALIB" name="Калибр." value="2" glyph="C" />
+			<enum id="ANT" name="Антенна" value="0"  />
+			<enum id="ATTEN" name="Аттен." value="1"  />
+			<enum id="CALIB" name="Калибр." value="2"  />
 		</type>
 		<type id="start_ctl_t" name="Запуск" type="enum">
-			<enum id="HIP" name="ХИП" value="0" glyph="A" />
-			<enum id="CALIB" name="Пачка" value="1" glyph="B" />
-			<enum id="EXT" name="Внеш" value="2" glyph="C" />
+			<enum id="HIP" name="ХИП" value="0" />
+			<enum id="CALIB" name="Пачка" value="1"  />
+			<enum id="EXT" name="Внеш" value="2" />
 		</type>
 		<type id="mode_ctl_t" name="Режим" type="enum">
-			<enum id="REQESTER" name="Запросчик" value="0" glyph="A" />
-			<enum id="RESPONDER" name="Ответчик" value="1" glyph="B" />
+			<enum id="REQESTER" name="Запросчик" value="0"  />
+			<enum id="RESPONDER" name="Ответчик" value="1"  />
+		</type>
+		<type id="dsp_onoff_t" name="Отключение дисплея" type="enum">
+			<enum id="NO" name="НЕТ" value="0" />
+			<enum id="1_MIN" name="1 МИНУТА" value="0"  />
+			<enum id="5_MIN" name="5 МИНУТ" value="1"  />
+			<enum id="10_MIN" name="10 МИНУТ" value="2"  />
 		</type>
 	</types>
 	
@@ -68,6 +74,10 @@
 		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" label="мкс" view="tbox_label" />
 		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" label="мкс" view="tbox_label" />
 		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" initial="0"  />
+		
+<!-- Экран -->	
+		<parameter id="brightness" type="u8" name="Яркость" initial="100" label="%" view="tbox_label" />
+		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	
@@ -105,22 +115,13 @@
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 		
 		<view id="root" layout="stack" vertical="true" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" >
-			<view id="header" layout="stack" vertical="true" preferred_item_size="true" >
-				<view id="lab1" inherited="lab" staticText="Статичный заголовок 1" /> <!-- сюда юудет выводиться название текущего меню -->
-				<view id="lab2" inherited="lab" staticText="Статичный заголовок 2" />
-				<view id="lab3" inherited="lab" staticText="Статичный заголовок 3" />
-				<view id="lab4" inherited="lab" staticText="Статичный заголовок 4" />
-				<view id="lab5" inherited="lab" staticText="Статичный заголовок 5" />
-				<view id="lab5" inherited="lab" staticText="Статичный заголовок 6" />
-				<view id="lab5" inherited="lab" staticText="Статичный заголовок 7" />
-			</view>
-		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
-		<!-- контроллер меню достраивает вид меню по списку параметров -->
+			<view id="menu_name_lab" inherited="lab" staticText="menu_name" /> 
 			<view id="scroll_window" kind="predefined" >
 				<view id="scroll_interior" layout="stretch" >
-					<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.header.lab1">
+					<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.menu_name_lab">
 						<view id="main" name="Главное" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
 						<view id="parameters" name="Параметры" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+						<view id="screen" name="Экран" menuRef="screen" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
 					</view>
 				</view>
 			</view>
@@ -146,6 +147,10 @@
 			<parameterRef id="req_span" />
 			<parameterRef id="rsp_span" />
 			<parameterRef id="mode_ctl" />
+		</menu>
+		<menu id="screen" name="Экран">
+			<parameterRef id="brightness" />
+			<parameterRef id="dsp_onoff" />
 		</menu>
 	</menus>
 </schema>
