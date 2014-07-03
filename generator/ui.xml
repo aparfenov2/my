@@ -63,7 +63,7 @@
 		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" initial="0"  />
 		
 <!-- Параметры -->	
-		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" label="Имп. пар\с" view="tbox_label" />
+		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" label="Имп. пар\\с" view="tbox_label" />
 		<parameter id="req_freq" type="float" name="Частота запроса" initial="1050.20" label="Мгц" view="tbox_label" />
 		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" label="мкс" view="tbox_label" />
 		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" label="мкс" view="tbox_label" />
@@ -104,26 +104,30 @@
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 		
-		<view id="root" layout="stack" vertical="true" preferred_item_size="true" >
-			<view id="header" layout="stack" vertical="true" preferred_item_size="true">
-				<view id="lab1" inherited="lab" staticText="Статичный заголовок 1" />
+		<view id="root" layout="stack" vertical="true" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" >
+			<view id="header" layout="stack" vertical="true" preferred_item_size="true" >
+				<view id="lab1" inherited="lab" staticText="Статичный заголовок 1" /> <!-- сюда юудет выводиться название текущего меню -->
 				<view id="lab2" inherited="lab" staticText="Статичный заголовок 2" />
 				<view id="lab3" inherited="lab" staticText="Статичный заголовок 3" />
 				<view id="lab4" inherited="lab" staticText="Статичный заголовок 4" />
 				<view id="lab5" inherited="lab" staticText="Статичный заголовок 5" />
+				<view id="lab5" inherited="lab" staticText="Статичный заголовок 6" />
+				<view id="lab5" inherited="lab" staticText="Статичный заголовок 7" />
 			</view>
 		<!-- по id внутренних видов их можно искать в инстансе динамического вида-->
 		<!-- контроллер меню достраивает вид меню по списку параметров -->
-		<!-- w=-1, h=-1 - значения взять из parent -->
 			<view id="scroll_window" kind="predefined" >
-				<view id="scroll_interior" layout="stretch" drawer="background" background="BACKGROUND_LIGHT">
-					<view id="menu" menuRef="main" itemTemplateView="item_template" layout="stack" vertical="true" controller="menu" />
+				<view id="scroll_interior" layout="stretch" >
+					<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.header.lab1">
+						<view id="main" name="Главное" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+						<view id="parameters" name="Параметры" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+					</view>
 				</view>
 			</view>
 		</view>
 		
-		<view id="item_template" layout="menu" drawer="background" background="BACKGROUND_LIGHT">
-			<view id="lab" inherited="lab" />
+		<view id="menu_item" layout="menu_item">
+			<view id="lab" inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>
@@ -135,15 +139,13 @@
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
 			<parameterRef id="start_ctl" />
-			
+		</menu>
+		<menu id="parameters" name="Параметры">
 			<parameterRef id="req_period" />
 			<parameterRef id="req_freq" />
 			<parameterRef id="req_span" />
 			<parameterRef id="rsp_span" />
 			<parameterRef id="mode_ctl" />
-			
-		</menu>
-		<menu id="parameters" name="Параметры">
 		</menu>
 	</menus>
 </schema>

@@ -320,9 +320,12 @@ private:
 	}
 public:
 
-
+	// если фон непрозрачный, обязательно перекрыть этот метод чтобы отрисовка не распространялась дальше !
 	virtual void set_dirty(bool dirty) {
 		_dirty = dirty;
+		if (dirty && parent) {
+			parent->dirty = true;
+		}
 	}
 	virtual void set_enabled(bool enabled) {
 		_enabled = enabled;
@@ -355,6 +358,47 @@ public:
 		}
 	}
 
+	bool is_child_of(gobject_t *aparent) {
+
+		_MY_ASSERT(aparent, return false);
+
+		gobject_t *p = this->parent;
+		while(p) {
+			if (p == aparent) {
+				return true;
+			}
+			p = p->parent;
+		}
+		return false;
+	}
+
+	bool is_direct_child_of(gobject_t *aparent) {
+
+		_MY_ASSERT(aparent, return false);
+		return this->parent == aparent;
+	}
+
+
+	bool is_parent_of(gobject_t *child) {
+		
+		_MY_ASSERT(child, return false);
+		return child->is_child_of(this);
+	}
+
+	bool is_direct_parent_of(gobject_t *child) {
+		
+		_MY_ASSERT(child, return false);
+		return child->parent == this;
+	}
+
+	gobject_t * get_root() {
+		gobject_t *pp = 0, *p = this->parent;
+		while(p) {
+			pp = p;
+			p = p->parent;
+		}
+		return pp ? pp : this;
+	}
 
 	virtual void render(surface_t &dst) {
 	}
@@ -976,6 +1020,10 @@ public:
 			}
 			goto lab_update_input;
 		}
+		// не должны редактироваться пока не перешли в активное состояние
+		if (!cursor_visible) {
+			return;
+		}
 
 		if (key == key_t::K_LEFT) {
 			if (caret_pos) caret_pos--;
@@ -1026,12 +1074,12 @@ lab_update_input:
 		notify(textbox_msg_t(textbox_msg_t::EDIT, _value));
 	}
 
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		if (dirty && parent) {
-			parent->dirty = true;
-		}
-		super::set_dirty(dirty);
-	}
+	//virtual void set_dirty(bool dirty) OVERRIDE {
+	//	if (dirty && parent) {
+	//		parent->dirty = true;
+	//	}
+	//	super::set_dirty(dirty);
+	//}
 
 	virtual void set_selected(bool selected) {
 		_MY_ASSERT(parent,return);
@@ -1125,12 +1173,12 @@ public:
 		add_child(&lab);
 	}
 
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		if (dirty && parent) {
-			parent->dirty = true;
-		}
-		super::set_dirty(dirty);
-	}
+	//virtual void set_dirty(bool dirty) OVERRIDE {
+	//	if (dirty && parent) {
+	//		parent->dirty = true;
+	//	}
+	//	super::set_dirty(dirty);
+	//}
 
 	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		lab.get_preferred_size(aw,ah);

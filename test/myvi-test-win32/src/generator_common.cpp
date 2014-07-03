@@ -8,6 +8,7 @@ gen::view_factory_t * gen::view_factory_t::_instance;
 // custom views globals
 custom::dynamic_model_t custom::dynamic_model_t::_instance;
 custom::converter_factory_t custom::converter_factory_t::_instance;
+custom::keyboard_filter_chain_t custom::keyboard_filter_chain_t::_instance;
 
 
 // метод фабрики вида по умолчанию для составного вида

@@ -251,7 +251,7 @@ void meta_registry_t::init() {
 		(new dynamic_parameter_meta_t())
 			->set_string_param("id","req_period")
 			->set_int_param("initial",1300)
-			->set_string_param("label","Имп. пар\с")
+			->set_string_param("label","Имп. пар\\с")
 			->set_string_param("name","Период запросов")
 			->set_string_param("type","u32")
 			->set_string_param("view","tbox_label")
@@ -387,6 +387,8 @@ void meta_registry_t::init() {
 	// root
 	views.push_back(
 		(new dynamic_view_meta_t())
+			->set_string_param("background","BACKGROUND_LIGHT")
+			->set_string_param("drawer","background")
 			->set_string_param("id","root")
 			->set_string_param("layout","stack")
 			->set_string_param("preferred_item_size","true")
@@ -427,6 +429,18 @@ void meta_registry_t::init() {
 					->set_string_param("inherited","lab")
 					->set_string_param("staticText","Статичный заголовок 5")
 		)
+			->add_child(
+				(new dynamic_view_meta_t())
+					->set_string_param("id","lab5")
+					->set_string_param("inherited","lab")
+					->set_string_param("staticText","Статичный заголовок 6")
+		)
+			->add_child(
+				(new dynamic_view_meta_t())
+					->set_string_param("id","lab5")
+					->set_string_param("inherited","lab")
+					->set_string_param("staticText","Статичный заголовок 7")
+		)
 		)
 		->add_child(
 			(new dynamic_view_meta_t())
@@ -434,29 +448,46 @@ void meta_registry_t::init() {
 				->set_string_param("kind","predefined")
 			->add_child(
 				(new dynamic_view_meta_t())
-					->set_string_param("background","BACKGROUND_LIGHT")
-					->set_string_param("drawer","background")
 					->set_string_param("id","scroll_interior")
 					->set_string_param("layout","stretch")
 				->add_child(
 					(new dynamic_view_meta_t())
-						->set_string_param("controller","menu")
-						->set_string_param("id","menu")
-						->set_string_param("itemTemplateView","item_template")
+						->set_string_param("controller","window_selector")
+						->set_string_param("id","window_selector")
+						->set_string_param("initial","main")
 						->set_string_param("layout","stack")
-						->set_string_param("menuRef","main")
+						->set_string_param("nameLabelPath","root.header.lab1")
+						->set_string_param("preferred_item_size","true")
 						->set_string_param("vertical","true")
+					->add_child(
+						(new dynamic_view_meta_t())
+							->set_string_param("controller","menu")
+							->set_string_param("id","main")
+							->set_string_param("itemTemplateView","menu_item")
+							->set_string_param("layout","stack")
+							->set_string_param("menuRef","main")
+							->set_string_param("name","Главное")
+							->set_string_param("vertical","true")
+		)
+					->add_child(
+						(new dynamic_view_meta_t())
+							->set_string_param("controller","menu")
+							->set_string_param("id","parameters")
+							->set_string_param("itemTemplateView","menu_item")
+							->set_string_param("layout","stack")
+							->set_string_param("menuRef","parameters")
+							->set_string_param("name","Параметры")
+							->set_string_param("vertical","true")
+		)
 		)
 		)
 		)
 		);
-	// item_template
+	// menu_item
 	views.push_back(
 		(new dynamic_view_meta_t())
-			->set_string_param("background","BACKGROUND_LIGHT")
-			->set_string_param("drawer","background")
-			->set_string_param("id","item_template")
-			->set_string_param("layout","menu")
+			->set_string_param("id","menu_item")
+			->set_string_param("layout","menu_item")
 		->add_child(
 			(new dynamic_view_meta_t())
 				->set_string_param("id","lab")
@@ -478,17 +509,17 @@ void meta_registry_t::init() {
 			->add_child("output_mode")
 			->add_child("out_level")
 			->add_child("start_ctl")
-			->add_child("req_period")
-			->add_child("req_freq")
-			->add_child("req_span")
-			->add_child("rsp_span")
-			->add_child("mode_ctl")
 		);
 	// parameters
 	menus.push_back(
 		(new dynamic_menu_meta_t())
 			->set_string_param("id","parameters")
 			->set_string_param("name","Параметры")
+			->add_child("req_period")
+			->add_child("req_freq")
+			->add_child("req_span")
+			->add_child("rsp_span")
+			->add_child("mode_ctl")
 		);
 
 }

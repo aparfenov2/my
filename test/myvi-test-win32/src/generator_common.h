@@ -542,6 +542,10 @@ public:
 
 
 class dynamic_view_meta_t : public dynamic_composite_meta_t<dynamic_view_meta_t, view_meta_t *, view_meta_t> {
+private:
+	typedef std::unordered_map<myvi::string_t, myvi::string_t> _str_map;
+	typedef std::unordered_map<myvi::string_t, s32> _int_map;
+	typedef std::unordered_map<myvi::string_t, double> _float_map;
 public:
 
 	virtual view_meta_t * get_view_child(s32 i) OVERRIDE {
@@ -554,9 +558,6 @@ public:
 
 	void mixin_params_from(const dynamic_view_meta_t &other) {
 
-		typedef std::unordered_map<myvi::string_t, myvi::string_t> _str_map;
-		typedef std::unordered_map<myvi::string_t, s32> _int_map;
-		typedef std::unordered_map<myvi::string_t, double> _float_map;
 
 		for (_str_map::const_iterator it = other.string_param_map.begin(); it != other.string_param_map.end(); it++) {
 			this->set_string_param((*it).first,(*it).second);
@@ -567,6 +568,26 @@ public:
 		for (_float_map::const_iterator it = other.float_param_map.begin(); it != other.float_param_map.end(); it++) {
 			this->set_float_param((*it).first,(*it).second);
 		}
+	}
+
+	// признак того, что данная мета имеет долнительные признаки к inherited
+	bool is_extension_of(view_meta_t *inherited) {
+		for (_str_map::const_iterator it = this->string_param_map.begin(); it != this->string_param_map.end(); it++) {
+			myvi::string_t v = inherited->get_string_param((*it).first);
+			if (v.is_empty()) return true; // если такого значения нет в inherited
+			if (!(v == (*it).second)) return true; // если inherited имеет другое значение
+		}
+		for (_int_map::const_iterator it = this->int_param_map.begin(); it != this->int_param_map.end(); it++) {
+			s32 v = inherited->get_int_param((*it).first);
+			if (v == _NAN) return true; // если такого значения нет в inherited
+			if (v != (*it).second) return true; // если inherited имеет другое значение
+		}
+		for (_float_map::const_iterator it = this->float_param_map.begin(); it != this->float_param_map.end(); it++) {
+			double v = inherited->get_float_param((*it).first);
+			if (v == _NANF) return true; // если такого значения нет в inherited
+			if (v != (*it).second) return true; // если inherited имеет другое значение
+		}
+		return false;
 	}
 
 };
@@ -673,6 +694,26 @@ public:
 	myvi::gobject_t *get_child(myvi::string_t id) {
 		return id_map[id];
 	}
+
+	myvi::gobject_t * resolve_path(myvi::string_t _path) {
+
+		meta_path_t path(_path);
+		meta_path_t::iterator_t iter = path.iterator();
+		myvi::string_t elem = iter.next();
+		dynamic_view_mixin_t *ret = this;
+		while (!elem.is_empty()) {
+
+			myvi::gobject_t * child = ret->get_child(elem);
+			if (!child) return 0;
+
+			elem = iter.next();
+			if (elem.is_empty()) return child;
+
+			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
+			if (!ret) return 0;
+		}
+		return 0;
+	}
 };
 
 
@@ -704,6 +745,10 @@ public:
 public:
 	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
 	virtual void init(view_build_context_t &ctx) {
+	}
+
+	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
+	virtual void on_view_init() {
 	}
 
 };

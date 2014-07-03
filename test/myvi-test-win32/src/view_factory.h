@@ -24,7 +24,7 @@ public:
 		} else if (layout_id == "stack") {
 			ret = new custom::stack_meta_layout_t(meta);
 
-		} else if (layout_id == "menu") {
+		} else if (layout_id == "menu_item") {
 			ret = new custom::menu_meta_layout_t(meta);
 		}
 //		_MY_ASSERT(ret, return 0);
@@ -48,6 +48,9 @@ public:
 
 		} else if (controller_id == "tbox") {
 			ret = new custom::tbox_controller_t();
+
+		} else if (controller_id == "window_selector") {
+			ret = new custom::window_selector_controller_t();
 
 		}
 		_MY_ASSERT(controller_id.is_empty() || ret, return 0);
@@ -85,7 +88,7 @@ public:
 	}
 
 
-	void combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited, gen::dynamic_view_meta_t &combined) {
+	void combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited, gen::dynamic_view_meta_t *combined) {
 
 		gen::dynamic_view_meta_t *dyn_src = dynamic_cast<gen::dynamic_view_meta_t *>(src);
 		_MY_ASSERT(dyn_src, return );
@@ -93,22 +96,28 @@ public:
 		gen::dynamic_view_meta_t *dyn_inherited = dynamic_cast<gen::dynamic_view_meta_t *>(inherited);
 		_MY_ASSERT(dyn_inherited, return );
 
-		combined.mixin_params_from(*dyn_src);
-		combined.mixin_params_from(*dyn_inherited);
+		combined->mixin_params_from(*dyn_src);
+		combined->mixin_params_from(*dyn_inherited);
 
 	}
 
 	// метод фабрики вида по умолчанию для составного вида
 	myvi::gobject_t * build_view(gen::view_build_context_t ctx) OVERRIDE {
 
-		gen::dynamic_view_meta_t combined_meta;
 
 		if (ctx.get_view_meta()->is_inherited()) {
 			gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.get_view_meta()->get_inherited());
 
-			combine_view_meta(ctx.get_view_meta(),inherited_meta, combined_meta);
-			// временная мета, размещена на стеке !!!
-			ctx.set_view_meta(&combined_meta);
+			gen::dynamic_view_meta_t *dvm = dynamic_cast<gen::dynamic_view_meta_t *>(ctx.get_view_meta());
+			_MY_ASSERT(dvm, return 0);
+
+			if (dvm->is_extension_of(inherited_meta)) {
+
+				gen::dynamic_view_meta_t *combined_meta = new gen::dynamic_view_meta_t();
+
+				combine_view_meta(ctx.get_view_meta(),inherited_meta, combined_meta);
+				ctx.set_view_meta(combined_meta);
+			}
 		}
 		ctx.set_view(0);
 		if (ctx.get_view_meta()->is_predefined()) {
@@ -117,7 +126,7 @@ public:
 				);
 
 		} else {
-			ctx.set_view (new custom::dynamic_view_t(ctx.get_view_meta()));
+			ctx.set_view (new custom::dynamic_view_t(ctx));
 		}
 
 		myvi::layout_t *layout = build_layout(ctx.get_view_meta());
@@ -130,6 +139,11 @@ public:
 		view_controller_t * view_controller = build_controller(ctx.get_view_meta());
 		if (view_controller) {
 			view_controller->init(ctx);
+
+			custom::dynamic_view_t *dv = dynamic_cast<custom::dynamic_view_t *>(ctx.get_view());
+			if (dv) {
+				dv->set_view_controller(view_controller);
+			}
 		}
 
 		return ctx.get_view();
