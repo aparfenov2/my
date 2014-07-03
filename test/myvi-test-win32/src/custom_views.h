@@ -301,21 +301,48 @@ public:
 
 class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t {
 	typedef myvi::gobject_t super;
+private:
+	gen::view_meta_t *view_meta;
+	gen::view_controller_t *view_controller;
 public:
 	gen::drawer_t *drawer;
 public:
-	dynamic_view_t(gen::meta_t *meta) {
+	dynamic_view_t(gen::view_build_context_t &ctx) {
 		drawer = 0;
+		view_meta = ctx.get_view_meta();
+		view_controller = 0; // устанавливается позже
 
-		myvi::string_t drawer_id = meta->get_string_param("drawer");
+		myvi::string_t drawer_id = view_meta->get_string_param("drawer");
 		if (!drawer_id.is_empty()) {
-			drawer = gen::view_factory_t::instance()->build_drawer(drawer_id, meta);
+			drawer = gen::view_factory_t::instance()->build_drawer(drawer_id, view_meta);
 		}
+	}
+
+	void set_view_controller(gen::view_controller_t *_view_controller) {
+		_MY_ASSERT(_view_controller, return);
+		this->view_controller = _view_controller;
+	}
+
+	gen::view_controller_t *get_view_controller() {
+		_MY_ASSERT(this->view_controller, return 0);
+		return this->view_controller;
+	}
+
+	gen::view_meta_t * get_view_meta() {
+		_MY_ASSERT(this->view_meta, return 0);
+		return this->view_meta;
 	}
 
 	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
 		dynamic_view_mixin_t::add_child(child, id);
 		super::add_child(child);
+	}
+
+	virtual void init() OVERRIDE {
+		super::init();
+		if (this->view_controller) {
+			this->view_controller->on_view_init();
+		}
 	}
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
@@ -659,6 +686,183 @@ public:
 
 
 typedef myvi::scrollable_window_t scroll_window_view_t;
+
+class keyboard_filter_t {
+public:
+	virtual bool processKey(myvi::key_t::key_t key) = 0;
+};
+
+// агрегатор всех фильтров клавиатуры
+class keyboard_filter_chain_t {
+public:
+	std::vector<keyboard_filter_t *> chain;
+	static keyboard_filter_chain_t _instance;
+public:
+	static keyboard_filter_chain_t & instance() {
+		return _instance;
+	}
+
+	void add_filter(keyboard_filter_t * filter) {
+		chain.push_back(filter);
+	}
+
+	bool processKey(myvi::key_t::key_t key) {
+		for (std::vector<keyboard_filter_t *>::const_iterator it = chain.begin(); it != chain.end(); it++) {
+			if ((*it)->processKey(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+};
+
+// контроллер вида выбора вида
+class window_selector_controller_t : public gen::view_controller_t {
+
+public:
+	class kbd_filter_t : public keyboard_filter_t {
+	public:
+		window_selector_controller_t *that;
+	public:
+		kbd_filter_t() {
+			that = 0;
+		}
+
+		myvi::gobject_t * get_child(s32 i) {
+
+			myvi::gobject_t::iterator_all_t iter = that->view->iterator_all();
+			myvi::gobject_t *p = iter.next();
+			while (i-- && p) {
+				p = iter.next();
+			}
+			return p;
+		}
+
+		virtual bool processKey(myvi::key_t::key_t key) OVERRIDE {
+
+			if (key == myvi::key_t::K_F1) {
+				if (myvi::gobject_t *child = get_child(0)) {
+					that->select(child);
+					return true;
+				}
+			} else if (key == myvi::key_t::K_F2) {
+				if (myvi::gobject_t *child = get_child(1)) {
+					that->select(child);
+					return true;
+				}
+			} else if (key == myvi::key_t::K_F3) {
+				if (myvi::gobject_t *child = get_child(2)) {
+					that->select(child);
+					return true;
+				}
+			} else if (key == myvi::key_t::K_F4) {
+				if (myvi::gobject_t *child = get_child(3)) {
+					that->select(child);
+					return true;
+				}
+			} else if (key == myvi::key_t::K_F5) {
+				if (myvi::gobject_t *child = get_child(4)) {
+					that->select(child);
+					return true;
+				}
+			}
+			return false;
+		}
+	};
+
+public:
+	myvi::gobject_t *view;
+	kbd_filter_t kbd_filter;
+	myvi::string_t nameLabelPath;
+	myvi::gobject_t * initial_view;
+public:
+	window_selector_controller_t() {
+		view = 0;
+		kbd_filter.that = this;
+		initial_view = 0;
+	}
+
+	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+
+		this->view = ctx.get_view();
+		_MY_ASSERT(this->view, return);
+
+		myvi::string_t initial_view_id = ctx.get_view_meta()->get_string_param("initial");
+		if (initial_view_id.is_empty()) {
+			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(0);
+			_MY_ASSERT(child_meta, return);
+			initial_view_id = child_meta->get_id();
+		}
+
+		gen::dynamic_view_mixin_t *dvm = dynamic_cast<gen::dynamic_view_mixin_t *>(this->view);
+		_MY_ASSERT(dvm, return);
+		this->initial_view = dvm->get_child(initial_view_id);
+		_MY_ASSERT(initial_view, return);
+
+
+		keyboard_filter_chain_t::instance().add_filter(&kbd_filter);
+
+		this->nameLabelPath = ctx.get_view_meta()->get_string_param("nameLabelPath");
+
+	}
+
+	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
+	virtual void on_view_init() OVERRIDE {
+		select(this->initial_view);
+	}
+
+	// делает видимым указанный вид и скрывает все остальные
+	void select(myvi::gobject_t * selected_child) {
+
+		_MY_ASSERT(this->view, return);
+		_MY_ASSERT(selected_child, return);
+		_MY_ASSERT(this->view->is_direct_parent_of(selected_child), return);
+		
+
+		selected_child->visible = true;
+
+		myvi::gobject_t::iterator_visible_t iter = view->iterator_visible();
+		myvi::gobject_t *child = iter.next();
+		while (child) {
+			if (child != selected_child) {
+				child->visible = false;
+			}
+			child = iter.next();
+		}
+		if (this->view->w && this->view->h) {
+			this->view->do_layout();
+		}
+		update_name(selected_child);
+
+		this->view->dirty = true;
+	}
+
+private:
+	void update_name(myvi::gobject_t *child) {
+		_MY_ASSERT(child, return);
+		dynamic_view_t *dv = dynamic_cast<dynamic_view_t *>(child);
+		_MY_ASSERT(dv, return);
+		update_name(dv->get_view_meta()->get_name());
+	};
+
+	void update_name(myvi::string_t name) {
+
+		if (nameLabelPath.is_empty()) return;
+
+		myvi::gobject_t *root = this->view->get_root();
+		gen::dynamic_view_mixin_t *dvm = dynamic_cast<gen::dynamic_view_mixin_t *>(root);
+		_MY_ASSERT(dvm, return);
+		myvi::gobject_t *name_lab_view = dvm->resolve_path(nameLabelPath);
+		_MY_ASSERT(name_lab_view, return);
+
+		// HACK : по идее надо обращатся к контроллеру вида , а не писать в чужой вид напрямую
+		myvi::label_t * lab = dynamic_cast<myvi::label_t *>(name_lab_view);
+		_MY_ASSERT(lab, return);
+		lab->text = name;
+		lab->dirty = true;
+	}
+
+};
 
 /*
 * ====================== ЛАЙОУТЫ И ПРОЧ. =======================

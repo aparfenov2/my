@@ -54,9 +54,13 @@ public:
 		if (key == key_t::K_SAVE) {
 		}
 		if (key) {
-			focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
-			if (focus_aware) {
-				focus_aware->key_event((key_t::key_t)key);
+			// сначала отдаем на перехват фильтрам клавиатуры
+			if (!custom::keyboard_filter_chain_t::instance().processKey(key)) {
+
+				focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+				if (focus_aware) {
+					focus_aware->key_event((key_t::key_t)key);
+				}
 			}
 		}
 		bool ret = rasterizer_t::render(gobj, s1);
@@ -114,7 +118,7 @@ logger_t *logger_t::instance = &logger_impl;
 
 
 // ------------------------------- весь экран ------------------------------------
-class test_screen_t : public gobject_t, public focus_aware_t {
+class test_screen_t : public gobject_t, public gen::dynamic_view_mixin_t, public focus_aware_t {
 	typedef gobject_t super;
 public:
 //	custom::tedit_t hdr_box;
@@ -150,7 +154,7 @@ public:
 		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
 		gobject_t *root_view = root_view_meta->build_view_no_ctx();
 
-		add_child(root_view);
+		add_child(root_view, "root");
 
 		root_view->x = 0;
 		root_view->y = 0;
@@ -164,6 +168,12 @@ public:
 		dirty = true;
 
 	}
+
+	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
+		dynamic_view_mixin_t::add_child(child, id);
+		super::add_child(child);
+	}
+
 
 	virtual void render(surface_t &dst) OVERRIDE {
 		dst.ctx.alfa = 0xff;
