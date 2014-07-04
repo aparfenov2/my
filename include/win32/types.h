@@ -23,6 +23,9 @@ typedef unsigned long int u32;
 #define SEALED sealed
 #define ABSTRACT abstract
 
+#define OPTIONAL
+#define NULLABLE
+
 #define STATIC_ASSERT( condition, name )\
     typedef char assert_failed_ ## name [ (condition) ? 1 : -1 ];
 #define _MY_MIN(a,b) (((a)<(b))?(a):(b))

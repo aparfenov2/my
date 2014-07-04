@@ -1,7 +1,12 @@
+/*
+* Определение интерфейсов связи прикладного уровня для прямой и обратной связи с этой системой
+*
+* WARNING: АВТОМАТИЧЕСКИ СГЕНЕРИРОВАННЫЙ ФАЙЛ
+*/
+
 #ifndef _MESSAGES_H
 #define _MESSAGES_H
 
-// заголовочный файл для хоста
 
 #include "types.h"
 #include "app_events.h"
@@ -81,28 +86,6 @@ public:
 };
 
 
-// технологические расширения интрефейса связи
-
-class host_interface2_t {
-public:
-	// принимаемые данные файла (ответ запроса на скачивание)
-	// file_id - дескриптор
-	// offset - смещение от начала файла, байт
-	// crc - опционально, crc
-	// first - признак первой записи из серии
-	// data - указатель на массив принимаемых данных
-	// len - длина массива
-	virtual void download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) = 0;
-	// принимаемая запись из таблицы файлов
-	// file_id - дескриптор
-	// cur_len - текущая длина файла, байт
-	// max_len - максимально допустимая длина файла, байт
-	// crc - если != 0
-	virtual void file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc) = 0;
-	// возвращаемый код ошибки неудачной файловой операции
-	virtual void error(u32 code) = 0;
-};
-
 // интерфейс "себя" для удаленной системы
 class exported_interface_t {
 public:
@@ -177,34 +160,6 @@ public:
 	virtual void set_offset_x(u32 v) = 0;
 //	virtual void set_time_sweep(u32 timeSweep) = 0;
 //	virtual void set_screen_saver(u8 screenSaver) = 0;
-};
-
-class exported_interface2_t {
-public:
-	// событие клавиатуры
-	virtual void key_event(key_t::key_t key) = 0;
-	// записать данные файла
-	// file_id - дескриптор
-	// offset - смещение от начала файла, байт
-	// crc - опционально, crc
-	// first - признак первой записи из серии
-	// data - указатель на массив передаваемых данных
-	// len - длина массива
-	virtual void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) = 0;
-	// запросить данные файла
-	// file_id - дескриптор
-	// offset - смещение от начала файла, байт
-	// length - длина, байт
-	virtual void download_file(u32 file_id, u32 offset, u32 length) = 0;
-	// обновить информацию в таблице файлов
-	// file_id - дескриптор
-	// cur_len - текущая длина файла, байт
-	// max_len - максимально допустимая длина файла, байт
-	// crc - если != 0
-	virtual void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) = 0;
-	// запросить информацию о файле
-	// file_id - дескриптор
-	virtual void read_file_info(u32 file_id) = 0;
 };
 
 } // ns msg
