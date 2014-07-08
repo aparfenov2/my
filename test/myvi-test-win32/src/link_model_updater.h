@@ -18,12 +18,12 @@ namespace custom {
 // 1. обновляет модель по приходу сообщений по линии связи
 // 2. подпиcывается на обновления модели и отправляет их в линию связи
 	
-class link_model_updater_t : public myvi::exported_interface2_t, public myvi::subscriber_t<custom::model_message_t>  {
+class link_model_updater_t : public myvi::exported_system_interface_t, public myvi::subscriber_t<custom::model_message_t>  {
 public:
-	myvi::host_interface2_t *host2;
-	myvi::exported_interface2_t *chained; // optional
+	myvi::host_system_interface_t *host2;
+	myvi::exported_system_interface_t *chained; // optional
 public:
-	link_model_updater_t(myvi::host_interface2_t *_host2, myvi::exported_interface2_t *_chained) {
+	link_model_updater_t(myvi::host_system_interface_t *_host2, myvi::exported_system_interface_t *_chained) {
 		host2 = _host2;
 		chained = _chained;
 		custom::dynamic_model_t::instance().subscribe(this);

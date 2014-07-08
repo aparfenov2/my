@@ -53,7 +53,7 @@ template void send_message<>(proto::host_interface_t &, serial_interface_t * );
 template void send_message<>(proto::exported_interface_t &, serial_interface_t * );
 
 
-void serializer_t::init(exported_interface2_t *aexported2, serial_interface_t *asintf ) {
+void serializer_t::init(exported_system_interface_t *aexported2, serial_interface_t *asintf ) {
 	exported2 = aexported2;
 	sintf = asintf;
 	sintf->subscribe(this);
@@ -140,7 +140,7 @@ void serializer_t::receive_frame(u8 *data, u32 len) {
 //сериализер на стороне хоста
 // ---------------------------------------
 
-void host_serializer_t::init(host_interface2_t *ahost2, serial_interface_t *asintf ) {
+void host_serializer_t::init(host_system_interface_t *ahost2, serial_interface_t *asintf ) {
 	host2 = ahost2;
 	sintf = asintf;
 	sintf->subscribe(this);

@@ -14,7 +14,7 @@ namespace myvi {
 
 // технологические расширения интрефейса связи
 
-class host_interface2_t {
+class host_system_interface_t {
 public:
 
 	// ответ на запрос на чтение данных из модели
@@ -44,7 +44,7 @@ public:
 };
 
 
-class exported_interface2_t {
+class exported_system_interface_t {
 public:
 
 	// запрос на чтение данных из модели

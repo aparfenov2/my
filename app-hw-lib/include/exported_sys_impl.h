@@ -12,12 +12,12 @@
 #include "exported_sys.h"
 
 namespace myvi {
-class exported_system_interface_impl_t : public exported_system_interface_t  {
+class exported_interface2_impl_t : public exported_interface2_t  {
 public:
-	host_system_interface_t *host;
-	exported_system_interface_t *chained;
+	host_interface2_t *host;
+	exported_interface2_t *chained;
 public:
-	exported_system_interface_impl_t(host_system_interface_t *ahost, exported_system_interface_t *_chained OPTIONAL) {
+	exported_interface2_impl_t(host_interface2_t *ahost, exported_interface2_t *_chained OPTIONAL) {
 		host = ahost;
 		chained = _chained;
 	}

@@ -179,7 +179,7 @@ public:
     }
 
 protected:
-    static s32 strlen(const T* p) {
+    s32 strlen(const T* p) {
         if(p == null) return 0;
 
         s32 len = 0;
@@ -191,7 +191,7 @@ protected:
         return len;
     }
 
-    static bool strcmp(const char* s1, const char* s2, unsigned int len) {
+    bool strcmp(const char* s1, const char* s2, unsigned int len) {
         for(unsigned int i=0; i<len; i++)
             if(*s1++ != *s2++)
                 return false;
