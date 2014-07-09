@@ -3,22 +3,98 @@
 
 #include "menu_common.h"
 #include "generator_common.h"
-//#include <sstream>
+#include "view_factory.h"
 #include <cstdio>
 
 namespace custom {
 
 
+
+
+namespace variant_type_t {
+	typedef enum {
+		STRING,
+		INT,
+		FLOAT
+	} variant_type_t;
+}
+
+
+class parameter_meta_ex_t {
+public:
+	gen::parameter_meta_t *parameter_meta;
+public:
+	parameter_meta_ex_t(gen::parameter_meta_t *_parameter_meta) {
+		parameter_meta = _parameter_meta;
+	}
+	myvi::gobject_t * build_menu_view(view_build_context_t ctx) {
+		ctx.set_parameter_meta(parameter_meta);
+		return view_factory_t::instance()->build_menu_view(ctx);
+	}
+	variant_type_t::variant_type_t match_value_type() {
+		gen::type_meta_t *type_meta = parameter_meta->get_type_meta();
+		_MY_ASSERT(!type_meta->is_complex(), return variant_type_t::STRING);
+
+		if (type_meta->is_basic()) {
+			if (type_meta->get_id() == "u8") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "s8") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "u16") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "s16") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "u32") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "s32") {
+				return variant_type_t::INT;
+			} else if (type_meta->get_id() == "float") {
+				return variant_type_t::FLOAT;
+			} else if (type_meta->get_id() == "string") {
+				return variant_type_t::STRING;
+			}
+		} else if (type_meta->is_enum()) {
+			return variant_type_t::INT;
+		}
+		// неизвестный простой тип
+		_MY_ASSERT(0, return variant_type_t::STRING);
+		return variant_type_t::STRING;
+	}
+};
+
+
+class view_meta_ex_t {
+public:
+	gen::view_meta_t *view_meta;
+public:
+	view_meta_ex_t(gen::view_meta_t *_view_meta) {
+		view_meta = _view_meta;
+	}
+
+// метод фабрики вида. Создает вид и привязывает к нему контроллер
+	myvi::gobject_t * build_view(view_build_context_t ctx) {
+		ctx.set_view_meta(view_meta);
+		return custom::view_factory_t::instance()->build_view(ctx);
+	}
+
+	myvi::gobject_t * build_view_no_ctx() {
+		custom::view_build_context_t ctx = custom::view_build_context_t();
+		ctx.set_view_meta(view_meta);
+		return build_view(ctx);
+	}
+
+};
+
 template <typename T>
 class variant_tt {
 public:
-	gen::variant_type_t::variant_type_t type;
+	variant_type_t::variant_type_t type;
 	T sval;
 	s32 ival;
 	double fval;
 public:
 	variant_tt() {
-		type = gen::variant_type_t::STRING;
+		type = variant_type_t::STRING;
 		ival = 0;
 		fval = 0;
 	}
@@ -37,31 +113,31 @@ public:
 
 	void set_value(myvi::string_t _sval) {
 		sval = _sval;
-		type = gen::variant_type_t::STRING;
+		type = variant_type_t::STRING;
 	}
 
 	void set_value(s32 _ival) {
 		ival = _ival;
-		type = gen::variant_type_t::INT;
+		type = variant_type_t::INT;
 	}
 
 	void set_value(double _fval) {
 		fval = _fval;
-		type = gen::variant_type_t::FLOAT;
+		type = variant_type_t::FLOAT;
 	}
 
 	myvi::string_t get_string_value() {
-		_MY_ASSERT(type == gen::variant_type_t::STRING, return 0);
+		_MY_ASSERT(type == variant_type_t::STRING, return 0);
 		return sval;
 	}
 
 	s32 get_int_value() {
-		_MY_ASSERT(type == gen::variant_type_t::INT, return 0);
+		_MY_ASSERT(type == variant_type_t::INT, return 0);
 		return ival;
 	}
 
 	double get_float_value() {
-		_MY_ASSERT(type == gen::variant_type_t::FLOAT, return 0);
+		_MY_ASSERT(type == variant_type_t::FLOAT, return 0);
 		return fval;
 	}
 
@@ -72,18 +148,18 @@ typedef variant_tt<myvi::string_t> variant_t;
 
 
 
-class variant_holder_t : public variant_tt<gen::volatile_string_impl_t> {
+class variant_holder_t : public variant_tt<volatile_string_impl_t> {
 public:
-	variant_holder_t (gen::variant_type_t::variant_type_t expected_type) {
+	variant_holder_t (variant_type_t::variant_type_t expected_type) {
 		this->type = expected_type;
 	}
 
 	void assign(variant_t &other) {
 		_MY_ASSERT(this->type == other.type, return);
 		switch(other.type) {
-		case gen::variant_type_t::STRING  : this->set_value(other.get_string_value()); break;
-		case gen::variant_type_t::INT  : this->set_value(other.get_int_value()); break;
-		case gen::variant_type_t::FLOAT  : this->set_value(other.get_float_value()); break;
+		case variant_type_t::STRING  : this->set_value(other.get_string_value()); break;
+		case variant_type_t::INT  : this->set_value(other.get_int_value()); break;
+		case variant_type_t::FLOAT  : this->set_value(other.get_float_value()); break;
 		}
 	}
 
@@ -91,9 +167,9 @@ public:
 		variant_t ret;
 
 		switch(this->type) {
-		case gen::variant_type_t::STRING  : ret.set_value(this->get_string_value()); break;
-		case gen::variant_type_t::INT  : ret.set_value(this->get_int_value()); break;
-		case gen::variant_type_t::FLOAT  : ret.set_value(this->get_float_value()); break;
+		case variant_type_t::STRING  : ret.set_value(this->get_string_value()); break;
+		case variant_type_t::INT  : ret.set_value(this->get_int_value()); break;
+		case variant_type_t::FLOAT  : ret.set_value(this->get_float_value()); break;
 		}
 
 		return ret;
@@ -108,9 +184,9 @@ public:
 // используется в контроллерах для разрешения parameterPath
 class parameter_path_resolver_t {
 public:
-	gen::meta_path_t & meta_path;
+	meta_path_t & meta_path;
 public:
-	parameter_path_resolver_t(gen::meta_path_t &_meta_path)
+	parameter_path_resolver_t(meta_path_t &_meta_path)
 		:meta_path(_meta_path) {
 	}
 	// resolve absolute path
@@ -118,7 +194,7 @@ public:
 
 		_MY_ASSERT(!meta_path.is_relative(), return 0);
 
-		gen::meta_path_t::iterator_t iter = meta_path.iterator();
+		meta_path_t::iterator_t iter = meta_path.iterator();
 
 		myvi::string_t root_id = iter.next();
 		gen::parameter_meta_t *root_meta = gen::meta_registry_t::instance().find_parameter_meta(root_id);
@@ -129,13 +205,13 @@ public:
 	// resolve path relative to root_meta
 	gen::parameter_meta_t * resolve(gen::parameter_meta_t *root_meta) {
 		_MY_ASSERT(meta_path.is_relative(), return 0);
-		gen::meta_path_t::iterator_t iter = meta_path.iterator();
+		meta_path_t::iterator_t iter = meta_path.iterator();
 		return resolve(iter, root_meta);
 	}
 
 
 private:
-	gen::parameter_meta_t * resolve(gen::meta_path_t::iterator_t &iter,  gen::parameter_meta_t *root_meta) {
+	gen::parameter_meta_t * resolve(meta_path_t::iterator_t &iter,  gen::parameter_meta_t *root_meta) {
 
 		for (;;) {
 			myvi::string_t child_id = iter.next();
@@ -185,7 +261,7 @@ public:
 		notify(model_message_t(parameter_path));
 	}
 
-	void read(myvi::string_t parameter_path, variant_t &value, gen::variant_type_t::variant_type_t expected_type)  {
+	void read(myvi::string_t parameter_path, variant_t &value, variant_type_t::variant_type_t expected_type)  {
 		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
 		value = holder->get_value();
 		_MY_ASSERT(value.type == expected_type, return);
@@ -197,7 +273,7 @@ public:
 		value = holder->get_value();
 	}
 
-	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, gen::variant_type_t::variant_type_t expected_type)  {
+	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type)  {
 
 		_MY_ASSERT(initial_value.type == expected_type, return);
 
@@ -208,7 +284,7 @@ public:
 	}
 
 private:
-	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, gen::variant_type_t::variant_type_t expected_type) {
+	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, variant_type_t::variant_type_t expected_type) {
 		variant_holder_t *ret = children[parameter_path];
 		if (!ret) {
 			ret = new variant_holder_t(expected_type);
@@ -222,13 +298,13 @@ private:
 // интерфейс конвертера значения в строку и обратно
 class converter_t {
 public:
-	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) = 0;
+	virtual void to_string(variant_t &value, volatile_string_impl_t &str) = 0;
 	virtual bool from_string(myvi::string_t &str, variant_t &value) = 0;
 };
 
 class string_converter_t : public converter_t {
 public:
-	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {
 		str = value.get_string_value();
 	}
 
@@ -240,7 +316,7 @@ public:
 
 class int_converter_t : public converter_t {
 public:
-	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {		
+	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {		
 		std::sprintf((char *)str.c_str(), "%d", value.get_int_value());
 		str.update_length();
 	}
@@ -257,7 +333,7 @@ public:
 
 class float_converter_t : public converter_t {
 public:
-	virtual void to_string(variant_t &value, gen::volatile_string_impl_t &str) OVERRIDE {
+	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {
 
 		char *buf = (char *)str.c_str();
 		s32 len = std::sprintf(buf, "%.6f", value.get_float_value());
@@ -289,11 +365,11 @@ public:
 	static converter_factory_t instance() {
 		return _instance;
 	}
-	converter_t * for_type(gen::variant_type_t::variant_type_t expected_type) {
+	converter_t * for_type(variant_type_t::variant_type_t expected_type) {
 		switch (expected_type) {
-		case gen::variant_type_t::STRING : return &string_converter;
-		case gen::variant_type_t::INT : return &int_converter;
-		case gen::variant_type_t::FLOAT : return &float_converter;
+		case variant_type_t::STRING : return &string_converter;
+		case variant_type_t::INT : return &int_converter;
+		case variant_type_t::FLOAT : return &float_converter;
 		}
 		_MY_ASSERT(0, return 0); // not found
 		return 0;
@@ -303,6 +379,60 @@ public:
 /*
 * ====================== ПРЕДОПРЕДЕЛЕННЫЕ ВИДЫ =======================
 */
+
+
+
+class dynamic_view_mixin_t  {
+public:
+	std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> id_map;
+public:
+	// добавляет дочерний вид с привязкой идентификатора
+	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
+		_MY_ASSERT(child, return);
+		id_map[id] = child;
+	}
+
+	myvi::gobject_t *get_child(myvi::string_t id) {
+		return id_map[id];
+	}
+
+	myvi::gobject_t * resolve_path(myvi::string_t _path) {
+
+		meta_path_t path(_path);
+		meta_path_t::iterator_t iter = path.iterator();
+		myvi::string_t elem = iter.next();
+		dynamic_view_mixin_t *ret = this;
+		while (!elem.is_empty()) {
+
+			myvi::gobject_t * child = ret->get_child(elem);
+			if (!child) return 0;
+
+			elem = iter.next();
+			if (elem.is_empty()) return child;
+
+			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
+			if (!ret) return 0;
+		}
+		return 0;
+	}
+};
+
+
+
+// интерфейс контроллера вида
+class view_controller_t {
+public:
+public:
+	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
+	virtual void init(view_build_context_t &ctx) {
+	}
+
+	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
+	virtual void on_view_init() {
+	}
+
+};
+
 
 class drawer_t {
 public:
@@ -323,7 +453,7 @@ public:
 
 		myvi::string_t color = meta->get_string_param("background");
 
-		this->ctx.pen_color = gen::view_factory_t::instance()->parse_color(color);
+		this->ctx.pen_color = view_factory_t::instance()->parse_color(color);
 		if (this->ctx.pen_color > 0) {
 			this->ctx.alfa = 0xff;
 		}
@@ -397,16 +527,16 @@ public:
 
 
 
-class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t, public myvi::focus_master_t {
+class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t, public myvi::focus_master_t {
 	typedef myvi::gobject_t super;
 private:
 	gen::view_meta_t *view_meta;
-	gen::view_controller_t *view_controller;
+	view_controller_t *view_controller;
 	focus_master_mixin_t *focus_master;
 public:
 	drawer_t *drawer;
 public:
-	dynamic_view_t(gen::view_build_context_t &ctx) {
+	dynamic_view_t(view_build_context_t &ctx) {
 		drawer = 0;
 		focus_master = 0;
 		view_meta = ctx.get_view_meta();
@@ -442,12 +572,12 @@ public:
 		return ret;
 	}
 
-	void set_view_controller(gen::view_controller_t *_view_controller) {
+	void set_view_controller(view_controller_t *_view_controller) {
 		_MY_ASSERT(_view_controller, return);
 		this->view_controller = _view_controller;
 	}
 
-	gen::view_controller_t *get_view_controller() {
+	view_controller_t *get_view_controller() {
 		_MY_ASSERT(this->view_controller, return 0);
 		return this->view_controller;
 	}
@@ -495,46 +625,46 @@ public:
 };
 
 
-class view_controller_impl_base_t : public gen::view_controller_t {
+class view_controller_impl_base_t : public view_controller_t {
 public:
-	gen::volatile_string_impl_t parameter_path;
-	gen::variant_type_t::variant_type_t type;
+	volatile_string_impl_t parameter_path;
+	variant_type_t::variant_type_t type;
 public:
 	view_controller_impl_base_t() {
-		type = gen::variant_type_t::STRING;
+		type = variant_type_t::STRING;
 	}
 
-	void set_initial(gen::view_build_context_t &ctx, variant_t &value) {
+	void set_initial(view_build_context_t &ctx, variant_t &value) {
 
 		myvi::string_t initial_str = ctx.get_parameter_meta()->get_string_param("initial");
 		if (!initial_str.is_empty()) {
-			_MY_ASSERT(type == gen::variant_type_t::STRING, return);
+			_MY_ASSERT(type == variant_type_t::STRING, return);
 			value.set_value(initial_str);
 			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
 		}
 
 		s32 initial_int = ctx.get_parameter_meta()->get_int_param("initial");
 		if (initial_int != _NAN) {
-			_MY_ASSERT(type == gen::variant_type_t::INT, return);
+			_MY_ASSERT(type == variant_type_t::INT, return);
 			value.set_value(initial_int);
 			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
 		}
 
 		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
-			_MY_ASSERT(type == gen::variant_type_t::FLOAT, return);
+			_MY_ASSERT(type == variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
 			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
 		}
 	}
 
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 
 
 		myvi::string_t parameter_path = ctx.get_view_meta()->get_string_param("parameterPath");
 
 		if (!parameter_path.is_empty()) {
-			gen::meta_path_t path = gen::meta_path_t(parameter_path);
+			meta_path_t path = meta_path_t(parameter_path);
 			parameter_path_resolver_t resolver(path);
 
 			gen::parameter_meta_t *child_parameter_meta = resolver.resolve(ctx.get_parameter_meta());
@@ -549,14 +679,14 @@ public:
 	}
 
 	// вызывается из контроллера texbox/combobox
-	void register_in_model(gen::view_build_context_t &ctx) {
+	void register_in_model(view_build_context_t &ctx) {
 
 		gen::type_meta_t *type_meta = ctx.get_parameter_meta()->get_type_meta();
 		_MY_ASSERT(!type_meta->is_complex(), return);
 
 		variant_t value;
 		this->parameter_path = ctx.get_parameter_path().path;
-		this->type = ctx.get_parameter_meta()->match_value_type();
+		this->type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
 
 		dynamic_model_t::instance().read(ctx.get_parameter_path().path, value, type);
 		set_initial(ctx, value);
@@ -568,6 +698,18 @@ public:
 
 class lab_view_t : public myvi::label_t {
 public:
+	myvi::font_size_t::font_size_t font_size;
+public:
+
+	lab_view_t(view_build_context_t &ctx) {
+
+		font_size = myvi::font_size_t::FS_20;
+
+		myvi::string_t font_size_id = ctx.get_view_meta()->get_string_param("fontSize");
+		if (!font_size_id.is_empty()) {
+//			font_size = gen::view_factory_t::instance()->parse_font_size(font_size_id);
+		}
+	}
 
 	virtual void init() OVERRIDE {
 		myvi::gobject_t::init();
@@ -594,7 +736,7 @@ public:
 		lab = 0;
 	}
 
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 		super::init(ctx);
 
 		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
@@ -654,7 +796,7 @@ class tbox_controller_t
 	typedef view_controller_impl_base_t super;
 public:
 	myvi::text_box_t *tb;
-	gen::volatile_string_impl_t string_value;
+	volatile_string_impl_t string_value;
 public:
 
 	tbox_controller_t() {
@@ -662,7 +804,7 @@ public:
 	}
 
 
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 // 0. Регистрирует поле в модели , если его ещё там нет
 		super::init(ctx);
 		register_in_model(ctx);
@@ -756,7 +898,7 @@ public:
 		cb = 0;
 	}
 
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE  {
+	virtual void init(view_build_context_t &ctx) OVERRIDE  {
 		super::init(ctx);
 
 		cb = dynamic_cast<myvi::combo_box_t *>(ctx.get_view());
@@ -776,10 +918,10 @@ public:
 
 
 // контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
-class menu_controller_t : public gen::view_controller_t {
+class menu_controller_t : public view_controller_t {
 public:
 public:
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 
 		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menuRef");
 		_MY_ASSERT(!menu_id.is_empty(), return);
@@ -798,14 +940,14 @@ public:
 			if (child_id.is_empty()) break;
 
 			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
-			myvi::gobject_t *child_view = child_meta->build_menu_view(ctx);
+			myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(ctx);
 
 			// создаем обёртку для вида параметра на основе шаблона
-			gen::view_build_context_t child_ctx = ctx;
+			view_build_context_t child_ctx = ctx;
 			child_ctx.set_view_meta(template_meta);
 			child_ctx.set_parameter_meta(child_meta);
 
-			myvi::gobject_t *child_wrapper = template_meta->build_view(child_ctx);
+			myvi::gobject_t *child_wrapper = view_meta_ex_t(template_meta).build_view(child_ctx);
 			child_wrapper->add_child(child_view);
 			ctx.get_view()->add_child(child_wrapper);
 		}
@@ -847,7 +989,7 @@ public:
 };
 
 // контроллер вида выбора вида
-class window_selector_controller_t : public gen::view_controller_t {
+class window_selector_controller_t : public view_controller_t {
 
 public:
 	class kbd_filter_t : public keyboard_filter_t {
@@ -912,7 +1054,7 @@ public:
 		initial_view = 0;
 	}
 
-	virtual void init(gen::view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 
 		this->view = ctx.get_view();
 		_MY_ASSERT(this->view, return);
@@ -924,7 +1066,7 @@ public:
 			initial_view_id = child_meta->get_id();
 		}
 
-		gen::dynamic_view_mixin_t *dvm = dynamic_cast<gen::dynamic_view_mixin_t *>(this->view);
+		dynamic_view_mixin_t *dvm = dynamic_cast<dynamic_view_mixin_t *>(this->view);
 		_MY_ASSERT(dvm, return);
 		this->initial_view = dvm->get_child(initial_view_id);
 		_MY_ASSERT(initial_view, return);
@@ -980,7 +1122,7 @@ private:
 		if (nameLabelPath.is_empty()) return;
 
 		myvi::gobject_t *root = this->view->get_root();
-		gen::dynamic_view_mixin_t *dvm = dynamic_cast<gen::dynamic_view_mixin_t *>(root);
+		dynamic_view_mixin_t *dvm = dynamic_cast<dynamic_view_mixin_t *>(root);
 		_MY_ASSERT(dvm, return);
 		myvi::gobject_t *name_lab_view = dvm->resolve_path(nameLabelPath);
 		_MY_ASSERT(name_lab_view, return);

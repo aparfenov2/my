@@ -727,6 +727,7 @@ public:
 		while (bt) {
 			s32 btw, bth;
 			bt->get_preferred_size(btw, bth);
+			_MY_ASSERT(btw && bth, return);
 
 			if (vertical) {
 				if (btw > aw) {

@@ -118,7 +118,7 @@ logger_t *logger_t::instance = &logger_impl;
 
 
 // ------------------------------- весь экран ------------------------------------
-class test_screen_t : public gobject_t, public gen::dynamic_view_mixin_t, public focus_aware_t {
+class test_screen_t : public gobject_t, public custom::dynamic_view_mixin_t, public focus_aware_t {
 	typedef gobject_t super;
 public:
 //	custom::tedit_t hdr_box;
@@ -152,7 +152,7 @@ public:
 		menu_context_t::instance().lctxg = lctxg;
 
 		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
-		gobject_t *root_view = root_view_meta->build_view_no_ctx();
+		gobject_t *root_view = custom::view_meta_ex_t(root_view_meta).build_view_no_ctx();
 
 		add_child(root_view, "root");
 
