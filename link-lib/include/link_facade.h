@@ -10,26 +10,52 @@
 
 namespace link {
 
-class app_link_facade_t {
+
+class host_facade_t {
 public:
 	app_link_decoder_t dec;
 	app_link_encoder_t enc;
-	myvi::host_serializer_t hs;
+	host_serializer_t hs;
 public:
 	//ahost - сюда приходят ответы от дисплея (уровень приложения)
 	//aexported2 - сюда будут отправляться запросы от хоста (системный уровень)
 	// _chained - сюда приходят ответы от дисплея (ситемный уровень)
-	void init(link::host_interface_t *ahost, myvi::serial_interface_t *asintf) {
+	void init(host_interface_t *ahost, serial_interface_t *asintf) {
+		init(ahost, asintf, 0);
+	}
 
-		dec.init(ahost, 0);
+	void init(host_interface_t *ahost, serial_interface_t *asintf, host_system_interface_t * chained) {
+
+		dec.init(ahost, chained);
 		enc.init(&hs);
 
 		hs.init(&dec, asintf);
 	}
 
 	// сюда хост посылает запросы
-	link::exported_interface_t * get_app_interface() {
+	exported_interface_t * get_app_interface() {
 		return &enc;
+	}
+
+	exported_system_interface_t * get_sys_interface() {
+		return &hs;
+	}
+
+};
+
+class local_facade_t {
+public:
+	serializer_t hs;
+public:
+
+	void init(exported_system_interface_t *exported_sys, serial_interface_t *asintf) {
+
+		hs.init(exported_sys, asintf);
+	}
+
+
+	host_system_interface_t * get_sys_interface() {
+		return &hs;
 	}
 
 };

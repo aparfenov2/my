@@ -191,6 +191,12 @@ public:
 		_MY_ASSERT(value.type == expected_type, return);
 	}
 
+	void read(myvi::string_t parameter_path, variant_t &value)  {
+		variant_holder_t *holder = children[parameter_path];
+		_MY_ASSERT(holder, return);
+		value = holder->get_value();
+	}
+
 	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, gen::variant_type_t::variant_type_t expected_type)  {
 
 		_MY_ASSERT(initial_value.type == expected_type, return);
@@ -900,7 +906,7 @@ public:
 
 		s32 w1, h1;
 		first->get_preferred_size(w1, h1);
-		pw = w1 / _META_LAYOUT_PERCENTAGE;
+		pw = (s32)(w1 / _META_LAYOUT_PERCENTAGE);
 		ph = h1;
 
 		// 2st child

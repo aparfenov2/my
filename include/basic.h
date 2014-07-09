@@ -191,7 +191,7 @@ protected:
         return len;
     }
 
-    bool strcmp(const char* s1, const char* s2, unsigned int len) {
+    static bool strcmp(const char* s1, const char* s2, unsigned int len) {
         for(unsigned int i=0; i<len; i++)
             if(*s1++ != *s2++)
                 return false;

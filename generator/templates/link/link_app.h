@@ -27,17 +27,17 @@ namespace link {
 
 // принимает сообщения об обновлении модели по интерфейсу связи системного уровня и обратно
 // работает в связке с внешним обработчиком интерфейса связи системного уровня на стороне хост-системы
-class app_link_decoder_t : public myvi::host_system_interface_t {
+class app_link_decoder_t : public link::host_system_interface_t {
 public:
 	link::host_interface_t *host; // прикладной интерфейс, куда декодируются входящие сообщения
-	myvi::host_system_interface_t *chained; // NULLABLE обработчик приема-передачи файлов по системному интерфейсу
+	link::host_system_interface_t *chained; // NULLABLE обработчик приема-передачи файлов по системному интерфейсу
 public:
 	app_link_decoder_t() {
 		host = 0;
 		chained = 0;
 	}
 
-	void init(link::host_interface_t *ahost, OPTIONAL myvi::host_system_interface_t *_chained) {
+	void init(link::host_interface_t *ahost, OPTIONAL link::host_system_interface_t *_chained) {
 		host = ahost;
 		chained = _chained;
 	}
@@ -85,12 +85,12 @@ private:
 // формирует сообщение для  SLAVE системы на обновление данных модели
 class app_link_encoder_t : public link::exported_interface_t {
 public:
-	myvi::exported_system_interface_t *exported2; // системный интерфейс slave-системы для ответа
+	link::exported_system_interface_t *exported2; // системный интерфейс slave-системы для ответа
 public:
 	app_link_encoder_t() {
 		exported2 = 0;
 	}
-	void init(myvi::exported_system_interface_t *aexported2) {
+	void init(link::exported_system_interface_t *aexported2) {
 		exported2 = aexported2;
 	}
 

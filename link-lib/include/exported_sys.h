@@ -10,7 +10,7 @@
 #include "app_events.h"
 
 
-namespace myvi {
+namespace link {
 
 // технологические расширения интрефейса связи
 
@@ -56,7 +56,7 @@ public:
 	virtual void write_model_data(char * path,  double float_value) = 0;
 
 	// событие клавиатуры
-	virtual void key_event(key_t::key_t key) = 0;
+	virtual void key_event(myvi::key_t::key_t key) = 0;
 	// записать данные файла
 	// file_id - дескриптор
 	// offset - смещение от начала файла, байт

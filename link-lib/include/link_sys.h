@@ -10,7 +10,7 @@
 
 #include "exported_sys.h"
 
-namespace myvi {
+namespace link {
 
 // интерфейс канала передачи данных
 class serial_data_receiver_t {
@@ -89,7 +89,7 @@ public:
 	virtual void write_model_data(char * path, s32 int_value) OVERRIDE;
 	virtual void write_model_data(char * path,  double float_value) OVERRIDE;
 
-	void key_event(key_t::key_t key) OVERRIDE;
+	void key_event(myvi::key_t::key_t key) OVERRIDE;
 
 	void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE;
 	void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE;
