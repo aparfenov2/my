@@ -80,13 +80,31 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 
 			focus_master_t *focus_master = current_g->get_focus_master();
 
-			if (focus_master) {
+			while (focus_master) {
+				myvi::focus_client_t *intention_last = intention.next;
+
 				focus_master->alter_focus_intention(intention);
+				// если фокус-мастрер что-то поменял - выбираем его предпочтение
+				if (intention.next != intention_last) {
+					break;
+				}
+				// опрашиваем фокус-мастеров верхних уровней
+				current_g = dynamic_cast<gobject_t*>(focus_master);
+				if (!current_g) {
+					break;
+				}
+				focus_master = current_g->get_focus_master();
 			}
 		}
 		select(intention.next);
 	}
 }
+
+// предидущее значение направления для сравнения с текущим
+static direction_t::direction_t last_direction;
+// текущее переназначенное направление
+static direction_t::direction_t overriden_direction;
+
 
 focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction, gobject_t *root) {
 
@@ -145,18 +163,30 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 		p = iter.next();
 	}
 
-	if (direction == direction_t::UP) {
-		next = next_up;
+	if (direction != last_direction) {
+		last_direction = direction;
+		overriden_direction = direction;
 	}
-	if (direction == direction_t::DOWN) {
-		next = next_down;
-	}
-	if (direction == direction_t::LEFT) {
+
+	switch (overriden_direction) {
+	case direction_t::LEFT: 
 		next = next_left;
-	}
-	if (direction == direction_t::RIGHT) {
+		if (!next) {
+			overriden_direction = direction_t::UP;
+		} else break;
+	case direction_t::UP: 
+		next = next_up;
+		break;
+	case direction_t::RIGHT: 
 		next = next_right;
+		if (!next) {
+			overriden_direction = direction_t::DOWN;
+		} else break;
+	case direction_t::DOWN: 
+		next = next_down;
+		break;
 	}
+
 	return dynamic_cast<focus_client_t *>(next);
 
 }

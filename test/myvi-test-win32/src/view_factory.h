@@ -57,18 +57,10 @@ public:
 		return ret;
 	}
 
-	virtual gen::drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) OVERRIDE {
-		gen::drawer_t *ret = 0;
-		if (drawer_id == "background") {
-			ret = new custom::background_drawer_t(meta);
-		}
-		_MY_ASSERT(ret, return 0);
-		return ret;
-	}
-
 	// gen::parameter_meta_t * meta otional
-	myvi::gobject_t * build_predefined_view(myvi::string_t view_id, gen::parameter_meta_t * meta) {
+	myvi::gobject_t * build_predefined_view(gen::view_build_context_t &ctx) {
 		myvi::gobject_t *view = 0;
+		myvi::string_t view_id = ctx.get_view_meta()->get_id();
 
 		if (view_id == "cbox") {
 			view = new custom::cbox_view_t();
@@ -81,7 +73,6 @@ public:
 
 		} else if (view_id == "scroll_window") {
 			view = new custom::scroll_window_view_t();
-
 		}
 		_MY_ASSERT(view, return 0);
 		return view;
@@ -122,7 +113,7 @@ public:
 		ctx.set_view(0);
 		if (ctx.get_view_meta()->is_predefined()) {
 			ctx.set_view(
-				build_predefined_view(ctx.get_view_meta()->get_id(), ctx.try_get_parameter_meta())
+				build_predefined_view(ctx)
 				);
 
 		} else {

@@ -304,24 +304,142 @@ public:
 * ====================== ѕ–≈ƒќѕ–≈ƒ≈Ћ≈ЌЌџ≈ ¬»ƒџ =======================
 */
 
+class drawer_t {
+public:
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) = 0;
+};
 
-class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t {
+
+// вид с фоном
+class background_drawer_t : public drawer_t  {
+public:
+	myvi::surface_context_t ctx;
+	bool hasBorder;
+public:
+	background_drawer_t(gen::meta_t *meta) {
+
+		hasBorder = false;
+		ctx.alfa = 0;
+
+		myvi::string_t color = meta->get_string_param("background");
+
+		this->ctx.pen_color = gen::view_factory_t::instance()->parse_color(color);
+		if (this->ctx.pen_color > 0) {
+			this->ctx.alfa = 0xff;
+		}
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		obj->translate(ax,ay);
+		dst.ctx = ctx;
+
+		if (ctx.alfa) {
+			dst.fill(ax,ay,obj->w,obj->h);
+		}
+		if (hasBorder) {
+			dst.rect(ax,ay,obj->w,obj->h);
+		}
+	}
+};
+
+
+class focus_master_mixin_t : public myvi::focus_master_t {
+public:
+	myvi::gobject_t *view;
+public:
+	focus_master_mixin_t(myvi::gobject_t *_view) {
+		view = _view;
+	}
+};
+
+class tbox_cbox_focus_master_mixin_t : public focus_master_mixin_t {
+public:
+	s32 selected_count;
+public:
+	tbox_cbox_focus_master_mixin_t(myvi::gobject_t *_view, gen::meta_t * meta) : focus_master_mixin_t(_view) {
+		selected_count = 0;
+	}
+
+	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
+
+		_MY_ASSERT(intention.current, return );
+		myvi::gobject_t *current_g = dynamic_cast<myvi::gobject_t*>(intention.current);
+		_MY_ASSERT(current_g, return );
+		myvi::gobject_t *next_g = dynamic_cast<myvi::gobject_t*>(intention.next);
+		_MY_ASSERT(next_g, return );
+
+		if (next_g->is_child_of(view)) {
+			selected_count++;
+
+		} else if (current_g->is_child_of(view)) {
+		// если intention.current наш, а intention.next не наш, т.е. выходим из области, то
+		
+		// если были_выбраны_оба, то не измен€ем, и сбрасываем были_выбраны_оба
+			if (selected_count >= 1) {
+				selected_count = 0;
+			} else {
+		// иначе выбираем не выбранный
+				myvi::gobject_t::iterator_visible_t iter = view->iterator_visible();
+				myvi::gobject_t *p = iter.next();
+				while(p) {
+					if (p != current_g) {
+						intention.next = dynamic_cast<myvi::focus_client_t*>(p);
+						selected_count++;
+						break;
+					}
+					p = iter.next();
+				}
+			}
+		}
+	}
+};
+
+
+
+class dynamic_view_t : public myvi::gobject_t, public gen::dynamic_view_mixin_t, public myvi::focus_master_t {
 	typedef myvi::gobject_t super;
 private:
 	gen::view_meta_t *view_meta;
 	gen::view_controller_t *view_controller;
+	focus_master_mixin_t *focus_master;
 public:
-	gen::drawer_t *drawer;
+	drawer_t *drawer;
 public:
 	dynamic_view_t(gen::view_build_context_t &ctx) {
 		drawer = 0;
+		focus_master = 0;
 		view_meta = ctx.get_view_meta();
 		view_controller = 0; // устанавливаетс€ позже
 
 		myvi::string_t drawer_id = view_meta->get_string_param("drawer");
 		if (!drawer_id.is_empty()) {
-			drawer = gen::view_factory_t::instance()->build_drawer(drawer_id, view_meta);
+			drawer = build_drawer(drawer_id, view_meta);
 		}
+
+		myvi::string_t focus_master_id = view_meta->get_string_param("focusMaster");
+		if (!focus_master_id.is_empty()) {
+			focus_master = build_focus_master(focus_master_id, view_meta);
+		}
+
+	}
+
+	drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta)  {
+		drawer_t *ret = 0;
+		if (drawer_id == "background") {
+			ret = new background_drawer_t(meta);
+		}
+		_MY_ASSERT(ret, return 0);
+		return ret;
+	}
+
+	focus_master_mixin_t * build_focus_master(myvi::string_t focus_master_id, gen::meta_t * meta)  {
+		focus_master_mixin_t *ret = 0;
+		if (focus_master_id == "tbox_cbox") {
+			ret = new tbox_cbox_focus_master_mixin_t(this, meta);
+		}
+		_MY_ASSERT(ret, return 0);
+		return ret;
 	}
 
 	void set_view_controller(gen::view_controller_t *_view_controller) {
@@ -368,6 +486,11 @@ public:
 		do_layout();
 	}
 
+	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
+		if (focus_master) {
+			focus_master->alter_focus_intention(intention);
+		}
+	}
 
 };
 
@@ -649,6 +772,7 @@ public:
 
 	}
 };
+
 
 
 // контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает событи€ от вида
@@ -948,38 +1072,6 @@ public:
 };
 
 
-// вид с фоном
-class background_drawer_t : public gen::drawer_t  {
-public:
-	myvi::surface_context_t ctx;
-	bool hasBorder;
-public:
-	background_drawer_t(gen::meta_t *meta) {
-
-		hasBorder = false;
-		ctx.alfa = 0;
-
-		myvi::string_t color = meta->get_string_param("background");
-
-		this->ctx.pen_color = gen::view_factory_t::instance()->parse_color(color);
-		if (this->ctx.pen_color > 0) {
-			this->ctx.alfa = 0xff;
-		}
-	}
-
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
-		s32 ax, ay;
-		obj->translate(ax,ay);
-		dst.ctx = ctx;
-
-		if (ctx.alfa) {
-			dst.fill(ax,ay,obj->w,obj->h);
-		}
-		if (hasBorder) {
-			dst.rect(ax,ay,obj->w,obj->h);
-		}
-	}
-};
 
 
 }  // ns
