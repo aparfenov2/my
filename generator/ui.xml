@@ -96,7 +96,7 @@
 		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
 		
 <!-- textbox + combobox -->		
-		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true"> 
+		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true" focusMaster="tbox_cbox" > 
 			<view id="tbox" inherited="tbox" />
 			<view id="cbox" inherited="cbox" />
 		</view>
@@ -108,7 +108,7 @@
 
 
 <!-- генерируемые виды -->
-		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" > 
+		<view id="dme" layout="stack" vertical="false" preferred_item_size="true" focusMaster="tbox_cbox" > 
 			<view id="ch" inherited="tbox" parameterPath=".ch" /> <!-- относительный путь внутри параметра dme -->
 			<view id="sfx" inherited="cbox" parameterPath=".sfx" />
 		</view>

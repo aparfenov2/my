@@ -672,11 +672,6 @@ public:
 
 
 
-class drawer_t {
-public:
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) = 0;
-};
-
 
 
 
@@ -731,8 +726,6 @@ public:
 	virtual myvi::gobject_t * build_view(view_build_context_t ctx) = 0;
 	// Метод фабрики вида для параметра
 	virtual myvi::gobject_t * build_menu_view(view_build_context_t ctx) = 0;
-	// фабрика отрисовщиков
-	virtual drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) = 0;
 
 	virtual u32 parse_color(myvi::string_t color) = 0;
 };
