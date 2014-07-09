@@ -1,4 +1,9 @@
+myvi.proto.read_model_data_request_t.path			max_size:128
+
+myvi.proto.read_model_data_response_t.path			max_size:128
+myvi.proto.read_model_data_response_t.string_value	max_size:128
+
+myvi.proto.write_model_data_request_t.path			max_size:128
+myvi.proto.write_model_data_request_t.string_value	max_size:128
+
 myvi.proto.file_data_t.data							max_size:128
-myvi.proto.exported_interface_t.co_code_t.code			max_size:64
-myvi.proto.exported_interface_t.co_code_t.aeroport		max_size:64
-myvi.proto.exported_interface_t.chart_data_t.yvalues	max_count:60

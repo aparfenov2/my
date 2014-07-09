@@ -1,5 +1,3 @@
-<#import "inc/common.ftl" as commons>
-
 <#macro emit_set_params meta tab="">
 	<#list meta.@@ as attr>
 		<#local isNum = true>

@@ -54,14 +54,14 @@
 		</type>
 		<type id="dsp_onoff_t" name="Отключение дисплея" type="enum">
 			<enum id="NO" name="НЕТ" value="0" />
-			<enum id="1_MIN" name="1 МИНУТА" value="0"  />
-			<enum id="5_MIN" name="5 МИНУТ" value="1"  />
-			<enum id="10_MIN" name="10 МИНУТ" value="2"  />
+			<enum id="a1_MIN" name="1 МИНУТА" value="0"  />
+			<enum id="a5_MIN" name="5 МИНУТ" value="1"  />
+			<enum id="a10_MIN" name="10 МИНУТ" value="2"  />
 		</type>
 	</types>
 	
 	<parameters>
-<!-- Главное -->	
+<!-- Главное -->
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
 		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
 		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
@@ -78,6 +78,8 @@
 <!-- Экран -->	
 		<parameter id="brightness" type="u8" name="Яркость" initial="100" label="%" view="tbox_label" />
 		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" />
+<!-- Test -->	
+		<parameter id="str_foo" type="string" name="Foo" initial="abc" />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	

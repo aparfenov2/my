@@ -1,8 +1,0 @@
-sourceEncoding : windows-1251
-sourceRoot: templates
-outputRoot: out
-
-data: {
-	schema: xml(../ui.xml)	
-} 
-logFile: ../../fmpp.log

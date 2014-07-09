@@ -179,7 +179,7 @@ public:
     }
 
 protected:
-    static s32 strlen(const T* p) {
+    s32 strlen(const T* p) {
         if(p == null) return 0;
 
         s32 len = 0;

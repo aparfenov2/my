@@ -24,3 +24,23 @@
 		<#stop "complex type is not complex: "+typedef.@type>
 	</#if>
 </#macro>
+
+<#function ternary a b c>
+	<#if a>
+		<#return b>
+	<#else>	
+		<#return c>
+	</#if>
+</#function>
+
+<#macro assert b msg=''>
+	<#if !b>
+		<#stop "assertion failed: " + msg>
+	</#if>
+</#macro>
+
+<#macro assertEq a b msg=''>
+	<#if a != b>
+		<#stop "assertion "+msg+" failed: expected : " + b + ", actual: "+ a>
+	</#if>
+</#macro>
