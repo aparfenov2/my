@@ -218,10 +218,7 @@ public:
 
 	u32 parse_color(myvi::string_t color);
 
-	myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id);
-
-	myvi::ttype_font_t * resolve_font(myvi::string_t font_size_id);
-
+	void prepare_context(myvi::label_context_t &ret, gen::meta_t *meta);
 
 };
 

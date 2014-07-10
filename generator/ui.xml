@@ -93,9 +93,9 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="tbox" controller="tbox" kind="predefined" decorator="background" background="BACKGROUND_WHITE" /> <!-- textbox -->
-		<view id="cbox" controller="cbox" kind="predefined" decorator="background" background="BACKGROUND_WHITE" /> <!-- combobox -->
-		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
+		<view id="tbox" controller="tbox" kind="predefined" decorator="background,3d" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- textbox -->
+		<view id="cbox" controller="cbox" kind="predefined" decorator="background,3d,cbox" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- combobox -->
+		<view id="lab" controller="lab" kind="predefined" font="TTF" fontSize="FS_15" /> <!-- label -->
 		
 <!-- textbox + combobox -->		
 		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true" focusMaster="tbox_cbox" > 
@@ -142,7 +142,7 @@
 		</view>
 		
 		<view id="menu_item" layout="menu_item">
-			<view id="lab" inherited="lab" font="TTF" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
+			<view id="lab" inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>

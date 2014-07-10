@@ -456,23 +456,56 @@ public:
 
 class decorator_t {
 public:
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) = 0;
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) = 0;
 };
 
 
-class drawer_aware_t {
+class decorator_aware_t {
 public:
 	virtual void set_drawer(decorator_t *decorator) = 0;
 };
 
 
+template<typename TBase>
+class decorator_aware_impl_t : public TBase,  public decorator_aware_t {
+public:
+	decorator_t *decorator;
+public:
+	decorator_aware_impl_t() {
+		decorator = 0;
+	}
+
+	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
+		decorator = _drawer;
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		if (decorator) {
+			decorator->render(this, dst, true);
+		}
+		TBase::render(dst);
+		if (decorator) {
+			decorator->render(this, dst, false);
+		}
+	}
+	
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		TBase::set_dirty(dirty);
+		if (dirty && parent && !decorator) {
+			parent->dirty = true;
+		}
+	}
+
+};
+
+
 // вид с фоном
-class background_drawer_t : public decorator_t  {
+class background_decorator_t : public decorator_t  {
 public:
 	myvi::surface_context_t ctx;
 	bool hasBorder;
 public:
-	background_drawer_t(gen::meta_t *meta) {
+	background_decorator_t(gen::meta_t *meta) {
 
 		hasBorder = false;
 		ctx.alfa = 0;
@@ -485,7 +518,8 @@ public:
 		}
 	}
 
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		if (!beforeSuper) return;
 		s32 ax, ay;
 		obj->translate(ax,ay);
 		dst.ctx = ctx;
@@ -500,17 +534,15 @@ public:
 };
 
 
-class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t, public myvi::focus_master_t, public drawer_aware_t {
-	typedef myvi::gobject_t super;
+
+class dynamic_view_t : public decorator_aware_impl_t<myvi::gobject_t>, public dynamic_view_mixin_t, public myvi::focus_master_t {
+	typedef decorator_aware_impl_t<myvi::gobject_t> super;
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
 	focus_master_mixin_t *focus_master;
 public:
-	decorator_t *decorator;
-public:
 	dynamic_view_t(view_build_context_t &ctx) {
-		decorator = 0;
 		focus_master = 0;
 		view_meta = ctx.get_view_meta();
 		view_controller = 0; // устанавливается позже
@@ -521,10 +553,6 @@ public:
 			focus_master = build_focus_master(focus_master_id, view_meta);
 		}
 
-	}
-
-	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
-		this->decorator = _drawer;
 	}
 
 
@@ -562,19 +590,6 @@ public:
 		super::init();
 		if (this->view_controller) {
 			this->view_controller->on_view_init();
-		}
-	}
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		if (decorator) {
-			decorator->render(this, dst);
-		}
-	}
-	
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
-		if (dirty && parent && !decorator) {
-			parent->dirty = true;
 		}
 	}
 
@@ -654,7 +669,7 @@ public:
 		this->parameter_path = ctx.get_parameter_path().path;
 		this->type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
 		value.type = type;
-		model_t::instance()->try_register_path(ctx.get_parameter_path().path, value, type);
+		model_t::instance()->try_register_path(this->parameter_path, value, type);
 		set_initial(ctx, value);
 
 	}
@@ -664,31 +679,13 @@ public:
 
 class lab_view_t : public myvi::label_t {
 public:
-	myvi::font_size_t::font_size_t font_size;
-	u32 color;
-	myvi::ttype_font_t *font;
+	gen::meta_t *meta;
 public:
 
 	lab_view_t(view_build_context_t &ctx) {
 
-		font_size = myvi::font_size_t::FS_20;
-		color = 0;
-		font = view_factory_t::instance().resolve_font("TTF");
-
-		myvi::string_t font_id = ctx.get_view_meta()->get_string_param("font");
-		if (!font_id.is_empty()) {
-			font = view_factory_t::instance().resolve_font(font_id);
-		}
-
-		myvi::string_t font_size_id = ctx.get_view_meta()->get_string_param("fontSize");
-		if (!font_size_id.is_empty()) {
-			font_size = view_factory_t::instance().parse_font_size(font_size_id);
-		}
-
-		myvi::string_t font_color_id = ctx.get_view_meta()->get_string_param("fontColor");
-		if (!font_color_id.is_empty()) {
-			color = view_factory_t::instance().parse_color(font_color_id);
-		}
+		meta = ctx.get_view_meta();
+		
 	}
 
 	virtual void init() OVERRIDE {
@@ -699,11 +696,8 @@ public:
 
 		visible = true;
 		this->ctx = ctx.lctx1;
-		this->ctx.font = font;
-		this->ctx.font_size = font_size;
-		if (color) {
-			this->ctx.sctx.pen_color = color;
-		}
+
+		view_factory_t::instance().prepare_context(this->ctx, meta);
 
 	}
 
@@ -745,13 +739,14 @@ public:
 
 
 
-class tbox_view_t : public myvi::text_box_t, public drawer_aware_t {
+
+class tbox_view_t : public decorator_aware_impl_t<myvi::text_box_t> {
 	typedef myvi::text_box_t super;
 public:
-	decorator_t *decorator;
+	gen::meta_t *meta;
 public:
-	tbox_view_t() {
-		decorator = 0;
+	tbox_view_t(gen::meta_t *_meta) {
+		meta = _meta;
 	}
 
 	virtual void init() OVERRIDE {
@@ -761,25 +756,9 @@ public:
 
 		this->visible = true;
 		this->lab.ctx = ctx.lctx1;
-		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
-	}
 
-	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
-		decorator = _drawer;
-	}
+		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
 
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		if (decorator) {
-			decorator->render(this, dst);
-		}
-		super::render(dst);
-	}
-	
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
-		if (dirty && parent && !decorator) {
-			parent->dirty = true;
-		}
 	}
 
 
@@ -868,14 +847,15 @@ public:
 
 };
 
-class cbox_view_t : public myvi::combo_box_t, public drawer_aware_t {
+class cbox_view_t : public decorator_aware_impl_t<myvi::combo_box_t> {
 	typedef myvi::combo_box_t super;
 public:
-	decorator_t *decorator;
+	gen::meta_t *meta;
 public:
-	cbox_view_t() {
-		decorator = 0;
+	cbox_view_t(gen::meta_t *_meta) {
+		meta = _meta;
 	}
+
 
 	virtual void init() OVERRIDE {
 		super::init();
@@ -884,25 +864,8 @@ public:
 
 		this->visible = true;
 		this->lab.ctx = ctx.lctx1;
-		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
-	}
 
-	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
-		decorator = _drawer;
-	}
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		if (decorator) {
-			decorator->render(this, dst);
-		}
-		super::render(dst);
-	}
-	
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
-		if (dirty && parent && !decorator) {
-			parent->dirty = true;
-		}
+		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
 	}
 
 };

@@ -76,10 +76,10 @@ static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx
 	myvi::string_t view_id = ctx.get_view_meta()->get_id();
 
 	if (view_id == "cbox") {
-		view = new custom::cbox_view_t();
+		view = new custom::cbox_view_t(ctx.get_view_meta());
 
 	} else if (view_id == "tbox") {
-		view = new custom::tbox_view_t();
+		view = new custom::tbox_view_t(ctx.get_view_meta());
 
 	} else if (view_id == "lab") {
 		view = new custom::lab_view_t(ctx);
@@ -120,10 +120,157 @@ static void build_child_views_of_view(view_build_context_t ctx) {
 	}
 }
 
-static decorator_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) {
+class decorator_array_t : public decorator_t {
+public:
+	std::vector<decorator_t *> children;
+public:
+	decorator_array_t(gen::meta_t *meta) {
+	}
+
+	void add_child(decorator_t *child) {
+		children.push_back(child);
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->render(obj, dst, beforeSuper);
+		}
+	}
+};
+
+
+// рисует 3d рамку вокруг контрола
+class d3_decorator_t : public decorator_t {
+public:
+public:
+	d3_decorator_t(gen::meta_t *meta) {
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		if (beforeSuper) return;
+
+		s32 x,y, w = obj->w, h = obj->h;
+		obj->translate(x, y);
+		dst.ctx.alfa = 0xff;
+
+		u32 black = 0x222625;
+		u32 white = 0xC3D4DB;
+		u32 gray = 0xA79FAA;
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y,w,false);
+		dst.line(x,y+1,w,false);
+		dst.line(x,y,h,true);
+		dst.line(x+1,y,h,true);
+
+		dst.ctx.pen_color = white;
+		dst.line(x,y+h-1,w,false);
+		dst.line(x+w-1,y,h,true);
+
+		dst.ctx.pen_color = gray;
+		dst.line(x,y+h-2,w,false);
+		dst.line(x+w-2,y,h,true);
+
+	}
+};
+
+// рисует галочку у cbox-a
+class cbox_decorator_t : public decorator_t {
+public:
+public:
+	cbox_decorator_t(gen::meta_t *meta) {
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		if (beforeSuper) return;
+
+		u32 black = 0x222625;
+		u32 gray = 0x909986;
+		u32 light_gray = 0xB3C7C6;
+
+		s32 x,y, w = obj->w, h = obj->h;
+		obj->translate(x, y);
+
+		s32 w1 = 15;
+
+		if (w < w1) return;
+
+		x += w - w1;
+		y += 2;
+		w = w1-2;
+		h = h-4;
+
+		dst.ctx.alfa = 0xff;
+		dst.ctx.pen_color = light_gray;
+		dst.line(x,y,w,false);
+		dst.line(x,y,h,true);
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y+h-1,w,false);
+		dst.line(x+w-1,y,h,true);
+
+		x += 1; y += 1;
+		w -= 2; h -= 2;
+		dst.ctx.pen_color = gray;
+		dst.fill(x,y,w,h);
+
+		x += 2; y += 2;
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y,x+6,y);
+		dst.line(x,y,x+3,y+6);
+		dst.line(x+6,y,x+3,y+6);
+	}
+};
+
+static decorator_t * build_decorator_simple(myvi::string_t decorator_id, gen::meta_t * meta) {
 	decorator_t *ret = 0;
-	if (drawer_id == "background") {
-		ret = new background_drawer_t(meta);
+	if (decorator_id == "background") {
+		ret = new background_decorator_t(meta);
+
+	} else if (decorator_id == "3d") {
+		ret = new d3_decorator_t(meta);
+
+	} else if (decorator_id == "cbox") {
+		ret = new cbox_decorator_t(meta);
+	}
+
+	_MY_ASSERT(ret, return 0);
+	return ret;
+}
+
+static decorator_t * build_decorator(myvi::string_t decorator_id, gen::meta_t * meta) {
+	decorator_t *ret = 0;
+	bool multiple = false;
+	decorator_array_t *decorator_array = 0;
+
+	for (s32 i=0; i < decorator_id.length(); i++) {
+		if (decorator_id[i] == ',') {
+			multiple = true;
+			break;
+		}
+	}
+	if (multiple) {
+		decorator_array = new decorator_array_t(meta);
+		s32 lasti = 0;
+		for (s32 i=0; i < decorator_id.length(); i++) {
+			if (decorator_id[i] == ',') {
+				myvi::string_t child_id = decorator_id.sub(lasti, i-lasti);
+				lasti = i+1;
+
+				decorator_t *child = build_decorator_simple(child_id, meta);
+				decorator_array->add_child(child);
+			}
+		}
+		myvi::string_t child_id = decorator_id.sub(lasti, decorator_id.length()-lasti);
+		decorator_t *child = build_decorator_simple(child_id, meta);
+		decorator_array->add_child(child);
+	}
+
+	if (decorator_array) {
+		ret = decorator_array;
+	} else {
+		ret = build_decorator_simple(decorator_id, meta);
 	}
 	_MY_ASSERT(ret, return 0);
 	return ret;
@@ -165,11 +312,11 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 
 	myvi::string_t drawer_id = ctx.get_view_meta()->get_string_param("decorator");
 	if (!drawer_id.is_empty()) {
-		drawer_aware_t *drawer_aware = dynamic_cast<drawer_aware_t *>(ctx.get_view());
+		decorator_aware_t *drawer_aware = dynamic_cast<decorator_aware_t *>(ctx.get_view());
 		_MY_ASSERT(drawer_aware, return 0);
 
 		drawer_aware->set_drawer(
-			build_drawer(drawer_id, ctx.get_view_meta())
+			build_decorator(drawer_id, ctx.get_view_meta())
 			);
 	}
 
@@ -321,7 +468,7 @@ u32 view_factory_t::parse_color(myvi::string_t color) {
 	return 0;
 }
 
-myvi::font_size_t::font_size_t view_factory_t::parse_font_size(myvi::string_t font_size_id) {
+static myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id) {
 	if (font_size_id == "FS_8") {
 		return myvi::font_size_t::FS_8;
 
@@ -341,7 +488,7 @@ myvi::font_size_t::font_size_t view_factory_t::parse_font_size(myvi::string_t fo
 
 extern resources_t res;
 
-myvi::ttype_font_t * view_factory_t::resolve_font(myvi::string_t font_id) {
+static myvi::ttype_font_t * resolve_font(myvi::string_t font_id) {
 
 	if (font_id == "TTF") {
 		return &res.ttf;
@@ -356,6 +503,30 @@ myvi::ttype_font_t * view_factory_t::resolve_font(myvi::string_t font_id) {
 	return 0;
 }
 
+void view_factory_t::prepare_context(myvi::label_context_t &ret, gen::meta_t *meta) {
+
+
+	myvi::string_t font_id = meta->get_string_param("font");
+	if (!font_id.is_empty()) {
+		ret.font = resolve_font(font_id);
+	} else {
+		ret.font = resolve_font("TTF");
+	}
+
+	myvi::string_t font_size_id = meta->get_string_param("fontSize");
+	if (!font_size_id.is_empty()) {
+		ret.font_size = parse_font_size(font_size_id);
+	} else {
+		ret.font_size = parse_font_size("FS_20");
+	}
+
+	myvi::string_t font_color_id = meta->get_string_param("fontColor");
+	if (!font_color_id.is_empty()) {
+		ret.sctx.pen_color = parse_color(font_color_id);
+	} else {
+		ret.sctx.pen_color = 0;
+	}
+}
 
 myvi::gobject_t * dynamic_view_mixin_t::resolve_path(myvi::string_t _path) {
 
