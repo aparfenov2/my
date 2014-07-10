@@ -42,8 +42,6 @@ public:
 
 };
 
-// все изменяемые строки здесь и далее длиной 255
-typedef myvi::string_impl_t<255> volatile_string_impl_t;
 
 
 // базовый класс меты
@@ -129,231 +127,12 @@ public:
 	}
 };
 
-// путь до обьекта мета-модели
-class meta_path_base_t {
-public:
-	class iterator_t {
-	public:
-		s32 lasti;
-		bool has_next;
-		meta_path_base_t *that;
-	public:
-		iterator_t() {
-			lasti = 0;
-			that = 0;
-			has_next = true;
-		}
-
-		myvi::string_t next() {
-
-			myvi::string_t spath = * that->spath;
-			s32 spath_length = spath.length();
-
-			if (!lasti) {
-				_MY_ASSERT(adjust_lasti(lasti, spath, spath_length), return 0);
-			}
-
-			if (has_next) {
-				for (s32 i=lasti; i < spath_length; i++) {
-
-					if (spath[i] == '.') { // case 2b, 2c, 3, 3a
-
-						s32 param_length = i - lasti;
-
-						_MY_ASSERT(param_length >= 0, return 0);
-
-						if (param_length > 0) {
-							myvi::string_t param_id = spath.sub(lasti, param_length);
-							lasti = i;
-
-							has_next = adjust_lasti(lasti, spath, spath_length);
-
-							return param_id;
-						}
-					}
-				}
-			}
-			// case 2, 3, 3a
-			if (lasti < spath_length) {
-				myvi::string_t param_id = spath.sub(lasti, spath_length - lasti);
-				lasti = spath_length;
-				return param_id;
-			}
-
-			return 0;
-		}
-
-	private:
-
-		bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_length) {
-
-			if (lasti >= spath_length) {
-				return false;
-			}
-
-			if (spath[lasti] == '.') lasti++;
-			_MY_ASSERT(lasti < spath_length, return false); // путь не может заканчиваться точкой
-			_MY_ASSERT(spath[lasti] != '.', return false); // путь не может содержать несколько точек подряд
-
-			return true; 
-		}
-
-	};
-protected:
-	myvi::string_t * spath;
-private:
-	iterator_t _iterator;
-public:
-
-	meta_path_base_t() {
-		spath = 0;
-	}
-
-	meta_path_base_t(myvi::string_t &_spath)  {
-		spath = &_spath;
-		_MY_ASSERT(!_spath.is_empty(), return); // case 0
-		_iterator.that = this;
-	}
-
-	bool is_relative() const {
-		return (*spath)[0] == '.';
-	}
-
-	iterator_t iterator() {
-		return _iterator;
-	}
-
-
-};
-
-
-
-
-// изменяемый путь
-class volatile_path_t : public meta_path_base_t {
-	typedef meta_path_base_t super;
-public:
-	volatile_string_impl_t path;
-public:
-	volatile_path_t() : super(path) {
-	}
-
-	volatile_path_t( const volatile_path_t & other) {
-		this->path = other.path;
-		this->spath = &path;
-	}
-
-
-	void add_relative(myvi::string_t id) {
-
-		_MY_ASSERT(!id.is_empty(), return);
-		if (id[0] != '.') {
-			path += ".";
-		}
-		path += id;
-	}
-
-	void add_absolute(myvi::string_t id) {
-		_MY_ASSERT(!id.is_empty(), return);
-		if (!path.is_empty() && id[0] != '.') {
-			path += ".";
-		}
-		path += id;
-	}
-};
-
-
-// неизменяемый путь
-class meta_path_t : public meta_path_base_t {
-	typedef meta_path_base_t super;
-public:
-	myvi::string_t path;
-public:
-	meta_path_t(myvi::string_t _path) : path(_path), super(path) {
-	}
-
-	meta_path_t(const meta_path_t & other) {
-		path = other.path;
-		this->spath = &path;
-	}
-
-	meta_path_t(const volatile_path_t & other) {
-		path = other.path;
-		this->spath = &path;
-	}
-
-};
-
-
-
-class view_meta_t;
-class parameter_meta_t;
-
-
-class view_build_context_t {
-private:
-	myvi::gobject_t *view;
-	view_meta_t *view_meta;
-	parameter_meta_t *parameter_meta;
-	volatile_path_t parameter_path; // полный путь до параметра
-public:
-	view_build_context_t() {
-		view = 0;
-		view_meta = 0;
-		parameter_meta = 0;
-	}
-
-	myvi::gobject_t * get_view() {
-		_MY_ASSERT(view, return 0);
-		return view;
-	}
-
-	view_meta_t * get_view_meta() {
-		_MY_ASSERT(view_meta, return 0);
-		return view_meta;
-	}
-
-	parameter_meta_t * get_parameter_meta() {
-		_MY_ASSERT(parameter_meta, return 0);
-		return parameter_meta;
-	}
-
-	parameter_meta_t * try_get_parameter_meta() {
-		return parameter_meta;
-	}
-
-	meta_path_t get_parameter_path() {
-		return parameter_path;
-	}
-
-	void set_view(myvi::gobject_t *_view) {
-		view = _view;
-	}
-
-	void set_view_meta(view_meta_t *_view_meta) {
-		view_meta = _view_meta;
-	}
-
-	void set_parameter_meta(parameter_meta_t *_parameter_meta);
-
-};
 
 class type_meta_t;
-
-
-namespace variant_type_t {
-	typedef enum {
-		STRING,
-		INT,
-		FLOAT
-	} variant_type_t;
-}
-
 
 // метаинфа о параметре
 class parameter_meta_t : public meta_t {
 public:
-	myvi::gobject_t * build_menu_view(view_build_context_t ctx);
 
 	myvi::string_t get_type_id() {
 		return this->get_string_param("type");
@@ -365,8 +144,6 @@ public:
 
 	parameter_meta_t * find_child_meta(myvi::string_t child_id);
 	type_meta_t * get_type_meta();
-
-	variant_type_t::variant_type_t match_value_type();
 
 };
 
@@ -521,9 +298,6 @@ public:
 // метаинфа о виде
 class view_meta_t : public meta_t {
 public:
-// метод фабрики вида. Создает вид и привязывает к нему контроллер
-	myvi::gobject_t * build_view(view_build_context_t ctx);
-	myvi::gobject_t * build_view_no_ctx();
 
 	virtual view_meta_t * get_view_child(s32 i) {
 		return 0;
@@ -673,78 +447,6 @@ public:
 
 
 
-
-
-
-class dynamic_view_mixin_t  {
-public:
-	std::unordered_map<myvi::string_t, myvi::gobject_t *, string_t_hash_t> id_map;
-public:
-	// добавляет дочерний вид с привязкой идентификатора
-	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
-		_MY_ASSERT(child, return);
-		id_map[id] = child;
-	}
-
-	myvi::gobject_t *get_child(myvi::string_t id) {
-		return id_map[id];
-	}
-
-	myvi::gobject_t * resolve_path(myvi::string_t _path) {
-
-		meta_path_t path(_path);
-		meta_path_t::iterator_t iter = path.iterator();
-		myvi::string_t elem = iter.next();
-		dynamic_view_mixin_t *ret = this;
-		while (!elem.is_empty()) {
-
-			myvi::gobject_t * child = ret->get_child(elem);
-			if (!child) return 0;
-
-			elem = iter.next();
-			if (elem.is_empty()) return child;
-
-			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
-			if (!ret) return 0;
-		}
-		return 0;
-	}
-};
-
-
-// интерфейс фабрики видов - выделен для компилируемости
-class view_factory_t {
-protected:
-	static view_factory_t * _instance;
-public:
-	static view_factory_t * instance() {
-		return _instance;
-	}
-	// called from menu_controller_t
-//	virtual void append_menu_view(myvi::gobject_t *view, gen::menu_meta_t *meta) = 0;
-	// метод фабрики вида по умолчанию для составного вида
-	virtual myvi::gobject_t * build_view(view_build_context_t ctx) = 0;
-	// Метод фабрики вида для параметра
-	virtual myvi::gobject_t * build_menu_view(view_build_context_t ctx) = 0;
-
-	virtual u32 parse_color(myvi::string_t color) = 0;
-};
-
-
-
-// интерфейс контроллера вида
-class view_controller_t {
-public:
-public:
-	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
-	virtual void init(view_build_context_t &ctx) {
-	}
-
-	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
-	virtual void on_view_init() {
-	}
-
-};
 
 
 

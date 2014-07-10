@@ -80,6 +80,8 @@
 		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" />
 <!-- Test -->	
 		<parameter id="str_foo" type="string" name="Foo" initial="abc" />
+		<parameter id="header_freq" type="float" name="Freq!" initial="1.001" label="GHz" view="tbox_label" />
+		<parameter id="header_level" type="float" name="Level!" initial="13.00" label="dBm" view="tbox_label" />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	
@@ -91,9 +93,9 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="tbox" controller="tbox" kind="predefined" /> <!-- textbox -->
-		<view id="cbox" controller="cbox" kind="predefined" /> <!-- combobox -->
-		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
+		<view id="tbox" controller="tbox" kind="predefined" decorator="background,3d" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- textbox -->
+		<view id="cbox" controller="cbox" kind="predefined" decorator="background,3d,cbox" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- combobox -->
+		<view id="lab" controller="lab" kind="predefined" font="TTF" fontSize="FS_15" /> <!-- label -->
 		
 <!-- textbox + combobox -->		
 		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true" focusMaster="tbox_cbox" > 
@@ -116,14 +118,24 @@
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 		
-		<view id="root" layout="stack" vertical="true" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" >
-			<view id="menu_name_lab" inherited="lab" staticText="menu_name" /> 
-			<view id="scroll_window" kind="predefined" >
-				<view id="scroll_interior" layout="stretch" >
-					<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.menu_name_lab">
-						<view id="main" name="Главное" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
-						<view id="parameters" name="Параметры" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
-						<view id="screen" name="Экран" menuRef="screen" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+		<view id="root" layout="stack" vertical="true" preferred_item_size="true" decorator="background" background="BACKGROUND_GRAY" >
+
+			<view id="header" layout="stack" vertical="false" preferred_item_size="true" >
+				<view id="hdr_freq" layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
+				<view id="hdr_lvl" layout="stretch" controller="parameter_view" parameterPath="header_level"/> 
+			</view>
+
+			<view id="menu" layout="stack" vertical="true" preferred_item_size="true">
+				<view id="menu_header" decorator="background" background="BACKGROUND_BLUE" layout="stretch">
+					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
+				</view>
+				<view id="scroll_window" kind="predefined" >
+					<view id="scroll_interior" layout="stretch" >
+						<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.menu.menu_header.menu_name_lab">
+							<view id="main" name="Главное" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+							<view id="parameters" name="Параметры" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+							<view id="screen" name="Экран" menuRef="screen" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+						</view>
 					</view>
 				</view>
 			</view>

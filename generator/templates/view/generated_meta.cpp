@@ -64,7 +64,7 @@
 	</#list>
 </#macro>
 
-#include "generated_meta.h"
+#include "generator_common.h"
 
 using namespace gen;
 

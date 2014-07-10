@@ -12,6 +12,7 @@
 
 #include "exported_sys.h"
 #include "custom_views.h"
+#include "custom_common.h"
 
 namespace custom {
 
@@ -26,21 +27,21 @@ public:
 	link_model_updater_t(link::host_system_interface_t *_host2, link::exported_system_interface_t *_chained) {
 		host2 = _host2;
 		chained = _chained;
-		custom::dynamic_model_t::instance().subscribe(this);
+		model_t::instance()->subscribe(this);
 	}
 
 	void read_and_respond(myvi::string_t path) {
-		custom::variant_t value;
-		custom::dynamic_model_t::instance().read(path, value);
+		variant_t value;
+		model_t::instance()->read(path, value);
 
 		switch (value.type) {
-		case gen::variant_type_t::STRING:
+		case variant_type_t::STRING:
 			host2->read_model_data_response(path.c_str(), value.get_string_value().c_str(), 0);
 			break;
-		case gen::variant_type_t::INT:
+		case variant_type_t::INT:
 			host2->read_model_data_response(path.c_str(), value.get_int_value(), 0);
 			break;
-		case gen::variant_type_t::FLOAT:
+		case variant_type_t::FLOAT:
 			host2->read_model_data_response(path.c_str(), value.get_float_value(), 0);
 			break;
 		}
@@ -58,18 +59,18 @@ public:
 
 	// запрос на запись данных в модель
 	virtual void write_model_data(char * path, char * string_value) OVERRIDE {
-		custom::variant_t value(string_value);
-		custom::dynamic_model_t::instance().update(path, value);
+		variant_t value(string_value);
+		model_t::instance()->update(path, value);
 	}
 
 	virtual void write_model_data(char * path, s32 int_value) OVERRIDE {
-		custom::variant_t value(int_value);
-		custom::dynamic_model_t::instance().update(path, value);
+		variant_t value(int_value);
+		model_t::instance()->update(path, value);
 	}
 
 	virtual void write_model_data(char * path,  double float_value) OVERRIDE {
-		custom::variant_t value(float_value);
-		custom::dynamic_model_t::instance().update(path, value);
+		variant_t value(float_value);
+		model_t::instance()->update(path, value);
 	}
 
 
