@@ -167,22 +167,48 @@ gobject_t * focus_manager_t::locate_next(direction_t::direction_t direction, gob
 		overriden_direction = direction;
 	}
 
-	switch (overriden_direction) {
-	case direction_t::LEFT: 
-		next = next_left;
-		if (!next) {
-			overriden_direction = direction_t::UP;
-		} else break;
-	case direction_t::UP: 
-		next = next_up;
-		break;
-	case direction_t::RIGHT: 
-		next = next_right;
-		if (!next) {
-			overriden_direction = direction_t::DOWN;
-		} else break;
-	case direction_t::DOWN: 
-		next = next_down;
+	s32 owerride_cnt = 0;
+
+	while (owerride_cnt < 2) {
+
+		switch (overriden_direction) {
+
+		case direction_t::LEFT: 
+			next = next_left;
+			if (!next) {
+				overriden_direction = direction_t::UP;
+				owerride_cnt++;
+				continue;
+			} 
+			break;
+
+		case direction_t::UP: 
+			next = next_up;
+			if (!next) {
+				overriden_direction = direction_t::LEFT;
+				owerride_cnt++;
+				continue;
+			} 
+			break;
+
+		case direction_t::RIGHT:
+			next = next_right;
+			if (!next) {
+				overriden_direction = direction_t::DOWN;
+				owerride_cnt++;
+				continue;
+			} 
+			break;
+
+		case direction_t::DOWN: 
+			next = next_down;
+			if (!next) {
+				overriden_direction = direction_t::RIGHT;
+				owerride_cnt++;
+				continue;
+			} 
+			break;
+		}
 		break;
 	}
 

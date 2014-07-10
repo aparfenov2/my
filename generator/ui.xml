@@ -80,6 +80,8 @@
 		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" />
 <!-- Test -->	
 		<parameter id="str_foo" type="string" name="Foo" initial="abc" />
+		<parameter id="header_freq" type="float" name="Freq!" initial="1.001" label="GHz" view="tbox_label" />
+		<parameter id="header_level" type="float" name="Level!" initial="13.00" label="dBm" view="tbox_label" />
 	</parameters>
 	
 <!-- предопределенные контроллеры -->	
@@ -91,8 +93,8 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="tbox" controller="tbox" kind="predefined" /> <!-- textbox -->
-		<view id="cbox" controller="cbox" kind="predefined" /> <!-- combobox -->
+		<view id="tbox" controller="tbox" kind="predefined" decorator="background" background="BACKGROUND_WHITE" /> <!-- textbox -->
+		<view id="cbox" controller="cbox" kind="predefined" decorator="background" background="BACKGROUND_WHITE" /> <!-- combobox -->
 		<view id="lab" controller="lab" kind="predefined" /> <!-- label -->
 		
 <!-- textbox + combobox -->		
@@ -116,15 +118,16 @@
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 		
-		<view id="root" layout="stack" vertical="true" preferred_item_size="true" drawer="background" background="BACKGROUND_LIGHT" >
-<!--		
-			<view id="header" layout="stack" vertical="true" preferred_item_size="true">
-				<view id="tb_cb" inherited="tbox_cbox"/> 
+		<view id="root" layout="stack" vertical="true" preferred_item_size="true" decorator="background" background="BACKGROUND_GRAY" >
+
+			<view id="header" layout="stack" vertical="false" preferred_item_size="true" >
+				<view id="hdr_freq" layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
+				<view id="hdr_lvl" layout="stretch" controller="parameter_view" parameterPath="header_level"/> 
 			</view>
--->			
+
 			<view id="menu" layout="stack" vertical="true" preferred_item_size="true">
-				<view id="menu_header" drawer="background" background="BACKGROUND_BLUE" layout="stretch">
-					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" fontSize="FS_10" fontColor="FONT_WHITE"  /> 
+				<view id="menu_header" decorator="background" background="BACKGROUND_BLUE" layout="stretch">
+					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
 				</view>
 				<view id="scroll_window" kind="predefined" >
 					<view id="scroll_interior" layout="stretch" >
@@ -139,7 +142,7 @@
 		</view>
 		
 		<view id="menu_item" layout="menu_item">
-			<view id="lab" inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
+			<view id="lab" inherited="lab" font="TTF" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>

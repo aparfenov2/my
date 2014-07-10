@@ -216,15 +216,12 @@ public:
 	// Метод фабрики вида для параметра
 	myvi::gobject_t * build_menu_view(view_build_context_t ctx);
 
-	u32 parse_color(myvi::string_t color) {
-		if (color == "BACKGROUND_LIGHT") {
-			return 0xF9FFF4;
-		} else if (color == "BACKGROUND_BLUE") {
-			return 0x679AB9;
-		}
-		_MY_ASSERT(0, return 0);
-		return 0;
-	}
+	u32 parse_color(myvi::string_t color);
+
+	myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id);
+
+	myvi::ttype_font_t * resolve_font(myvi::string_t font_size_id);
+
 
 };
 
@@ -265,25 +262,7 @@ public:
 		return id_map[id];
 	}
 
-	myvi::gobject_t * resolve_path(myvi::string_t _path) {
-
-		meta_path_t path(_path);
-		meta_path_t::iterator_t iter = path.iterator();
-		myvi::string_t elem = iter.next();
-		dynamic_view_mixin_t *ret = this;
-		while (!elem.is_empty()) {
-
-			myvi::gobject_t * child = ret->get_child(elem);
-			if (!child) return 0;
-
-			elem = iter.next();
-			if (elem.is_empty()) return child;
-
-			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
-			if (!ret) return 0;
-		}
-		return 0;
-	}
+	myvi::gobject_t * resolve_path(myvi::string_t _path);
 };
 
 

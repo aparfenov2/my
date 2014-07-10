@@ -454,13 +454,20 @@ public:
 };
 
 
-class drawer_t {
+class decorator_t {
 public:
 	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) = 0;
 };
 
+
+class drawer_aware_t {
+public:
+	virtual void set_drawer(decorator_t *decorator) = 0;
+};
+
+
 // вид с фоном
-class background_drawer_t : public drawer_t  {
+class background_drawer_t : public decorator_t  {
 public:
 	myvi::surface_context_t ctx;
 	bool hasBorder;
@@ -493,25 +500,21 @@ public:
 };
 
 
-class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t, public myvi::focus_master_t {
+class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t, public myvi::focus_master_t, public drawer_aware_t {
 	typedef myvi::gobject_t super;
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
 	focus_master_mixin_t *focus_master;
 public:
-	drawer_t *drawer;
+	decorator_t *decorator;
 public:
 	dynamic_view_t(view_build_context_t &ctx) {
-		drawer = 0;
+		decorator = 0;
 		focus_master = 0;
 		view_meta = ctx.get_view_meta();
 		view_controller = 0; // устанавливается позже
 
-		myvi::string_t drawer_id = view_meta->get_string_param("drawer");
-		if (!drawer_id.is_empty()) {
-			drawer = build_drawer(drawer_id, view_meta);
-		}
 
 		myvi::string_t focus_master_id = view_meta->get_string_param("focusMaster");
 		if (!focus_master_id.is_empty()) {
@@ -520,14 +523,10 @@ public:
 
 	}
 
-	drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) {
-		drawer_t *ret = 0;
-		if (drawer_id == "background") {
-			ret = new background_drawer_t(meta);
-		}
-		_MY_ASSERT(ret, return 0);
-		return ret;
+	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
+		this->decorator = _drawer;
 	}
+
 
 	focus_master_mixin_t * build_focus_master(myvi::string_t focus_master_id, gen::meta_t * meta) {
 		focus_master_mixin_t *ret = 0;
@@ -567,14 +566,14 @@ public:
 	}
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		if (drawer) {
-			drawer->render(this, dst);
+		if (decorator) {
+			decorator->render(this, dst);
 		}
 	}
 	
 	virtual void set_dirty(bool dirty) OVERRIDE {
 		super::set_dirty(dirty);
-		if (dirty && parent && !drawer) {
+		if (dirty && parent && !decorator) {
 			parent->dirty = true;
 		}
 	}
@@ -666,15 +665,29 @@ public:
 class lab_view_t : public myvi::label_t {
 public:
 	myvi::font_size_t::font_size_t font_size;
+	u32 color;
+	myvi::ttype_font_t *font;
 public:
 
 	lab_view_t(view_build_context_t &ctx) {
 
 		font_size = myvi::font_size_t::FS_20;
+		color = 0;
+		font = view_factory_t::instance().resolve_font("TTF");
+
+		myvi::string_t font_id = ctx.get_view_meta()->get_string_param("font");
+		if (!font_id.is_empty()) {
+			font = view_factory_t::instance().resolve_font(font_id);
+		}
 
 		myvi::string_t font_size_id = ctx.get_view_meta()->get_string_param("fontSize");
 		if (!font_size_id.is_empty()) {
-//			font_size = gen::view_factory_t::instance()->parse_font_size(font_size_id);
+			font_size = view_factory_t::instance().parse_font_size(font_size_id);
+		}
+
+		myvi::string_t font_color_id = ctx.get_view_meta()->get_string_param("fontColor");
+		if (!font_color_id.is_empty()) {
+			color = view_factory_t::instance().parse_color(font_color_id);
 		}
 	}
 
@@ -686,7 +699,11 @@ public:
 
 		visible = true;
 		this->ctx = ctx.lctx1;
-		this->ctx.font_size = myvi::font_size_t::FS_20;
+		this->ctx.font = font;
+		this->ctx.font_size = font_size;
+		if (color) {
+			this->ctx.sctx.pen_color = color;
+		}
 
 	}
 
@@ -728,9 +745,15 @@ public:
 
 
 
-class tbox_view_t : public myvi::text_box_t {
+class tbox_view_t : public myvi::text_box_t, public drawer_aware_t {
 	typedef myvi::text_box_t super;
 public:
+	decorator_t *decorator;
+public:
+	tbox_view_t() {
+		decorator = 0;
+	}
+
 	virtual void init() OVERRIDE {
 		super::init();
 
@@ -740,6 +763,25 @@ public:
 		this->lab.ctx = ctx.lctx1;
 		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
 	}
+
+	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
+		decorator = _drawer;
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		if (decorator) {
+			decorator->render(this, dst);
+		}
+		super::render(dst);
+	}
+	
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty && parent && !decorator) {
+			parent->dirty = true;
+		}
+	}
+
 
 };
 
@@ -826,9 +868,15 @@ public:
 
 };
 
-class cbox_view_t : public myvi::combo_box_t {
+class cbox_view_t : public myvi::combo_box_t, public drawer_aware_t {
 	typedef myvi::combo_box_t super;
 public:
+	decorator_t *decorator;
+public:
+	cbox_view_t() {
+		decorator = 0;
+	}
+
 	virtual void init() OVERRIDE {
 		super::init();
 
@@ -838,6 +886,25 @@ public:
 		this->lab.ctx = ctx.lctx1;
 		this->lab.ctx.font_size = myvi::font_size_t::FS_20;
 	}
+
+	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
+		decorator = _drawer;
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		if (decorator) {
+			decorator->render(this, dst);
+		}
+		super::render(dst);
+	}
+	
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty && parent && !decorator) {
+			parent->dirty = true;
+		}
+	}
+
 };
 
 
@@ -920,6 +987,28 @@ public:
 		}
 
 //		gen::view_factory_t::instance()->append_menu_view(view, menu_meta);
+	}
+};
+
+
+// вставляет вид, создаваемый параметром, в свой вид
+class parameter_view_controller_t : public view_controller_t {
+public:
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
+
+		myvi::string_t parameter_path = ctx.get_view_meta()->get_string_param("parameterPath");
+
+		_MY_ASSERT(!parameter_path.is_empty(), return);
+
+		meta_path_t path = meta_path_t(parameter_path);
+		parameter_path_resolver_t resolver(path);
+
+		gen::parameter_meta_t *child_parameter_meta = resolver.resolve();
+//			ctx.set_parameter_meta(child_parameter_meta);
+
+		myvi::gobject_t * child_view = parameter_meta_ex_t(child_parameter_meta).build_menu_view(ctx);
+		ctx.get_view()->add_child(child_view);
+
 	}
 };
 

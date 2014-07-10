@@ -3,6 +3,8 @@
 #define _VIEW_FACTORY_CPP
 #include "custom_views.h"
 
+#include "resources.h"
+
 using namespace custom;
 
 view_factory_t view_factory_t::_instance;
@@ -60,6 +62,9 @@ static view_controller_t * build_controller(gen::view_meta_t * meta) {
 	} else if (controller_id == "window_selector") {
 		ret = new custom::window_selector_controller_t();
 
+	} else if (controller_id == "parameter_view") {
+		ret = new custom::parameter_view_controller_t();
+
 	}
 	_MY_ASSERT(controller_id.is_empty() || ret, return 0);
 	return ret;
@@ -115,6 +120,15 @@ static void build_child_views_of_view(view_build_context_t ctx) {
 	}
 }
 
+static decorator_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) {
+	decorator_t *ret = 0;
+	if (drawer_id == "background") {
+		ret = new background_drawer_t(meta);
+	}
+	_MY_ASSERT(ret, return 0);
+	return ret;
+}
+
 
 // метод фабрики вида по умолчанию для составного вида
 myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
@@ -148,6 +162,17 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 	if (layout) {
 		ctx.get_view()->layout = layout;
 	}
+
+	myvi::string_t drawer_id = ctx.get_view_meta()->get_string_param("decorator");
+	if (!drawer_id.is_empty()) {
+		drawer_aware_t *drawer_aware = dynamic_cast<drawer_aware_t *>(ctx.get_view());
+		_MY_ASSERT(drawer_aware, return 0);
+
+		drawer_aware->set_drawer(
+			build_drawer(drawer_id, ctx.get_view_meta())
+			);
+	}
+
 
 	build_child_views_of_view(ctx);
 
@@ -279,3 +304,75 @@ myvi::string_t meta_path_base_t::iterator_t::next() {
 	return 0;
 }
 
+
+u32 view_factory_t::parse_color(myvi::string_t color) {
+	if (color == "BACKGROUND_WHITE") {
+		return 0xF9FFF4;
+	} else if (color == "BACKGROUND_BLUE") {
+		return 0x679AB9;
+
+	} else if (color == "BACKGROUND_GRAY") {
+		return 0x97A39F;
+
+	} else if (color == "FONT_WHITE") {
+		return 0xE5E9F2;
+	}
+	_MY_ASSERT(0, return 0);
+	return 0;
+}
+
+myvi::font_size_t::font_size_t view_factory_t::parse_font_size(myvi::string_t font_size_id) {
+	if (font_size_id == "FS_8") {
+		return myvi::font_size_t::FS_8;
+
+	} else if (font_size_id == "FS_15") {
+		return myvi::font_size_t::FS_15;
+
+	} else if (font_size_id == "FS_20") {
+		return myvi::font_size_t::FS_20;
+
+	} else if (font_size_id == "FS_30") {
+		return myvi::font_size_t::FS_30;
+	}
+	_MY_ASSERT(0, return (myvi::font_size_t::font_size_t) 0);
+	return (myvi::font_size_t::font_size_t) 0;
+}
+
+
+extern resources_t res;
+
+myvi::ttype_font_t * view_factory_t::resolve_font(myvi::string_t font_id) {
+
+	if (font_id == "TTF") {
+		return &res.ttf;
+
+	} else if (font_id == "TTF_BOLD") {
+		return &res.ttf_bold;
+
+	} else if (font_id == "GLY") {
+		return &res.gly;
+	}
+	_MY_ASSERT(0, return  0);
+	return 0;
+}
+
+
+myvi::gobject_t * dynamic_view_mixin_t::resolve_path(myvi::string_t _path) {
+
+	meta_path_t path(_path);
+	meta_path_t::iterator_t iter = path.iterator();
+	myvi::string_t elem = iter.next();
+	dynamic_view_mixin_t *ret = this;
+	while (!elem.is_empty()) {
+
+		myvi::gobject_t * child = ret->get_child(elem);
+		if (!child) return 0;
+
+		elem = iter.next();
+		if (elem.is_empty()) return child;
+
+		ret = dynamic_cast<dynamic_view_mixin_t *>(child);
+		if (!ret) return 0;
+	}
+	return 0;
+}
