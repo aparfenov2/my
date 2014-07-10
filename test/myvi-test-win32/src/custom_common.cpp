@@ -1,9 +1,25 @@
-#include "view_factory.h"
+#include "custom_common.h"
+
+#define _VIEW_FACTORY_CPP
 #include "custom_views.h"
 
 using namespace custom;
 
 view_factory_t view_factory_t::_instance;
+
+static dynamic_model_t dynamic_model;
+model_t * model_t::_instance = &dynamic_model;
+
+converter_factory_t converter_factory_t::_instance;
+keyboard_filter_chain_t keyboard_filter_chain_t::_instance;
+
+
+
+void view_build_context_t::set_parameter_meta(gen::parameter_meta_t *_parameter_meta) {
+	parameter_meta = _parameter_meta;
+	parameter_path.add_absolute(_parameter_meta->get_id());
+}
+
 
 static myvi::layout_t * build_layout(gen::meta_t * meta) {
 
@@ -170,7 +186,7 @@ static myvi::gobject_t * build_default_view_for_complex_type(view_build_context_
 	myvi::string_t type_id = ctx.get_parameter_meta()->get_type_id();
 	gen::view_meta_t *view_template_meta = gen::meta_registry_t::instance().find_view_meta("default_composite_template");
 	ctx.set_view_meta(view_template_meta);
-	myvi::gobject_t * view = view_factory_t::instance()->build_view(ctx);
+	myvi::gobject_t * view = view_factory_t::instance().build_view(ctx);
 	// строим виды только для составных типов, виды простых типов предопределены и конструируются сразу в meta_t::build_view()
 	gen::type_meta_t *type_meta = gen::meta_registry_t::instance().find_type_meta(type_id);
 	_MY_ASSERT(type_meta, return 0);
@@ -209,3 +225,57 @@ myvi::gobject_t * view_factory_t::build_menu_view(view_build_context_t ctx) {
 
 	return view;
 }
+
+
+static bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_length) {
+
+	if (lasti >= spath_length) {
+		return false;
+	}
+
+	if (spath[lasti] == '.') lasti++;
+	_MY_ASSERT(lasti < spath_length, return false); // путь не может заканчиваться точкой
+	_MY_ASSERT(spath[lasti] != '.', return false); // путь не может содержать несколько точек подряд
+
+	return true; 
+}
+
+myvi::string_t meta_path_base_t::iterator_t::next() {
+
+	myvi::string_t spath = * that->spath;
+	s32 spath_length = spath.length();
+
+	if (!lasti) {
+		_MY_ASSERT(adjust_lasti(lasti, spath, spath_length), return 0);
+	}
+
+	if (has_next) {
+		for (s32 i=lasti; i < spath_length; i++) {
+
+			if (spath[i] == '.') { // case 2b, 2c, 3, 3a
+
+				s32 param_length = i - lasti;
+
+				_MY_ASSERT(param_length >= 0, return 0);
+
+				if (param_length > 0) {
+					myvi::string_t param_id = spath.sub(lasti, param_length);
+					lasti = i;
+
+					has_next = adjust_lasti(lasti, spath, spath_length);
+
+					return param_id;
+				}
+			}
+		}
+	}
+	// case 2, 3, 3a
+	if (lasti < spath_length) {
+		myvi::string_t param_id = spath.sub(lasti, spath_length - lasti);
+		lasti = spath_length;
+		return param_id;
+	}
+
+	return 0;
+}
+

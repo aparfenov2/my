@@ -20,8 +20,7 @@
 #include "disp_def.h"
 
 #include "generator_common.h"
-#include "generated_meta.h"
-#include "custom_views.h"
+#include "custom_common.h"
 
 
 using namespace myvi;
@@ -51,8 +50,10 @@ public:
 	}
 
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) OVERRIDE {
+
 		if (key == key_t::K_SAVE) {
 		}
+
 		if (key) {
 			// сначала отдаем на перехват фильтрам клавиатуры
 			if (!custom::keyboard_filter_chain_t::instance().processKey(key)) {

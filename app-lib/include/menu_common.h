@@ -87,7 +87,7 @@ public:
 */
 
 // окно с прокруткой.
-class scrollable_window_t : public gobject_t, public subscriber_t<focus_client_t *>, public focus_master_t {
+class scrollable_window_t : public gobject_t, public subscriber_t<gobject_t *>, public focus_master_t {
 	typedef gobject_t super;
 public:
 public:
@@ -103,112 +103,19 @@ public:
 	// оповещение от focus_manager о выбранном объекте
 	// обьект не наш, а interior !!!
 
-	virtual void accept(focus_client_t* &sel) OVERRIDE {
-		// если это наш объект (или одно из детей наших детей)
-		gobject_t *p = dynamic_cast<gobject_t *>(sel);
-		gobject_t *our = 0;
-		while (p) {
-			if (p == this) {
-				our = dynamic_cast<gobject_t *>(sel);
-				break;
-			}
-			p = p->parent;
-		}
-		// то пытаемся скрыть крайние дочерние объекты чтобы объект в фокусе оставался видимым
-		if (our) {
-			scroll_to(our);
-		}
-	}
+	virtual void accept(gobject_t* &sel) OVERRIDE;
 
 	// прокрутить чтобы выбранный children стал виден
-	void scroll_to(gobject_t *interior_child) {
-
-		gobject_t *p = interior_child->parent;
-		while (p) {
-			if (p == this) {
-				break;
-			}
-			p = p->parent;
-		}
-		_MY_ASSERT(p, return); // проверим что дитё находится в нашей ветви
-
-		s32 ix,iy, ax,ay;
-		interior_child->translate(ix,iy);
-		this->translate(ax,ay);
-
-		// пытаемся сдвинуть окно
-		s32 dx = 0;
-
-		if (ix < ax) {
-			dx = ax - ix;
-		} else if ((ix + interior_child->w) > (ax + this->w)) {
-			dx = (ax + this->w) - (ix + interior_child->w);
-		}
-
-		s32 dy = 0;
-
-		if (iy < ay) {
-			dy = ay - iy;
-		} else if ((iy + interior_child->h) > (ay + this->h)) {
-			dy = (ay + this->h) - (iy + interior_child->h);
-		}
-
-		if (dx || dy) {
-			get_interior()->x += dx;
-			get_interior()->y += dy;
-			this->dirty = true;
-		}
-	}
+	void scroll_to(gobject_t *interior_child);
 
 	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
 		_MY_ASSERT(get_interior(),return);
 		get_interior()->get_preferred_size(pw,ph);
 	}
 
-	virtual void do_layout() OVERRIDE {
-		_MY_ASSERT(w && h, return);
+	virtual void do_layout() OVERRIDE ;
 
-		s32 ipw,iph;
-		get_interior()->get_preferred_size(ipw,iph);
-
-		this->get_interior()->w = w;
-		this->get_interior()->h = h;
-
-		// пока только вертикальный скролл
-		//if (ipw > this->get_interior()->w) {
-		//	this->get_interior()->w = ipw;
-		//}
-		if (iph > this->get_interior()->h) {
-			this->get_interior()->h = iph;
-		}
-
-		this->get_interior()->do_layout();
-	}
-
-	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE {
-
-		_MY_ASSERT(intention.current, return );
-		if (!intention.next) return;
-
-		gobject_t *p = dynamic_cast<gobject_t*>(intention.current);
-		while (p && p->parent != get_interior()) {
-			p = p->parent;
-		}
-		_MY_ASSERT(p, return );
-
-		p = dynamic_cast<gobject_t*>(intention.next);
-		while (p && p->parent != get_interior()) {
-			p = p->parent;
-		}
-		if (!p) { // менеджер фокуса собирается перейти на чужой объект
-			// проверим, есть ли возможность перейти на обьект внутри нашего inerior
-			focus_client_t *next = focus_manager_t::instance.locate_next(intention.direction, this->get_interior());
-			if (next) {
-				intention.next = next;
-			}
-		}
-
-	}
+	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE ;
 };
 
 

@@ -50,8 +50,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 
 	if (!selected) {
 		gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
-		focus_client_t *p = dynamic_cast<focus_client_t*>(iter.next());
-		select(p);
+		select(iter.next());
 		return;
 	}
 
@@ -70,7 +69,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 		intention.direction = direction_t::RIGHT;
 	}
 
-	intention.current = selected;
+	intention.current = dynamic_cast<gobject_t*>(selected);
 	intention.next = locate_next(intention.direction, root);
 
 	if (intention.next) {
@@ -81,7 +80,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 			focus_master_t *focus_master = current_g->get_focus_master();
 
 			while (focus_master) {
-				myvi::focus_client_t *intention_last = intention.next;
+				gobject_t *intention_last = intention.next;
 
 				focus_master->alter_focus_intention(intention);
 				// если фокус-мастрер что-то поменял - выбираем его предпочтение
@@ -106,7 +105,7 @@ static direction_t::direction_t last_direction;
 static direction_t::direction_t overriden_direction;
 
 
-focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction, gobject_t *root) {
+gobject_t * focus_manager_t::locate_next(direction_t::direction_t direction, gobject_t *root) {
 
 	// определяем ближайшие обьекты рядом с selected
 	gobject_t *next = 0;
@@ -187,19 +186,18 @@ focus_client_t * focus_manager_t::locate_next(direction_t::direction_t direction
 		break;
 	}
 
-	return dynamic_cast<focus_client_t *>(next);
+	return next;
 
 }
 
-void focus_manager_t::select(focus_client_t *p) {
+void focus_manager_t::select(gobject_t *p) {
 
 
 	if (selected) {
 		_MY_ASSERT(dynamic_cast<focus_client_t*>(selected), return);
-		_MY_ASSERT(dynamic_cast<gobject_t*>(selected), return);
 
 		dynamic_cast<focus_client_t*>(selected)->selected = false;
-		dynamic_cast<gobject_t*>(selected)->dirty = true;
+		selected->dirty = true;
 	}
 
 	selected = p;

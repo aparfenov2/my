@@ -42,9 +42,9 @@ class focus_client_t;
 class focus_aware_t;
 
 // глобальный менеджер фокуса
-class focus_manager_t : public publisher_t<focus_client_t *,_MAX_FOCUS_MANAGER_SUBSCRIBERS> {
+class focus_manager_t : public publisher_t<gobject_t *,_MAX_FOCUS_MANAGER_SUBSCRIBERS> {
 public:
-	focus_client_t *selected;
+	gobject_t *selected;
 	stack_t<focus_aware_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
 
 	static focus_manager_t instance;
@@ -57,7 +57,7 @@ private:
 
 public:
 	void key_event(key_t::key_t key, gobject_t *root);
-	void select(focus_client_t *p);
+	void select(gobject_t *p);
 
 	void capture_child(focus_aware_t *child) {
 		_MY_ASSERT(child,return);
@@ -73,14 +73,14 @@ public:
 		captured.pop();
 	}
 
-	focus_client_t * locate_next(direction_t::direction_t direction, gobject_t *root);
+	gobject_t * locate_next(direction_t::direction_t direction, gobject_t *root);
 
 };
 
 class focus_intention_t {
 public:
-	focus_client_t *current;
-	focus_client_t *next;
+	gobject_t *current;
+	gobject_t *next;
 	direction_t::direction_t direction;
 public:
 	focus_intention_t() {

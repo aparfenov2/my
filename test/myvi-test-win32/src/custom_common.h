@@ -8,6 +8,36 @@
 namespace custom {
 
 
+class keyboard_filter_t {
+public:
+	virtual bool processKey(myvi::key_t::key_t key) = 0;
+};
+
+// агрегатор всех фильтров клавиатуры
+class keyboard_filter_chain_t {
+public:
+	std::vector<keyboard_filter_t *> chain;
+	static keyboard_filter_chain_t _instance;
+public:
+	static keyboard_filter_chain_t & instance() {
+		return _instance;
+	}
+
+	void add_filter(keyboard_filter_t * filter) {
+		chain.push_back(filter);
+	}
+
+	bool processKey(myvi::key_t::key_t key) {
+		for (std::vector<keyboard_filter_t *>::const_iterator it = chain.begin(); it != chain.end(); it++) {
+			if ((*it)->processKey(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+};
+
+
 // все изменяемые строки здесь и далее длиной 255
 typedef myvi::string_impl_t<255> volatile_string_impl_t;
 
@@ -27,59 +57,7 @@ public:
 			has_next = true;
 		}
 
-		myvi::string_t next() {
-
-			myvi::string_t spath = * that->spath;
-			s32 spath_length = spath.length();
-
-			if (!lasti) {
-				_MY_ASSERT(adjust_lasti(lasti, spath, spath_length), return 0);
-			}
-
-			if (has_next) {
-				for (s32 i=lasti; i < spath_length; i++) {
-
-					if (spath[i] == '.') { // case 2b, 2c, 3, 3a
-
-						s32 param_length = i - lasti;
-
-						_MY_ASSERT(param_length >= 0, return 0);
-
-						if (param_length > 0) {
-							myvi::string_t param_id = spath.sub(lasti, param_length);
-							lasti = i;
-
-							has_next = adjust_lasti(lasti, spath, spath_length);
-
-							return param_id;
-						}
-					}
-				}
-			}
-			// case 2, 3, 3a
-			if (lasti < spath_length) {
-				myvi::string_t param_id = spath.sub(lasti, spath_length - lasti);
-				lasti = spath_length;
-				return param_id;
-			}
-
-			return 0;
-		}
-
-	private:
-
-		bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_length) {
-
-			if (lasti >= spath_length) {
-				return false;
-			}
-
-			if (spath[lasti] == '.') lasti++;
-			_MY_ASSERT(lasti < spath_length, return false); // путь не может заканчиваться точкой
-			_MY_ASSERT(spath[lasti] != '.', return false); // путь не может содержать несколько точек подряд
-
-			return true; 
-		}
+		myvi::string_t next();
 
 	};
 protected:
@@ -217,6 +195,8 @@ public:
 };
 
 
+
+
 // фабрика дочерних видов. Её задача создать вид и связать его с контроллерм
 class view_factory_t {
 public:
@@ -225,8 +205,8 @@ public:
 	view_factory_t() {
 	}
 
-	static view_factory_t * instance() {
-		return &_instance;
+	static view_factory_t & instance() {
+		return _instance;
 	}
 
 
@@ -235,8 +215,6 @@ public:
 
 	// Метод фабрики вида для параметра
 	myvi::gobject_t * build_menu_view(view_build_context_t ctx);
-
-
 
 	u32 parse_color(myvi::string_t color) {
 		if (color == "BACKGROUND_LIGHT") {
@@ -249,6 +227,67 @@ public:
 	}
 
 };
+
+
+class view_meta_ex_t {
+public:
+	gen::view_meta_t *view_meta;
+public:
+	view_meta_ex_t(gen::view_meta_t *_view_meta) {
+		view_meta = _view_meta;
+	}
+
+// метод фабрики вида. Создает вид и привязывает к нему контроллер
+	myvi::gobject_t * build_view(view_build_context_t ctx) {
+		ctx.set_view_meta(view_meta);
+		return custom::view_factory_t::instance().build_view(ctx);
+	}
+
+	myvi::gobject_t * build_view_no_ctx() {
+		custom::view_build_context_t ctx = custom::view_build_context_t();
+		ctx.set_view_meta(view_meta);
+		return build_view(ctx);
+	}
+
+};
+
+class dynamic_view_mixin_t  {
+public:
+	std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> id_map;
+public:
+	// добавляет дочерний вид с привязкой идентификатора
+	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
+		_MY_ASSERT(child, return);
+		id_map[id] = child;
+	}
+
+	myvi::gobject_t *get_child(myvi::string_t id) {
+		return id_map[id];
+	}
+
+	myvi::gobject_t * resolve_path(myvi::string_t _path) {
+
+		meta_path_t path(_path);
+		meta_path_t::iterator_t iter = path.iterator();
+		myvi::string_t elem = iter.next();
+		dynamic_view_mixin_t *ret = this;
+		while (!elem.is_empty()) {
+
+			myvi::gobject_t * child = ret->get_child(elem);
+			if (!child) return 0;
+
+			elem = iter.next();
+			if (elem.is_empty()) return child;
+
+			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
+			if (!ret) return 0;
+		}
+		return 0;
+	}
+};
+
+
+
 
 } // ns myvi
 #endif

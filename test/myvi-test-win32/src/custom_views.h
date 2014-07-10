@@ -1,9 +1,13 @@
+#ifndef _VIEW_FACTORY_CPP 
+#error should only be included from view_factory.cpp
+#endif
+
 #ifndef _CUSTOM_VIEWS_H
 #define _CUSTOM_VIEWS_H
 
 #include "menu_common.h"
 #include "generator_common.h"
-#include "view_factory.h"
+#include "custom_common.h"
 #include <cstdio>
 
 namespace custom {
@@ -29,7 +33,7 @@ public:
 	}
 	myvi::gobject_t * build_menu_view(view_build_context_t ctx) {
 		ctx.set_parameter_meta(parameter_meta);
-		return view_factory_t::instance()->build_menu_view(ctx);
+		return view_factory_t::instance().build_menu_view(ctx);
 	}
 	variant_type_t::variant_type_t match_value_type() {
 		gen::type_meta_t *type_meta = parameter_meta->get_type_meta();
@@ -63,27 +67,6 @@ public:
 };
 
 
-class view_meta_ex_t {
-public:
-	gen::view_meta_t *view_meta;
-public:
-	view_meta_ex_t(gen::view_meta_t *_view_meta) {
-		view_meta = _view_meta;
-	}
-
-// метод фабрики вида. Создает вид и привязывает к нему контроллер
-	myvi::gobject_t * build_view(view_build_context_t ctx) {
-		ctx.set_view_meta(view_meta);
-		return custom::view_factory_t::instance()->build_view(ctx);
-	}
-
-	myvi::gobject_t * build_view_no_ctx() {
-		custom::view_build_context_t ctx = custom::view_build_context_t();
-		ctx.set_view_meta(view_meta);
-		return build_view(ctx);
-	}
-
-};
 
 template <typename T>
 class variant_tt {
@@ -223,17 +206,6 @@ private:
 };
 
 
-/*
-class model_t {
-public:
-	// обновление модели
-	virtual void update(myvi::string_t parameter_path, variant_t &value) = 0;
-	// ожидает правильного типа значения до вызова !
-	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
-
-};
-*/
-
 
 class model_message_t {
 public:
@@ -245,41 +217,61 @@ public:
 
 #define _MODEL_MAX_SUBSCRIBERS 128
 
-class dynamic_model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> { 
+
+class model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> {
+public:
+	static model_t *_instance;
+public:
+	static model_t * instance() {
+		return _instance;
+	}
+	// обновление модели
+	virtual void update(myvi::string_t parameter_path, variant_t &value) = 0;
+	// ожидает правильного типа значения до вызова !
+	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
+
+	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) = 0;
+
+	void read(myvi::string_t parameter_path, variant_t &value, variant_type_t::variant_type_t expected_type)  {
+		read(parameter_path, value);
+		_MY_ASSERT(value.type == expected_type, return);
+	}
+
+};
+
+
+class dynamic_model_t : public model_t { 
 
 public:
 	std::unordered_map<myvi::string_t, variant_holder_t *, gen::string_t_hash_t> children;
-	static dynamic_model_t _instance;
 public:
-	static dynamic_model_t & instance() {
-		return _instance;
-	}
 
-	void update(myvi::string_t parameter_path, variant_t &value)  {
-		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
+	virtual void update(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
+//		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
+		variant_holder_t *holder = children[parameter_path];
+		_MY_ASSERT(holder, return);
 		holder->assign(value);
 		notify(model_message_t(parameter_path));
 	}
 
-	void read(myvi::string_t parameter_path, variant_t &value, variant_type_t::variant_type_t expected_type)  {
-		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
-		value = holder->get_value();
-		_MY_ASSERT(value.type == expected_type, return);
-	}
 
-	void read(myvi::string_t parameter_path, variant_t &value)  {
+	virtual void read(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
 		variant_holder_t *holder = children[parameter_path];
 		_MY_ASSERT(holder, return);
 		value = holder->get_value();
 	}
 
-	void initialize_value(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type)  {
+	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) OVERRIDE  {
+
+		variant_holder_t *holder = children[parameter_path];
+		if (holder) {
+			_MY_ASSERT(holder->type == expected_type, return);
+			return;
+		}
 
 		_MY_ASSERT(initial_value.type == expected_type, return);
 
-		variant_holder_t *ret = children[parameter_path];
-		_MY_ASSERT(!ret, return);
-		variant_holder_t * holder = get_or_make_holder(parameter_path, expected_type);
+		holder = get_or_make_holder(parameter_path, expected_type);
 		holder->assign(initial_value);
 	}
 
@@ -295,12 +287,14 @@ private:
 };
 
 
+
 // интерфейс конвертера значения в строку и обратно
 class converter_t {
 public:
 	virtual void to_string(variant_t &value, volatile_string_impl_t &str) = 0;
 	virtual bool from_string(myvi::string_t &str, variant_t &value) = 0;
 };
+
 
 class string_converter_t : public converter_t {
 public:
@@ -354,6 +348,7 @@ public:
 	}
 };
 
+
 class converter_factory_t {
 public:
 	static converter_factory_t _instance;
@@ -361,10 +356,12 @@ public:
 	string_converter_t string_converter;
 	int_converter_t int_converter;
 	float_converter_t float_converter;
+
 public:
 	static converter_factory_t instance() {
 		return _instance;
 	}
+
 	converter_t * for_type(variant_type_t::variant_type_t expected_type) {
 		switch (expected_type) {
 		case variant_type_t::STRING : return &string_converter;
@@ -382,40 +379,6 @@ public:
 
 
 
-class dynamic_view_mixin_t  {
-public:
-	std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> id_map;
-public:
-	// добавляет дочерний вид с привязкой идентификатора
-	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
-		_MY_ASSERT(child, return);
-		id_map[id] = child;
-	}
-
-	myvi::gobject_t *get_child(myvi::string_t id) {
-		return id_map[id];
-	}
-
-	myvi::gobject_t * resolve_path(myvi::string_t _path) {
-
-		meta_path_t path(_path);
-		meta_path_t::iterator_t iter = path.iterator();
-		myvi::string_t elem = iter.next();
-		dynamic_view_mixin_t *ret = this;
-		while (!elem.is_empty()) {
-
-			myvi::gobject_t * child = ret->get_child(elem);
-			if (!child) return 0;
-
-			elem = iter.next();
-			if (elem.is_empty()) return child;
-
-			ret = dynamic_cast<dynamic_view_mixin_t *>(child);
-			if (!ret) return 0;
-		}
-		return 0;
-	}
-};
 
 
 
@@ -434,11 +397,67 @@ public:
 };
 
 
+
+
+
+
+class focus_master_mixin_t : public myvi::focus_master_t {
+public:
+	myvi::gobject_t *view;
+public:
+	focus_master_mixin_t(myvi::gobject_t *_view) {
+		view = _view;
+	}
+};
+
+
+class tbox_cbox_focus_master_mixin_t : public focus_master_mixin_t {
+public:
+	s32 selected_count;
+public:
+	tbox_cbox_focus_master_mixin_t(myvi::gobject_t *_view, gen::meta_t * meta) : focus_master_mixin_t(_view) {
+		selected_count = 0;
+	}
+
+	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
+
+		_MY_ASSERT(intention.current, return );
+		myvi::gobject_t *current_g = (intention.current);
+		_MY_ASSERT(current_g, return );
+		myvi::gobject_t *next_g = (intention.next);
+		_MY_ASSERT(next_g, return );
+
+		if (next_g->is_child_of(view)) {
+			selected_count++;
+
+		} else if (current_g->is_child_of(view)) {
+		// если intention.current наш, а intention.next не наш, т.е. выходим из области, то
+		
+		// если были_выбраны_оба, то не изменяем, и сбрасываем были_выбраны_оба
+			if (selected_count >= 1) {
+				selected_count = 0;
+			} else {
+		// иначе выбираем не выбранный
+				myvi::gobject_t::iterator_visible_t iter = view->iterator_visible();
+				myvi::gobject_t *p = iter.next();
+				while(p) {
+					if (p != current_g) {
+						intention.next = p;
+						selected_count++;
+						break;
+					}
+					p = iter.next();
+				}
+			}
+		}
+	}
+};
+
+
 class drawer_t {
 public:
 	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst) = 0;
 };
-
 
 // вид с фоном
 class background_drawer_t : public drawer_t  {
@@ -453,7 +472,7 @@ public:
 
 		myvi::string_t color = meta->get_string_param("background");
 
-		this->ctx.pen_color = view_factory_t::instance()->parse_color(color);
+		this->ctx.pen_color = view_factory_t::instance().parse_color(color);
 		if (this->ctx.pen_color > 0) {
 			this->ctx.alfa = 0xff;
 		}
@@ -472,59 +491,6 @@ public:
 		}
 	}
 };
-
-
-class focus_master_mixin_t : public myvi::focus_master_t {
-public:
-	myvi::gobject_t *view;
-public:
-	focus_master_mixin_t(myvi::gobject_t *_view) {
-		view = _view;
-	}
-};
-
-class tbox_cbox_focus_master_mixin_t : public focus_master_mixin_t {
-public:
-	s32 selected_count;
-public:
-	tbox_cbox_focus_master_mixin_t(myvi::gobject_t *_view, gen::meta_t * meta) : focus_master_mixin_t(_view) {
-		selected_count = 0;
-	}
-
-	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
-
-		_MY_ASSERT(intention.current, return );
-		myvi::gobject_t *current_g = dynamic_cast<myvi::gobject_t*>(intention.current);
-		_MY_ASSERT(current_g, return );
-		myvi::gobject_t *next_g = dynamic_cast<myvi::gobject_t*>(intention.next);
-		_MY_ASSERT(next_g, return );
-
-		if (next_g->is_child_of(view)) {
-			selected_count++;
-
-		} else if (current_g->is_child_of(view)) {
-		// если intention.current наш, а intention.next не наш, т.е. выходим из области, то
-		
-		// если были_выбраны_оба, то не изменяем, и сбрасываем были_выбраны_оба
-			if (selected_count >= 1) {
-				selected_count = 0;
-			} else {
-		// иначе выбираем не выбранный
-				myvi::gobject_t::iterator_visible_t iter = view->iterator_visible();
-				myvi::gobject_t *p = iter.next();
-				while(p) {
-					if (p != current_g) {
-						intention.next = dynamic_cast<myvi::focus_client_t*>(p);
-						selected_count++;
-						break;
-					}
-					p = iter.next();
-				}
-			}
-		}
-	}
-};
-
 
 
 class dynamic_view_t : public myvi::gobject_t, public dynamic_view_mixin_t, public myvi::focus_master_t {
@@ -554,7 +520,7 @@ public:
 
 	}
 
-	drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta)  {
+	drawer_t * build_drawer(myvi::string_t drawer_id, gen::meta_t * meta) {
 		drawer_t *ret = 0;
 		if (drawer_id == "background") {
 			ret = new background_drawer_t(meta);
@@ -563,7 +529,7 @@ public:
 		return ret;
 	}
 
-	focus_master_mixin_t * build_focus_master(myvi::string_t focus_master_id, gen::meta_t * meta)  {
+	focus_master_mixin_t * build_focus_master(myvi::string_t focus_master_id, gen::meta_t * meta) {
 		focus_master_mixin_t *ret = 0;
 		if (focus_master_id == "tbox_cbox") {
 			ret = new tbox_cbox_focus_master_mixin_t(this, meta);
@@ -571,6 +537,7 @@ public:
 		_MY_ASSERT(ret, return 0);
 		return ret;
 	}
+
 
 	void set_view_controller(view_controller_t *_view_controller) {
 		_MY_ASSERT(_view_controller, return);
@@ -640,21 +607,21 @@ public:
 		if (!initial_str.is_empty()) {
 			_MY_ASSERT(type == variant_type_t::STRING, return);
 			value.set_value(initial_str);
-			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path, value);
 		}
 
 		s32 initial_int = ctx.get_parameter_meta()->get_int_param("initial");
 		if (initial_int != _NAN) {
 			_MY_ASSERT(type == variant_type_t::INT, return);
 			value.set_value(initial_int);
-			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path, value);
 		}
 
 		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
 			_MY_ASSERT(type == variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
-			dynamic_model_t::instance().update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path, value);
 		}
 	}
 
@@ -687,8 +654,8 @@ public:
 		variant_t value;
 		this->parameter_path = ctx.get_parameter_path().path;
 		this->type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
-
-		dynamic_model_t::instance().read(ctx.get_parameter_path().path, value, type);
+		value.type = type;
+		model_t::instance()->try_register_path(ctx.get_parameter_path().path, value, type);
 		set_initial(ctx, value);
 
 	}
@@ -811,7 +778,7 @@ public:
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
-		dynamic_model_t::instance().read(this->parameter_path, value, type);
+		model_t::instance()->read(this->parameter_path, value, type);
 
 		this->tb = dynamic_cast<myvi::text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
@@ -821,7 +788,7 @@ public:
 		this->tb->value = string_value;
 
 // 2. Подписывается на изменения в модели и обновления поля
-		dynamic_model_t::instance().subscribe(this);
+		model_t::instance()->subscribe(this);
 
 // 3. Подписывается на изменения поля и обновления модели
 		tb->subscribe(this);
@@ -834,7 +801,7 @@ public:
 			return;
 		}
 		variant_t value;
-		dynamic_model_t::instance().read(this->parameter_path, value, this->type);
+		model_t::instance()->read(this->parameter_path, value, this->type);
 
 		converter_t *conv = converter_factory_t::instance().for_type(this->type);
 		conv->to_string(value, string_value);
@@ -852,7 +819,7 @@ public:
 		variant_t value;
 		bool ret = conv->from_string(msg.value, value);
 		if (ret) {
-			dynamic_model_t::instance().update(this->parameter_path, value);
+			model_t::instance()->update(this->parameter_path, value);
 		}
 	}
 
@@ -959,34 +926,6 @@ public:
 
 typedef myvi::scrollable_window_t scroll_window_view_t;
 
-class keyboard_filter_t {
-public:
-	virtual bool processKey(myvi::key_t::key_t key) = 0;
-};
-
-// агрегатор всех фильтров клавиатуры
-class keyboard_filter_chain_t {
-public:
-	std::vector<keyboard_filter_t *> chain;
-	static keyboard_filter_chain_t _instance;
-public:
-	static keyboard_filter_chain_t & instance() {
-		return _instance;
-	}
-
-	void add_filter(keyboard_filter_t * filter) {
-		chain.push_back(filter);
-	}
-
-	bool processKey(myvi::key_t::key_t key) {
-		for (std::vector<keyboard_filter_t *>::const_iterator it = chain.begin(); it != chain.end(); it++) {
-			if ((*it)->processKey(key)) {
-				return true;
-			}
-		}
-		return false;
-	}
-};
 
 // контроллер вида выбора вида
 class window_selector_controller_t : public view_controller_t {

@@ -1,4 +1,4 @@
-#include "view_factory.h"
+#include "generator_common.h"
 
 using namespace gen;
 
