@@ -1,4 +1,3 @@
-#include <tchar.h>
 #include "surface.h"
 
 #include "bmp_math.h"
@@ -16,8 +15,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <windows.h>
-#include "Serial.h"
 
 #include "link.h"
 #include "disp_def.h"
@@ -38,16 +35,6 @@ extern resources_t res;
 //host_emu_t emu;
 
 
-int ShowError (LONG lError, LPCTSTR lptszMessage)
-{
-	// Generate a message text
-	TCHAR tszMessage[256];
-	wsprintf(tszMessage,_T("%s\n(error code %d)"), lptszMessage, lError);
-
-	// Display message-box and return with an error-code
-	::MessageBox(0,tszMessage,_T("Hello world"), MB_ICONSTOP|MB_OK);
-	return 1;
-}
 
 
 void save_ttcache() {
@@ -107,70 +94,6 @@ public:
 	}
 };
 
-class serial_interface_impl_t : public serial_interface_t {
-public:
-	serial_data_receiver_t *receiver;
-	CSerial *serial;
-public:
-	serial_interface_impl_t(CSerial *aserial) {
-		receiver = 0;
-		serial = aserial;
-	}
-
-	virtual void send(u8 *data, u32 len) OVERRIDE {
-		LONG  lLastError = serial->Write(data,len);
-		if (lLastError != ERROR_SUCCESS) {
-			ShowError(serial->GetLastError(), _T("Unable to send data"));
-		}
-	}
-
-	virtual void subscribe(serial_data_receiver_t *areceiver) OVERRIDE {
-		receiver = areceiver;
-	}
-
-	void cycle() {
-		u8 buf[1024];
-		u32 read;
-		LONG  lLastError = serial->Read(buf, 1024, &read);
-		if (lLastError != ERROR_SUCCESS) {
-			ShowError(serial->GetLastError(), _T("Unable to receive data"));
-		} else if (read) {
-			receiver->receive(buf, read);
-		}
-	}
-};
-
-class logger_impl_t : public logger_t {
-public:
-	std::ofstream log;
-public:
-
-	logger_impl_t(std::string path):log(path) {
-	}
-
-    virtual logger_t& operator << (s32 v) OVERRIDE {
-		cout << v;
-		log << v;
-//		log.flush();
-        return *this;
-    }
-
-    virtual logger_t& operator << (const char *v) OVERRIDE {
-		if (v == _endl) {
-			cout << endl;
-			log << endl;
-		} else {
-			cout << v;
-			log << v;
-		}
-//		log.flush();
-        return *this;
-    }
-
-};
-
-logger_impl_t logger_impl("log.log"); 
-logger_t *logger_t::instance = &logger_impl;
 my_test_drawer_t test_drawer;
 
 font_size_t::font_size_t sizes[] = 
@@ -240,24 +163,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 
 
-	CSerial serial;
-
-	LONG    lLastError = ERROR_SUCCESS;
-
-    // Attempt to open the serial port (COM1)
-    lLastError = serial.Open(argv[1],0,0,false);
-	if (lLastError != ERROR_SUCCESS)
-		return ::ShowError(serial.GetLastError(), _T("Unable to open COM-port"));
-
-    // Setup the serial port (9600,N81) using hardware handshaking
-	lLastError = serial.Setup(CSerial::EBaud115200,CSerial::EData8,CSerial::EParNone,CSerial::EStop1);
-	if (lLastError != ERROR_SUCCESS)
-		return ::ShowError(serial.GetLastError(), _T("Unable to set COM-port setting"));
-
-	// Setup handshaking
-	lLastError = serial.SetupHandshaking(CSerial::EHandshakeOff);
-	if (lLastError != ERROR_SUCCESS)
-		return ::ShowError(serial.GetLastError(), _T("Unable to set COM-port handshaking"));
 
 	serial_interface_impl_t sintf(&serial);
 	myvi::serializer_t ser;

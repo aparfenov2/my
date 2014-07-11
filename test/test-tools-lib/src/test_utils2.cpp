@@ -6,6 +6,7 @@
 using namespace std;
 using namespace cimg_library;
 using namespace myvi;
+using namespace test;
 
 void draw_img(surface_t &s, CImg<unsigned char> &img) {
 	for (int y = 0; y < s.h; y++) {

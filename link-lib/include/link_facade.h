@@ -5,7 +5,7 @@
 #ifndef _LINK_FACADE_H
 #define _LINK_FACADE_H
 
-#include "link_sys.h"
+#include "link_sys_impl.h"
 #include "link_app.h"
 
 namespace link {

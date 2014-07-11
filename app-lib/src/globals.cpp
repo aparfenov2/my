@@ -5,7 +5,7 @@
 using namespace myvi;
 
 
-const char * logger_t::_endl = "endl";
+//const char * logger_t::_endl = "endl";
 
 /*
 suffix_t units::time2_suffixes_t::ms = suffix_t("ля",units::MS);

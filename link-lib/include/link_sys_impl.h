@@ -8,21 +8,10 @@
 #ifndef SERIALIZER_H_
 #define SERIALIZER_H_
 
+#include "link.h"
 #include "exported_sys.h"
 
 namespace link {
-
-// интерфейс канала передачи данных
-class serial_data_receiver_t {
-public:
-	virtual void receive(u8 *data, u32 len) = 0;
-};
-
-class serial_interface_t {
-public:
-	virtual void send(u8 *data, u32 len) = 0;
-	virtual void subscribe(serial_data_receiver_t *receiver) = 0;
-};
 
 class _internal_frame_receiver_t {
 public:
