@@ -1,12 +1,12 @@
+#include <tchar.h>
+
 #include "surface.h"
 
 #include "bmp_math.h"
-#include "host_emu.h"
 
 #include "assert_impl.h"
 
 #include "test_tools.h"
-#include "screen_1.h"
 #include "resources.h"
 #include "widgets.h"
 
@@ -19,6 +19,11 @@
 #include "link.h"
 #include "disp_def.h"
 
+#include "menu_common.h"
+#include "custom_common.h"
+#include "link_facade.h"
+#include "link_model_updater.h"
+
 using namespace std;
 using namespace myvi;
 
@@ -27,13 +32,7 @@ using namespace myvi;
 u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16)];
 surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,16), buf0);
 
-//u8 buf0[BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24)];
-//surface_24bpp_t s1(TFT_WIDTH,TFT_HEIGHT,BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24), buf0);
-
-screen_1_t screen1;
 extern resources_t res;
-//host_emu_t emu;
-
 
 
 
@@ -52,49 +51,127 @@ void save_ttcache() {
 	delete[] buf;
 }
 
-class my_test_drawer_t : public test_drawer_t {
+
+
+// ------------------------------- âåñü ýêðàí ------------------------------------
+
+typedef custom::dynamic_view_mixin_aware_impl_t<gobject_t> _test_screen_super_t;
+
+class test_screen_t : public _test_screen_super_t, public focus_aware_t {
+	typedef _test_screen_super_t super;
+public:
+//	custom::tedit_t hdr_box;
+//	custom::scrollable_menu_t scrollable;
+
+
+public:
+
+	virtual void init() OVERRIDE {
+
+		w = TFT_WIDTH;
+		h = TFT_HEIGHT;
+//		rasterizer_t::debug = true;
+
+		button_context_t bctx1;
+		bctx1.bk_sel_color = 0x292929; // gray
+		bctx1.bk_color = 0x203E95; // blue
+
+		label_context_t lctx1;
+		lctx1.sctx.pen_color = 0x010101;
+		lctx1.font = &res.ttf;
+		lctx1.font_size = font_size_t::FS_8;
+
+		label_context_t lctxg;
+		lctxg.sctx.pen_color = 0x010101;
+		lctxg.font = &res.gly;
+		lctxg.font_size = font_size_t::FS_30;
+
+		menu_context_t::instance().bctx1 = bctx1;
+		menu_context_t::instance().lctx1 = lctx1;
+		menu_context_t::instance().lctxg = lctxg;
+
+		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
+		gobject_t *root_view = custom::view_meta_ex_t(root_view_meta).build_view_no_ctx();
+
+		add_child(root_view, "root");
+
+		root_view->x = 0;
+		root_view->y = 0;
+		root_view->w = w;
+		root_view->h = h;
+
+
+		init_children();
+
+		do_layout();
+		dirty = true;
+
+	}
+
+	virtual void render(surface_t &dst) OVERRIDE {
+		dst.ctx.alfa = 0xff;
+		dst.ctx.pen_color = 0xf9f9f9;//0x203E95;
+		s32 ax,ay;
+		translate(ax,ay);
+		dst.fill(ax,ay,w,h);
+
+	}
+
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty) {
+			int i = 0;
+		}
+	}
+
+
+};
+
+
+class my_test_drawer_t : public test::test_drawer_t {
 public:
 	s32 kx;
 	s32 ky;
+	gobject_t *gobj;
+	bool drawFlag;
 public:
-	my_test_drawer_t() {
+	my_test_drawer_t(gobject_t *agobj) {
+		drawFlag = false;
+		gobj = agobj;
 		w = TFT_WIDTH * 2;
 		h = TFT_HEIGHT * 2;
 		kx = 2;
 		ky = 2;
-		cout << "set size to " << w << "x" << h << endl;
+		std::cout << "set size to " << w << "x" << h << std::endl;
 	}
 
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) OVERRIDE {
+
 		if (key == key_t::K_SAVE) {
 			save_ttcache();
 		}
+
 		if (key) {
-			globals::modal_overlay.key_event((key_t::key_t)key);
+			// ñíà÷àëà îòäàåì íà ïåðåõâàò ôèëüòðàì êëàâèàòóðû
+			if (!custom::keyboard_filter_chain_t::instance().processKey(key)) {
+
+				focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+				if (focus_aware) {
+					focus_aware->key_event((key_t::key_t)key);
+				}
+			}
 		}
-		screen1.mouse_event((s32)(mx / kx),(s32) (my / ky), (mkey_t::mkey_t)mkey);
-		return rasterizer_t::render(&globals::modal_overlay, s1);
+		bool ret = rasterizer_t::render(gobj, s1);
+		if (ret) {
+			drawFlag = !drawFlag;
+			s1.putpx(0,0, drawFlag ? 0x00ff00 : 0xff0000);
+		}
+		return ret;
 	}
 
 };
 
-class exported_interface2_impl_t : public msg::exported_interface2_t {
-public:
-	void key_event(key_t::key_t key) OVERRIDE {
-		globals::modal_overlay.key_event(key);
-	}
-
-	void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
-	}
-	void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE {
-	}
-	void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
-	}
-	void read_file_info(u32 file_id) OVERRIDE {
-	}
-};
-
-my_test_drawer_t test_drawer;
 
 font_size_t::font_size_t sizes[] = 
 		{font_size_t::FS_8, font_size_t::FS_15, font_size_t::FS_20, font_size_t::FS_30 ,(font_size_t::font_size_t)0};
@@ -121,8 +198,17 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 	_LOG1("log started");
 
+	_TCHAR* com_port_name = argv[1];
+	bool no_ttf = false;
+	bool host_mode = false;
+// parse command line
+	for (s32 i=0; i < argc; i++) {
+		if (i < 2) continue;
+		if (_tcscmp(argv[i], _T("--nottf"))) no_ttf = true;
+		if (_tcscmp(argv[i], _T("--host"))) host_mode = true;
+	}
 // init ttcache
-	if (argc < 3) {
+	if (!no_ttf) {
 		ttcache_t::init_lib();
 	} else {
 		cout << "skipped ttcache_t::init_lib() " << endl;
@@ -153,23 +239,37 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	print_chars(res.ttf,s1,"ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ÙØÜÛÚÝÞß");
 	print_chars(res.ttf,s1,"`1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
 
-	screen1.init(); // init whole tree
-	app_model_t::instance.init();
-//	emu.set_target(&app_model_t::instance);
-
-	globals::modal_overlay.w = TFT_WIDTH;
-	globals::modal_overlay.h = TFT_HEIGHT;
-	globals::modal_overlay.push_modal(&screen1);
+	_MY_ASSERT(com_port_name, return -1);
+	test::serial_port_t port(com_port_name);
+	test::serial_interface_impl_t sintf;
+	sintf.init(port);
 
 
+	if (!host_mode) {
+		_LOG1("link_mode: slave");
+		// ëîêàëüíàÿ ðîëü
+		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
+		link::local_facade_t *local_facade = new link::local_facade_t();
+		local_facade->init(link_model_updater, &sintf);
+		link_model_updater->init(local_facade->get_sys_interface(), 0);
+
+	} else {
+		_LOG1("link_mode: host");
+		// ðîëü õîñòà
+		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
+		link::host_serializer_t *host_serializer = new link::host_serializer_t();
+		host_serializer->init(link_model_repeater, &sintf);
+
+		link_model_repeater->init(host_serializer, 0);
+	}
 
 
-	serial_interface_impl_t sintf(&serial);
-	myvi::serializer_t ser;
-	exported_interface2_impl_t exported2;
-	ser.init(&app_model_t::instance, &exported2, &sintf);
-	app_model_t::instance.subscribe_host(&ser);
+	gen::meta_registry_t::instance().init();
 
+	test_screen_t test_screen;
+	test_screen.init(); // init whole tree
+
+	my_test_drawer_t test_drawer(&test_screen);
 	test_drawer.create_window(s1);
 
 	bool exit = false;

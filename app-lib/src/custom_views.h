@@ -15,15 +15,6 @@ namespace custom {
 
 
 
-namespace variant_type_t {
-	typedef enum {
-		STRING,
-		INT,
-		FLOAT
-	} variant_type_t;
-}
-
-
 class parameter_meta_ex_t {
 public:
 	gen::parameter_meta_t *parameter_meta;
@@ -68,66 +59,6 @@ public:
 
 
 
-template <typename T>
-class variant_tt {
-public:
-	variant_type_t::variant_type_t type;
-	T sval;
-	s32 ival;
-	double fval;
-public:
-	variant_tt() {
-		type = variant_type_t::STRING;
-		ival = 0;
-		fval = 0;
-	}
-
-	variant_tt(myvi::string_t _sval) {
-		set_value(_sval);
-	}
-
-	variant_tt(s32 _ival) {
-		set_value(_ival);
-	}
-
-	variant_tt(double _fval) {
-		set_value(_fval);
-	}
-
-	void set_value(myvi::string_t _sval) {
-		sval = _sval;
-		type = variant_type_t::STRING;
-	}
-
-	void set_value(s32 _ival) {
-		ival = _ival;
-		type = variant_type_t::INT;
-	}
-
-	void set_value(double _fval) {
-		fval = _fval;
-		type = variant_type_t::FLOAT;
-	}
-
-	myvi::string_t get_string_value() {
-		_MY_ASSERT(type == variant_type_t::STRING, return 0);
-		return sval;
-	}
-
-	s32 get_int_value() {
-		_MY_ASSERT(type == variant_type_t::INT, return 0);
-		return ival;
-	}
-
-	double get_float_value() {
-		_MY_ASSERT(type == variant_type_t::FLOAT, return 0);
-		return fval;
-	}
-
-};
-
-// служит только для передачи, но не для хранения значения !
-typedef variant_tt<myvi::string_t> variant_t;
 
 
 
@@ -207,38 +138,6 @@ private:
 
 
 
-class model_message_t {
-public:
-	myvi::string_t path;
-public:
-	model_message_t(myvi::string_t _path) : path(_path) {
-	}
-};
-
-#define _MODEL_MAX_SUBSCRIBERS 128
-
-
-class model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> {
-public:
-	static model_t *_instance;
-public:
-	static model_t * instance() {
-		return _instance;
-	}
-	// обновление модели
-	virtual void update(myvi::string_t parameter_path, variant_t &value) = 0;
-	// ожидает правильного типа значения до вызова !
-	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
-
-	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) = 0;
-
-	void read(myvi::string_t parameter_path, variant_t &value, variant_type_t::variant_type_t expected_type)  {
-		read(parameter_path, value);
-		_MY_ASSERT(value.type == expected_type, return);
-	}
-
-};
-
 
 class dynamic_model_t : public model_t { 
 
@@ -251,7 +150,7 @@ public:
 		variant_holder_t *holder = children[parameter_path];
 		_MY_ASSERT(holder, return);
 		holder->assign(value);
-		notify(model_message_t(parameter_path));
+		notify(model_message_t(parameter_path, value));
 	}
 
 
@@ -535,8 +434,13 @@ public:
 
 
 
-class dynamic_view_t : public decorator_aware_impl_t<myvi::gobject_t>, public dynamic_view_mixin_t, public myvi::focus_master_t {
-	typedef decorator_aware_impl_t<myvi::gobject_t> super;
+
+typedef dynamic_view_mixin_aware_impl_t<
+								decorator_aware_impl_t<myvi::gobject_t>
+								> _dynamic_view_t_super_t;
+
+class dynamic_view_t : public _dynamic_view_t_super_t, public myvi::focus_master_t {
+	typedef _dynamic_view_t_super_t super;
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
@@ -579,11 +483,6 @@ public:
 	gen::view_meta_t * get_view_meta() {
 		_MY_ASSERT(this->view_meta, return 0);
 		return this->view_meta;
-	}
-
-	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) OVERRIDE {
-		dynamic_view_mixin_t::add_child(child, id);
-		super::add_child(child);
 	}
 
 	virtual void init() OVERRIDE {
@@ -821,8 +720,8 @@ public:
 		if (!(msg.path == this->parameter_path)) {
 			return;
 		}
-		variant_t value;
-		model_t::instance()->read(this->parameter_path, value, this->type);
+		variant_t value = msg.value;
+		_MY_ASSERT(value.type == this->type, return);
 
 		converter_t *conv = converter_factory_t::instance().for_type(this->type);
 		conv->to_string(value, string_value);
