@@ -204,8 +204,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
 // parse command line
 	for (s32 i=0; i < argc; i++) {
 		if (i < 2) continue;
-		if (_tcscmp(argv[i], _T("--nottf"))) no_ttf = true;
-		if (_tcscmp(argv[i], _T("--host"))) host_mode = true;
+		if (_tcscmp(argv[i], _T("--nottf")) == 0) no_ttf = true;
+		if (_tcscmp(argv[i], _T("--host")) == 0) host_mode = true;
 	}
 // init ttcache
 	if (!no_ttf) {
@@ -244,9 +244,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	test::serial_interface_impl_t sintf;
 	sintf.init(port);
 
-
+	char *wnd_title = "<title>";
 	if (!host_mode) {
 		_LOG1("link_mode: slave");
+		wnd_title = "myvi: slave";
 		// локальная роль
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
 		link::local_facade_t *local_facade = new link::local_facade_t();
@@ -255,6 +256,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	} else {
 		_LOG1("link_mode: host");
+		wnd_title = "myvi: host";
 		// роль хоста
 		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
 		link::host_serializer_t *host_serializer = new link::host_serializer_t();
@@ -270,7 +272,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	test_screen.init(); // init whole tree
 
 	my_test_drawer_t test_drawer(&test_screen);
-	test_drawer.create_window(s1);
+	test_drawer.create_window(s1, wnd_title);
 
 	bool exit = false;
 	while (!exit) {

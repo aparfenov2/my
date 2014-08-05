@@ -726,6 +726,7 @@ public:
 		converter_t *conv = converter_factory_t::instance().for_type(this->type);
 		conv->to_string(value, string_value);
 		this->tb->value = string_value;
+		this->tb->dirty = true;
 	}
 
 	// обновление от виджета
