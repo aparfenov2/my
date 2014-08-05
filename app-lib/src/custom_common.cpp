@@ -73,7 +73,7 @@ static view_controller_t * build_controller(gen::view_meta_t * meta) {
 // gen::parameter_meta_t * meta otional
 static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx) {
 	myvi::gobject_t *view = 0;
-	myvi::string_t view_id = ctx.get_view_meta()->get_id();
+	myvi::string_t view_id = ctx.get_view_meta()->get_predefined_id();
 
 	if (view_id == "cbox") {
 		view = new custom::cbox_view_t(ctx.get_view_meta());
@@ -100,8 +100,9 @@ static void combine_view_meta(gen::view_meta_t *src, gen::view_meta_t *inherited
 	gen::dynamic_view_meta_t *dyn_inherited = dynamic_cast<gen::dynamic_view_meta_t *>(inherited);
 	_MY_ASSERT(dyn_inherited, return );
 
-	combined->mixin_params_from(*dyn_src);
+	// порядок важен !
 	combined->mixin_params_from(*dyn_inherited);
+	combined->mixin_params_from(*dyn_src);
 
 }
 
@@ -280,9 +281,12 @@ static decorator_t * build_decorator(myvi::string_t decorator_id, gen::meta_t * 
 // метод фабрики вида по умолчанию для составного вида
 myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 
+	//if (ctx.get_view_meta()->get_id() == "menu_name_lab") {
+	//	int i = 0;
+	//}
 
 	if (ctx.get_view_meta()->is_inherited()) {
-		gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.get_view_meta()->get_inherited());
+		gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.get_view_meta()->get_inherited_id());
 
 		gen::dynamic_view_meta_t *dvm = dynamic_cast<gen::dynamic_view_meta_t *>(ctx.get_view_meta());
 		_MY_ASSERT(dvm, return 0);

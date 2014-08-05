@@ -6,6 +6,7 @@
 using namespace std;
 using namespace cimg_library;
 using namespace myvi;
+using namespace test;
 
 void draw_img(surface_t &s, CImg<unsigned char> &img) {
 	for (int y = 0; y < s.h; y++) {
@@ -58,10 +59,10 @@ time_t last_time = 0;
 CImg<unsigned char> *img = 0;
 CImgDisplay *dsp = 0;
 
-void test_drawer_t::create_window(surface_t &s) {
+void test_drawer_t::create_window(surface_t &s, const char *title) {
 	img = new CImg<unsigned char>(s.w,s.h,1,3);
 	draw_img(s, *img);
-	dsp = new CImgDisplay(*img,"Surface Viewer");
+	dsp = new CImgDisplay(*img,title);
 
 	dsp->resize(w,h);
 

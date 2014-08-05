@@ -2,7 +2,7 @@
 * Реализаци интерфейса связи системного уровня для прямой и обратной связи с этой системой
 */
 
-#include "link_sys.h"
+#include "link_sys_impl.h"
 #include "assert_impl.h"
 #include <string.h>
 #include "myvi.pb.h"

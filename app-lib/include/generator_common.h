@@ -303,13 +303,17 @@ public:
 		return 0;
 	}
 
+	myvi::string_t get_predefined_id() {
+		return this->get_string_param("predefined");
+	}
+
 	bool is_predefined() {
-		return this->get_string_param("kind") == "predefined";
+		return !this->get_predefined_id().is_empty();
 	}
 	bool is_inherited() {
-		return ! get_inherited().is_empty();
+		return !get_inherited_id().is_empty();
 	}
-	myvi::string_t get_inherited() {
+	myvi::string_t get_inherited_id() {
 		return this->get_string_param("inherited");
 	}
 };
