@@ -15,6 +15,8 @@ bool rasterizer_t::debug = false;
 focus_manager_t focus_manager_t::instance;
 
 
+#define _TEXT_PADDING 2
+
 void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 
 	_MY_ASSERT(root, return);
@@ -714,6 +716,9 @@ void label_t::render(surface_t &dst) {
 
 	translate(ax,ay);
 
+	ax += _TEXT_PADDING;
+	ay += _TEXT_PADDING;
+
 	if (!text32.is_empty()) {
 		// glyph string
 		ctx.font->print_to(ax,ay,dst,text32);	
@@ -748,5 +753,8 @@ void label_t::get_preferred_size(s32 &aw, s32 &ah)  {
 		string_t cs1 = string_t("1");
 		ctx.font->get_string_size(cs1, aw, ah);
 	}
+
+	aw += _TEXT_PADDING * 2;
+	ah += _TEXT_PADDING * 2;
 
 }
