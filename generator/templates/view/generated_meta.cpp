@@ -35,13 +35,13 @@
 		<#list type.parameter as parameter>
 			<#lt>${tab+"\t"}->add_parameter(
 			<@emit_parameter_meta parameter tab+"\t\t"/>
-			)
+			<#lt>${tab+"\t"})
 		</#list>
 	<#elseif type.@type == 'enum'>
 		<#list type.enum as enum>
 			<#lt>${tab+"\t"}->add_enum_value(
 			<@emit_enum_meta enum tab+"\t\t"/>
-			)
+			<#lt>${tab+"\t"})
 		</#list>
 	</#if>
 </#macro>
@@ -52,7 +52,7 @@
 	<#list view.view as child>
 	<#lt>${tab}->add_child(
 		<@emit_view_meta child tab+"\t"/>
-		)
+	<#lt>${tab+"\t"})
 	</#list>
 </#macro>
 

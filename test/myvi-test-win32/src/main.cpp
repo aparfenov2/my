@@ -267,11 +267,15 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 
 	gen::meta_registry_t::instance().init();
-
+	
 	test_screen_t test_screen;
 	test_screen.init(); // init whole tree
 
-	my_test_drawer_t test_drawer(&test_screen);
+	modal_overlay_t::instance().w = TFT_WIDTH;
+	modal_overlay_t::instance().h = TFT_HEIGHT;
+	modal_overlay_t::instance().push_modal(&test_screen);
+
+	my_test_drawer_t test_drawer(& modal_overlay_t::instance());
 	test_drawer.create_window(s1, wnd_title);
 
 	bool exit = false;

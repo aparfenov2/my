@@ -96,6 +96,7 @@
 		<view id="tbox" controller="tbox" predefined="tbox" decorator="background,3d" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- textbox -->
 		<view id="cbox" controller="cbox" predefined="cbox" decorator="background,3d,cbox" background="BACKGROUND_WHITE" fontSize="FS_15" /> <!-- combobox -->
 		<view id="lab" controller="lab" predefined="lab" font="TTF" fontSize="FS_15" /> <!-- label -->
+		<view id="btn" controller="btn" predefined="btn" layout="center" /> <!-- button -->
 		
 <!-- textbox + combobox -->		
 		<view id="tbox_cbox" layout="stack" vertical="false" preferred_item_size="true" focusMaster="tbox_cbox" > 
@@ -118,7 +119,21 @@
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
 
-		<view id="root" layout="stack" vertical="true" preferred_item_size="true" stretch_last="true" decorator="background" background="BACKGROUND_GRAY" >
+		<view id="root" layout="center">
+			<view id="bt1" inherited="btn" name="Нажми" popup_view="foo_popup" />
+		</view>
+		
+		<view id="foo_popup" layout="center">
+			<view id="wnd" layout="center"  decorator="background" background="BACKGROUND_BLUE" width="300" height="200" >
+				<view id="centered1" layout="stack" vertical="true" preferred_item_size="true" >
+					<view id="lab1" inherited="lab" staticText="Сообщение 1" />
+					<view id="bt1" inherited="btn" name="Закрыть" close="true" />
+				</view>
+			</view>
+		</view>
+		
+		
+		<view id="root1" layout="stack" vertical="true" preferred_item_size="true" stretch_last="true" decorator="background" background="BACKGROUND_GRAY" >
 
 			<view id="header" layout="stack" vertical="false" preferred_item_size="true" >
 				<view id="hdr_freq" layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
@@ -127,22 +142,22 @@
 
 			<view id="menu" layout="stack" vertical="true" preferred_item_size="true" stretch_last="true">
 				<view id="menu_header" decorator="background" background="BACKGROUND_BLUE" layout="stretch">
-					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
+					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" listen="menu_name" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
 				</view>
 				<view id="scroll_window" predefined="scroll_window" >
 					<view id="scroll_interior" layout="stretch" >
 <!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
-						<view id="window_selector" initial="main" layout="stretch" controller="window_selector" listen="menu_select" nameLabelPath="root.menu.menu_header.menu_name_lab">
+						<view id="window_selector" initial="main" layout="stretch" controller="window_selector" listen="menu_select" event="menu_name" >
 							<view id="main" name="Главное" layout="center" >
 								<view id="main_innher" name="Главное"  layout="stack" vertical="false" preferred_item_size="false" bw="120" height="80" >
 									<view id="sub1" layout="center" decorator="background" background="BACKGROUND_BLUE" >
-										<view id="bt1" layout="center" name="Управление" predefined="btn" event="menu_select" arg0="control" />
+										<view id="bt1" inherited="btn" name="Управление" event="menu_select" arg0="control" />
 									</view>
 									<view id="sub2"  layout="center" decorator="background" background="BACKGROUND_BLUE">
-										<view id="bt2" layout="center" name="Калибровка" predefined="btn" event="menu_select" arg0="parameters" />
+										<view id="bt2" inherited="btn" name="Калибровка" event="menu_select" arg0="parameters" />
 									</view>
 									<view id="sub3" layout="center" decorator="background" background="BACKGROUND_BLUE">
-										<view id="bt3" layout="center" name="Настройки" predefined="btn" event="menu_select" arg0="settings" />
+										<view id="bt3" inherited="btn" name="Настройки"  event="menu_select" arg0="settings" />
 									</view>
 								</view>
 							</view>
@@ -154,6 +169,7 @@
 				</view>
 			</view>
 		</view>
+		
 		
 		<view id="menu_item" layout="menu_item">
 			<view id="lab" inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->

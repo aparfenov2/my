@@ -22,9 +22,6 @@ public:
 };
 
 
-namespace globals {
-	extern bool gui_debug;
-}
 
 #define _MAX_GOBJECT_TREE_DEPTH 32
 #define _MAX_FOCUS_MANAGER_SUBSCRIBERS 32
@@ -47,15 +44,19 @@ public:
 	gobject_t *selected;
 	stack_t<focus_aware_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
 
-	static focus_manager_t instance;
 
 private:
-
+	static focus_manager_t _instance;
 	focus_manager_t() {
 		selected = 0;
 	}
 
 public:
+
+	static focus_manager_t & instance() {
+		return _instance;
+	}
+
 	void key_event(key_t::key_t key, gobject_t *root);
 	void select(gobject_t *p);
 
@@ -105,11 +106,11 @@ public:
 	virtual void key_event(key_t::key_t key);
 
 	void capture_focus() {
-		focus_manager_t::instance.capture_child(this);
+		focus_manager_t::instance().capture_child(this);
 	}
 
 	void release_focus() {
-		focus_manager_t::instance.release_child(this);
+		focus_manager_t::instance().release_child(this);
 	}
 
 };
@@ -807,35 +808,36 @@ public:
 };
 
 
-// оверлей модальных диалогов - должен находиться в короне дерева отображения
+// оверлей модальных диалогов - должен находиться в корне дерева отображения
 
 
-class modal_overlay_t : public gobject_t {
+class modal_overlay_t : public gobject_t, public focus_aware_t {
 private:
+	modal_overlay_t() {
+	}
+	static modal_overlay_t _instance;
 public:
+	static modal_overlay_t & instance() {
+		return _instance;
+	}
 
 	void push_modal(gobject_t *modal) {
 
 		add_child(modal);
-
 		modal->dirty = true;
 	}
 
-	void pop_modal(gobject_t *modal) {
+	void pop_modal() {
 
-		gobject_t *popped = children.back();
+		gobject_t *modal = children.back();
 		children.pop_back();
 
-		_MY_ASSERT(modal == popped,return);
+//		_MY_ASSERT(modal == popped,return);
 		modal->parent = 0;
 		children.front()->dirty = true;
 	}
 
 };
-
-namespace globals {
-extern modal_overlay_t modal_overlay;
-}
 
 } // ns
 #endif

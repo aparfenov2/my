@@ -433,6 +433,89 @@ public:
 };
 
 
+// рисует 3d рамку вокруг контрола
+class d3_decorator_t : public decorator_t {
+public:
+public:
+	d3_decorator_t(gen::meta_t *meta) {
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		if (beforeSuper) return;
+
+		s32 x,y, w = obj->w, h = obj->h;
+		obj->translate(x, y);
+		dst.ctx.alfa = 0xff;
+
+		u32 black = 0x222625;
+		u32 white = 0xC3D4DB;
+		u32 gray = 0xA79FAA;
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y,w,false);
+		dst.line(x,y+1,w,false);
+		dst.line(x,y,h,true);
+		dst.line(x+1,y,h,true);
+
+		dst.ctx.pen_color = white;
+		dst.line(x,y+h-1,w,false);
+		dst.line(x+w-1,y,h,true);
+
+		dst.ctx.pen_color = gray;
+		dst.line(x+1,y+h-2,w-2,false);
+		dst.line(x+w-2,y+1,h-2,true);
+
+	}
+};
+
+// рисует галочку у cbox-a
+class cbox_decorator_t : public decorator_t {
+public:
+public:
+	cbox_decorator_t(gen::meta_t *meta) {
+	}
+
+	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+		if (beforeSuper) return;
+
+		u32 black = 0x222625;
+		u32 gray = 0x909986;
+		u32 light_gray = 0xB3C7C6;
+
+		s32 x,y, w = obj->w, h = obj->h;
+		obj->translate(x, y);
+
+		s32 w1 = 15;
+
+		if (w < w1) return;
+
+		x += w - w1;
+		y += 2;
+		w = w1-2;
+		h = h-4;
+
+		dst.ctx.alfa = 0xff;
+		dst.ctx.pen_color = light_gray;
+		dst.line(x,y,w,false);
+		dst.line(x,y,h,true);
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y+h-1,w,false);
+		dst.line(x+w-1,y,h,true);
+
+		x += 1; y += 1;
+		w -= 2; h -= 2;
+		dst.ctx.pen_color = gray;
+		dst.fill(x,y,w,h);
+
+		x += 2; y += 2;
+
+		dst.ctx.pen_color = black;
+		dst.line(x,y,x+6,y);
+		dst.line(x,y,x+3,y+6);
+		dst.line(x+6,y,x+3,y+6);
+	}
+};
 
 
 typedef dynamic_view_mixin_aware_impl_t<
@@ -592,66 +675,6 @@ public:
 };
 
 
-class lab_view_t : public myvi::label_t {
-public:
-	gen::meta_t *meta;
-public:
-
-	lab_view_t(view_build_context_t &ctx) {
-
-		meta = ctx.get_view_meta();
-		
-	}
-
-	virtual void init() OVERRIDE {
-		myvi::gobject_t::init();
-
-
-		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
-
-		visible = true;
-		this->ctx = ctx.lctx1;
-
-		view_factory_t::instance().prepare_context(this->ctx, meta);
-
-	}
-
-};
-
-
-class label_controller_t : public view_controller_impl_base_t {
-	typedef view_controller_impl_base_t super;
-public:
-	myvi::label_t *lab;
-public:
-
-	label_controller_t() {
-		lab = 0;
-	}
-
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
-		super::init(ctx);
-
-		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
-		_MY_ASSERT(lab, return);
-
-		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("staticText");
-		if (!static_text.is_empty()) {
-			lab->text = static_text;
-			return;
-		}
-
-		myvi::string_t label_source = ctx.get_view_meta()->get_string_param("labelSource");
-		if (label_source.is_empty()) {
-			label_source = "name";
-		}
-
-
-		lab->text = ctx.get_parameter_meta()->get_string_param(label_source);
-	}
-
-};
-
 class meta_ex_t {
 public:
 	gen::meta_t *meta;
@@ -681,6 +704,8 @@ public:
 	variant_t arg0;
 public:
 	event_bus_msg_t(myvi::string_t _event_name, variant_t _arg0) {
+
+		_MY_ASSERT(!_event_name.is_empty(), return);
 		event_name = _event_name;
 		arg0 = _arg0;
 	}
@@ -700,7 +725,138 @@ public:
 
 };
 
-class button_view_t : public decorator_aware_impl_t<myvi::button_t>, public myvi::focus_aware_t {
+
+class lab_view_t : public myvi::label_t {
+public:
+	gen::meta_t *meta;
+public:
+
+	lab_view_t(view_build_context_t &ctx) {
+
+		meta = ctx.get_view_meta();
+		
+	}
+
+	virtual void init() OVERRIDE {
+		myvi::gobject_t::init();
+
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+
+		visible = true;
+		this->ctx = ctx.lctx1;
+
+		view_factory_t::instance().prepare_context(this->ctx, meta);
+
+	}
+
+};
+
+
+class label_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<event_bus_msg_t> {
+	typedef view_controller_impl_base_t super;
+public:
+	myvi::label_t *lab;
+	myvi::string_t listen_event_name;
+public:
+
+	label_controller_t() {
+		lab = 0;
+	}
+
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
+
+		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
+		_MY_ASSERT(lab, return);
+
+		this->listen_event_name = ctx.get_view_meta()->get_string_param("listen");
+
+		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("staticText");
+		if (!static_text.is_empty()) {
+
+			lab->text = static_text;
+		} else {
+
+			myvi::string_t label_source = ctx.get_view_meta()->get_string_param("labelSource");
+			if (label_source.is_empty()) {
+				label_source = "name";
+			}
+			lab->text = ctx.get_parameter_meta()->get_string_param(label_source);
+		}
+
+		if (! this->listen_event_name.is_empty()) {
+			event_bus_t::instance().subscribe(this);
+		}
+	}
+
+	virtual void accept(event_bus_msg_t &msg) OVERRIDE {
+
+		_MY_ASSERT (! this->listen_event_name.is_empty(), return);
+
+		if (this->listen_event_name == msg.event_name) {
+			lab->text = msg.arg0.get_string_value();
+		}
+	}
+
+};
+
+
+
+class view_cache_t {
+	typedef std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> vmap_t;
+public:
+	vmap_t view_map;
+public:
+	myvi::gobject_t * get_view(myvi::string_t view_id) {
+		_MY_ASSERT(!view_id.is_empty(), return 0);
+
+		vmap_t::iterator iter = view_map.find(view_id);
+		if(iter != view_map.end()) return iter->second;
+
+		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
+		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view_no_ctx();
+		view->init();
+		view_map[view_id] = view;
+		return view;
+	}
+};
+
+
+class popup_manager_t  {
+private:
+	popup_manager_t() {
+	}
+public:
+	view_cache_t view_cache;
+public:
+	static popup_manager_t & instance() {
+		static popup_manager_t _instance;
+		return _instance;
+	}
+
+
+	void popup(myvi::string_t view_id) {
+		myvi::gobject_t *view = view_cache.get_view(view_id);
+		myvi::modal_overlay_t::instance().push_modal(view);
+		view->w = myvi::modal_overlay_t::instance().w;
+		view->h = myvi::modal_overlay_t::instance().h;
+		view->do_layout();
+	}
+
+	void popdown() {
+		myvi::modal_overlay_t::instance().pop_modal();
+		myvi::focus_manager_t::instance().select(0);
+	}
+
+};
+
+
+class button_view_t : 
+	public decorator_aware_impl_t<myvi::button_t>, 
+	public myvi::focus_aware_t, 
+	public myvi::publisher_t<myvi::key_t::key_t, 1> {
+
 	typedef decorator_aware_impl_t<myvi::button_t> super;
 public:
 	gen::meta_t *meta;
@@ -723,29 +879,68 @@ public:
 	}
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
+		notify(key);
+	}
+};
+
+
+
+class button_view_controller_t : 
+	public view_controller_impl_base_t, 
+	public myvi::subscriber_t<myvi::key_t::key_t> {
+
+	typedef view_controller_impl_base_t super;
+public:
+	button_view_t *button_view;
+	gen::meta_t *meta;
+	myvi::string_t popup_view_id;
+	myvi::string_t event_id;
+	bool close;
+public:
+	button_view_controller_t() {
+		button_view = 0;
+		meta = 0;
+		close = false;
+	}
+
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
+
+		this->button_view = dynamic_cast<button_view_t *>(ctx.get_view());
+		_MY_ASSERT(this->button_view, return);
+		button_view->subscribe(this);
+
+		this->meta = ctx.get_view_meta();
+		_MY_ASSERT(this->meta, return);
+
+		this->popup_view_id = ctx.get_view_meta()->get_string_param("popup_view");
+		this->event_id = meta->get_string_param("event");
+		this->close = meta->get_string_param("close") == "true";
+	}
+
+	virtual void accept(myvi::key_t::key_t & key) OVERRIDE {
+
 		if (key == myvi::key_t::K_ENTER) {
-			myvi::string_t event_id = meta->get_string_param("event");
-			if (!event_id.is_empty()) {
+
+			if (!this->event_id.is_empty()) {
 				variant_t arg0 = meta_ex_t(meta).get_variant_param("arg0");
 				if (!arg0.is_empty()) {
 					event_bus_t::instance().notify(event_bus_msg_t(event_id, arg0));
 				}
+
+			} 
+			
+			if (!this->popup_view_id.is_empty()) {
+				popup_manager_t::instance().popup(this->popup_view_id);
+			} 
+
+			if (this->close) {
+				popup_manager_t::instance().popdown();
 			}
 		}
 	}
-};
-
-/*
-class button_view_controller_t : public view_controller_impl_base_t {
-	typedef view_controller_impl_base_t super;
-public:
-public:
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
-		super::init(ctx);
-	}
 
 };
-*/
 
 class tbox_view_t : public decorator_aware_impl_t<myvi::text_box_t> {
 	typedef decorator_aware_impl_t<myvi::text_box_t> super;
@@ -1044,9 +1239,9 @@ public:
 public:
 	myvi::gobject_t *view;
 	kbd_filter_t kbd_filter;
-	myvi::string_t nameLabelPath;
 	myvi::gobject_t * initial_view;
 	myvi::string_t event_name;
+	myvi::string_t name_event_name;
 public:
 	window_selector_controller_t() {
 		view = 0;
@@ -1060,7 +1255,8 @@ public:
 		_MY_ASSERT(this->view, return);
 
 		myvi::string_t initial_view_id = ctx.get_view_meta()->get_string_param("initial");
-		event_name = ctx.get_view_meta()->get_string_param("listen");
+		this->event_name = ctx.get_view_meta()->get_string_param("listen");
+		this->name_event_name = ctx.get_view_meta()->get_string_param("event");
 
 		if (initial_view_id.is_empty()) {
 			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(0);
@@ -1075,8 +1271,6 @@ public:
 		keyboard_filter_chain_t::instance().add_filter(&kbd_filter);
 
 		event_bus_t::instance().subscribe(this);
-
-		this->nameLabelPath = ctx.get_view_meta()->get_string_param("nameLabelPath");
 
 	}
 
@@ -1138,6 +1332,13 @@ private:
 	};
 
 	void update_name(myvi::string_t name) {
+		if (!name_event_name.is_empty()) {
+			event_bus_t::instance().notify(event_bus_msg_t(name_event_name, name));
+		}
+	}
+
+/*
+	void update_name(myvi::string_t name) {
 
 		if (nameLabelPath.is_empty()) return;
 
@@ -1153,7 +1354,7 @@ private:
 		lab->text = name;
 		lab->dirty = true;
 	}
-
+*/
 };
 
 /*
@@ -1280,7 +1481,6 @@ public:
 	}
 
 };
-
 
 
 

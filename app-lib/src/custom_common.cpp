@@ -71,8 +71,8 @@ static view_controller_t * build_controller(gen::view_meta_t * meta) {
 	} else if (controller_id == "parameter_view") {
 		ret = new custom::parameter_view_controller_t();
 
-	//} else if (controller_id == "btn") {
-	//	ret = new custom::button_view_controller_t();
+	} else if (controller_id == "btn") {
+		ret = new custom::button_view_controller_t();
 
 	}
 	_MY_ASSERT(controller_id.is_empty() || ret, return 0);
@@ -152,89 +152,6 @@ public:
 };
 
 
-// рисует 3d рамку вокруг контрола
-class d3_decorator_t : public decorator_t {
-public:
-public:
-	d3_decorator_t(gen::meta_t *meta) {
-	}
-
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
-		if (beforeSuper) return;
-
-		s32 x,y, w = obj->w, h = obj->h;
-		obj->translate(x, y);
-		dst.ctx.alfa = 0xff;
-
-		u32 black = 0x222625;
-		u32 white = 0xC3D4DB;
-		u32 gray = 0xA79FAA;
-
-		dst.ctx.pen_color = black;
-		dst.line(x,y,w,false);
-		dst.line(x,y+1,w,false);
-		dst.line(x,y,h,true);
-		dst.line(x+1,y,h,true);
-
-		dst.ctx.pen_color = white;
-		dst.line(x,y+h-1,w,false);
-		dst.line(x+w-1,y,h,true);
-
-		dst.ctx.pen_color = gray;
-		dst.line(x,y+h-2,w,false);
-		dst.line(x+w-2,y,h,true);
-
-	}
-};
-
-// рисует галочку у cbox-a
-class cbox_decorator_t : public decorator_t {
-public:
-public:
-	cbox_decorator_t(gen::meta_t *meta) {
-	}
-
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
-		if (beforeSuper) return;
-
-		u32 black = 0x222625;
-		u32 gray = 0x909986;
-		u32 light_gray = 0xB3C7C6;
-
-		s32 x,y, w = obj->w, h = obj->h;
-		obj->translate(x, y);
-
-		s32 w1 = 15;
-
-		if (w < w1) return;
-
-		x += w - w1;
-		y += 2;
-		w = w1-2;
-		h = h-4;
-
-		dst.ctx.alfa = 0xff;
-		dst.ctx.pen_color = light_gray;
-		dst.line(x,y,w,false);
-		dst.line(x,y,h,true);
-
-		dst.ctx.pen_color = black;
-		dst.line(x,y+h-1,w,false);
-		dst.line(x+w-1,y,h,true);
-
-		x += 1; y += 1;
-		w -= 2; h -= 2;
-		dst.ctx.pen_color = gray;
-		dst.fill(x,y,w,h);
-
-		x += 2; y += 2;
-
-		dst.ctx.pen_color = black;
-		dst.line(x,y,x+6,y);
-		dst.line(x,y,x+3,y+6);
-		dst.line(x+6,y,x+3,y+6);
-	}
-};
 
 static decorator_t * build_decorator_simple(myvi::string_t decorator_id, gen::meta_t * meta) {
 	decorator_t *ret = 0;
