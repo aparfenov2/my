@@ -445,6 +445,7 @@ private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
 	focus_master_mixin_t *focus_master;
+	s32 fw, fh;
 public:
 	dynamic_view_t(view_build_context_t &ctx) {
 		focus_master = 0;
@@ -456,6 +457,9 @@ public:
 		if (!focus_master_id.is_empty()) {
 			focus_master = build_focus_master(focus_master_id, view_meta);
 		}
+
+		fw = this->view_meta->get_int_param("width");
+		fh = this->view_meta->get_int_param("height");
 
 	}
 
@@ -499,6 +503,18 @@ public:
 	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
 		if (focus_master) {
 			focus_master->alter_focus_intention(intention);
+		}
+	}
+	
+	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+
+		super::get_preferred_size(pw,ph);
+
+		if (fw != _NAN) {
+			pw = fw;
+		}
+		if (fh != _NAN) {
+			ph = fh;
 		}
 	}
 
@@ -636,11 +652,103 @@ public:
 
 };
 
+class meta_ex_t {
+public:
+	gen::meta_t *meta;
+public:
+	meta_ex_t(gen::meta_t *_meta) {
+		meta = _meta;
+	}
+	variant_t get_variant_param(myvi::string_t key) {
+
+		if (!meta->get_string_param(key).is_empty()) {
+			return meta->get_string_param(key);
+
+		} else if (meta->get_int_param(key) != _NAN) {
+			return meta->get_int_param(key);
+
+		} else if (meta->get_float_param(key) != _NANF) {
+			return meta->get_float_param(key);
+		}
+		return variant_t();
+	}
+};
 
 
+class event_bus_msg_t {
+public:
+	myvi::string_t event_name;
+	variant_t arg0;
+public:
+	event_bus_msg_t(myvi::string_t _event_name, variant_t _arg0) {
+		event_name = _event_name;
+		arg0 = _arg0;
+	}
+};
+
+#define _EVENT_BUS_MAX_SUBSCRIBERS 32
+
+class event_bus_t : public myvi::publisher_t<event_bus_msg_t, _EVENT_BUS_MAX_SUBSCRIBERS> {
+private:
+	event_bus_t() {
+	}
+public:
+	static event_bus_t & instance() {
+		static event_bus_t _instance;
+		return _instance;
+	}
+
+};
+
+class button_view_t : public decorator_aware_impl_t<myvi::button_t>, public myvi::focus_aware_t {
+	typedef decorator_aware_impl_t<myvi::button_t> super;
+public:
+	gen::meta_t *meta;
+public:
+	button_view_t(gen::meta_t *_meta) {
+		meta = _meta;
+	}
+
+	virtual void init() OVERRIDE {
+		super::init();
+
+
+		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+		this->l_mid.visible = true;
+		this->l_mid.ctx = ctx.lctx1;
+		this->l_mid.text = meta->get_string_param("name");
+
+		view_factory_t::instance().prepare_context(this->l_mid.ctx, meta);
+
+	}
+
+	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
+		if (key == myvi::key_t::K_ENTER) {
+			myvi::string_t event_id = meta->get_string_param("event");
+			if (!event_id.is_empty()) {
+				variant_t arg0 = meta_ex_t(meta).get_variant_param("arg0");
+				if (!arg0.is_empty()) {
+					event_bus_t::instance().notify(event_bus_msg_t(event_id, arg0));
+				}
+			}
+		}
+	}
+};
+
+/*
+class button_view_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
+public:
+public:
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
+		super::init(ctx);
+	}
+
+};
+*/
 
 class tbox_view_t : public decorator_aware_impl_t<myvi::text_box_t> {
-	typedef myvi::text_box_t super;
+	typedef decorator_aware_impl_t<myvi::text_box_t> super;
 public:
 	gen::meta_t *meta;
 public:
@@ -880,7 +988,7 @@ typedef myvi::scrollable_window_t scroll_window_view_t;
 
 
 // контроллер вида выбора вида
-class window_selector_controller_t : public view_controller_t {
+class window_selector_controller_t : public view_controller_t, public myvi::subscriber_t<event_bus_msg_t> {
 
 public:
 	class kbd_filter_t : public keyboard_filter_t {
@@ -938,6 +1046,7 @@ public:
 	kbd_filter_t kbd_filter;
 	myvi::string_t nameLabelPath;
 	myvi::gobject_t * initial_view;
+	myvi::string_t event_name;
 public:
 	window_selector_controller_t() {
 		view = 0;
@@ -951,19 +1060,21 @@ public:
 		_MY_ASSERT(this->view, return);
 
 		myvi::string_t initial_view_id = ctx.get_view_meta()->get_string_param("initial");
+		event_name = ctx.get_view_meta()->get_string_param("listen");
+
 		if (initial_view_id.is_empty()) {
 			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(0);
 			_MY_ASSERT(child_meta, return);
 			initial_view_id = child_meta->get_id();
 		}
 
-		dynamic_view_mixin_t *dvm = dynamic_cast<dynamic_view_mixin_t *>(this->view);
-		_MY_ASSERT(dvm, return);
-		this->initial_view = dvm->get_child(initial_view_id);
+		this->initial_view = resolve_view(initial_view_id);
 		_MY_ASSERT(initial_view, return);
 
 
 		keyboard_filter_chain_t::instance().add_filter(&kbd_filter);
+
+		event_bus_t::instance().subscribe(this);
 
 		this->nameLabelPath = ctx.get_view_meta()->get_string_param("nameLabelPath");
 
@@ -973,6 +1084,15 @@ public:
 	virtual void on_view_init() OVERRIDE {
 		select(this->initial_view);
 	}
+
+	// сообщение по шине
+	virtual void accept(event_bus_msg_t &msg) OVERRIDE {
+		if (msg.event_name == this->event_name) {
+			_WEAK_ASSERT(!msg.arg0.is_empty() && msg.arg0.type == variant_type_t::STRING, return);
+			select(resolve_view(msg.arg0.get_string_value()));
+		}
+	}
+
 
 	// делает видимым указанный вид и скрывает все остальные
 	void select(myvi::gobject_t * selected_child) {
@@ -1001,6 +1121,15 @@ public:
 	}
 
 private:
+
+	myvi::gobject_t * resolve_view(myvi::string_t view_id) {
+		dynamic_view_mixin_t *dvm = dynamic_cast<dynamic_view_mixin_t *>(this->view);
+		_MY_ASSERT(dvm, return 0);
+		myvi::gobject_t *view = dvm->get_child(view_id);
+		_MY_ASSERT(view, return 0);
+		return view;
+	}
+
 	void update_name(myvi::gobject_t *child) {
 		_MY_ASSERT(child, return);
 		dynamic_view_t *dv = dynamic_cast<dynamic_view_t *>(child);
@@ -1043,7 +1172,55 @@ public:
 	stack_meta_layout_t(gen::meta_t *meta) {
 		this->vertical = meta->get_string_param("vertical") == "true";
 		this->preferred_item_size = meta->get_string_param("preferred_item_size") == "true";
+		this->stretch_last = meta->get_string_param("stretch_last") == "true";
+		if (meta->get_int_param("bw") != _NAN) {
+			this->bw = meta->get_int_param("bw");
+		}
+		if (meta->get_int_param("bh") != _NAN) {
+			this->bw = meta->get_int_param("bh");
+		}
 	}
+};
+
+
+// центрирует дочерний виджет по обеим осям родительского
+// EXPECT: children.count == 1
+class center_meta_layout_t : public myvi::layout_t {
+public:
+	center_meta_layout_t(gen::meta_t *meta) {
+	}
+
+	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t *p = iter.next();
+		_MY_ASSERT(p,return);
+		p->get_preferred_size(aw,ah);
+		p = iter.next();
+		_MY_ASSERT(!p,return);
+	}
+
+	virtual void layout(myvi::gobject_t *parent) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t *p = iter.next();
+		_MY_ASSERT(p,return);
+
+		p->get_preferred_size(p->w,p->h);
+		if (p->h > parent->h) {
+			p->h = parent->h;
+		}
+		if (p->w > parent->w) {
+			p->w = parent->w;
+		}
+
+		p->y = (parent->h - p->h)/2;
+		p->x = (parent->w - p->w)/2;
+
+		p = iter.next();
+		_MY_ASSERT(!p,return);
+	}
+
 };
 
 #define _META_LAYOUT_PERCENTAGE 0.6

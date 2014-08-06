@@ -423,12 +423,12 @@ void stack_layout_t::get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) {
 			if (btw > aw) {
 				aw = btw;
 			}
-			ah += bth + spy;
+			ah += (preferred_item_size ? bth : bh) + spy;
 		} else {
 			if (bth > ah) {
 				ah = bth;
 			}
-			aw += btw + spx;
+			aw += (preferred_item_size ? btw : bw) + spx;
 		}
 		bt = iter.next();
 	}
@@ -442,7 +442,7 @@ void stack_layout_t::layout(gobject_t *parent) {
 	_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
 	gobject_t::iterator_visible_t iter = parent->iterator_visible();
-	gobject_t *child = iter.next();
+	gobject_t *child = iter.next(), *pchild = 0;
 
 	s32 px = 0;
 	s32 py = 0;
@@ -481,7 +481,20 @@ void stack_layout_t::layout(gobject_t *parent) {
 			child->h = parent->h;
 			px += child->w + spx;
 		}
+
+		pchild = child;
 		child = iter.next();
+
+		if (!child && stretch_last) {
+			if (vertical) {
+				py -= pchild->h + spy; // rewind py
+				pchild->h = parent->h - py;
+			} else {
+				px -= pchild->x + spx; // rewind px
+				pchild->w = parent->w - px;
+			}
+			break;
+		}
 	}
 	if (!vertical && px) px -= spx;
 	if (vertical && py) py -= spy;
@@ -489,14 +502,40 @@ void stack_layout_t::layout(gobject_t *parent) {
 }
 
 
-void levels_layout_t::layout(gobject_t *parent) {
+void levels_layout_t::get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah)  {
 
 	gobject_t::iterator_visible_t iter = parent->iterator_visible();
+	gobject_t *child = iter.next();
+	_WEAK_ASSERT(child, return);
+
+	aw = ah = 0;
+	while (child) {
+
+		s32 cw, ch;
+		child->get_preferred_size(cw, ch);
+		if (aw < cw) {
+			aw = cw;
+		}
+		ah += ch;
+		child = iter.next();
+	}
+}
+
+
+void levels_layout_t::layout(gobject_t *parent) {
+
+	gobject_t::iterator_all_t iter = parent->iterator_all();
 	gobject_t *child = iter.next();
 	gobject_t *pchild = 0;
 	s32 i = 0;
 	while (child) {
-//			child->set_preferred_size();
+		if (!child->visible) {
+//			i++;
+			child = iter.next();
+			continue;
+		}
+		child->get_preferred_size(child->w, child->h);
+
 		if (child->w > parent->w)
 			child->w = parent->w;
 		child->x = (parent->w - child->w)/2;

@@ -300,6 +300,20 @@ public:
 		fval = 0;
 	}
 
+	bool is_empty() {
+		switch (type) {
+		case variant_type_t::STRING:
+			return sval.is_empty();
+
+		case variant_type_t::INT:
+			return ival == _NAN;
+
+		case variant_type_t::FLOAT:
+			return fval == _NANF;
+		}
+		return true;
+	}
+
 	variant_tt(myvi::string_t _sval) {
 		set_value(_sval);
 	}

@@ -117,24 +117,38 @@
 
 		
 		<view id="default_composite_template" layout="stack" vertical="true"/>
-		
-		<view id="root" layout="stack" vertical="true" preferred_item_size="true" decorator="background" background="BACKGROUND_GRAY" >
+
+		<view id="root" layout="stack" vertical="true" preferred_item_size="true" stretch_last="true" decorator="background" background="BACKGROUND_GRAY" >
 
 			<view id="header" layout="stack" vertical="false" preferred_item_size="true" >
 				<view id="hdr_freq" layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
 				<view id="hdr_lvl" layout="stretch" controller="parameter_view" parameterPath="header_level"/> 
 			</view>
 
-			<view id="menu" layout="stack" vertical="true" preferred_item_size="true">
+			<view id="menu" layout="stack" vertical="true" preferred_item_size="true" stretch_last="true">
 				<view id="menu_header" decorator="background" background="BACKGROUND_BLUE" layout="stretch">
 					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
 				</view>
 				<view id="scroll_window" predefined="scroll_window" >
 					<view id="scroll_interior" layout="stretch" >
-						<view id="window_selector" initial="main" layout="stack" vertical="true" preferred_item_size="true" controller="window_selector" nameLabelPath="root.menu.menu_header.menu_name_lab">
-							<view id="main" name="Главное" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
-							<view id="parameters" name="Параметры" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
-							<view id="screen" name="Экран" menuRef="screen" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+<!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
+						<view id="window_selector" initial="main" layout="stretch" controller="window_selector" listen="menu_select" nameLabelPath="root.menu.menu_header.menu_name_lab">
+							<view id="main" name="Главное" layout="center" >
+								<view id="main_innher" name="Главное"  layout="stack" vertical="false" preferred_item_size="false" bw="120" height="80" >
+									<view id="sub1" layout="center" decorator="background" background="BACKGROUND_BLUE" >
+										<view id="bt1" layout="center" name="Управление" predefined="btn" event="menu_select" arg0="control" />
+									</view>
+									<view id="sub2"  layout="center" decorator="background" background="BACKGROUND_BLUE">
+										<view id="bt2" layout="center" name="Калибровка" predefined="btn" event="menu_select" arg0="parameters" />
+									</view>
+									<view id="sub3" layout="center" decorator="background" background="BACKGROUND_BLUE">
+										<view id="bt3" layout="center" name="Настройки" predefined="btn" event="menu_select" arg0="settings" />
+									</view>
+								</view>
+							</view>
+							<view id="control" name="Управление" menuRef="main" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+							<view id="parameters" name="Калибровка" menuRef="parameters" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
+							<view id="settings" name="Настройки" menuRef="screen" itemTemplateView="menu_item" layout="stack" vertical="true" controller="menu" />
 						</view>
 					</view>
 				</view>

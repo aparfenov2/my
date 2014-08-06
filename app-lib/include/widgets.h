@@ -528,11 +528,13 @@ public:
 	s32 bh;
 	bool vertical;
 	bool preferred_item_size;  // использовать предпочитаемый размер компонента вместо размера €чейки
+	bool stretch_last;
 public:
 	stack_layout_t() {
 		spx=5,spy=5,vertical=(true);
 		bw=20,bh=20;
 		preferred_item_size = false;
+		stretch_last = false;
 	}
 
 	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) ;
@@ -582,9 +584,7 @@ public:
 		levels[3] = -1;
 	}
 
-	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
-		_MY_ASSERT(0, return);
-	}
+	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE ;
 
 	virtual void layout(gobject_t *parent) OVERRIDE ;
 };

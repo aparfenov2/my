@@ -23,10 +23,9 @@ void view_build_context_t::set_parameter_meta(gen::parameter_meta_t *_parameter_
 }
 
 
-static myvi::layout_t * build_layout(gen::meta_t * meta) {
+static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * meta) {
 
 	myvi::layout_t * ret = 0;
-	myvi::string_t layout_id = meta->get_string_param("layout");
 
 	if (layout_id == "stretch") {
 		ret = new custom::stretch_meta_layout_t(meta);
@@ -36,9 +35,16 @@ static myvi::layout_t * build_layout(gen::meta_t * meta) {
 
 	} else if (layout_id == "menu_item") {
 		ret = new custom::menu_meta_layout_t(meta);
+
+	} else if (layout_id == "center") {
+		ret = new custom::center_meta_layout_t(meta);
 	}
-//		_MY_ASSERT(ret, return 0);
+	_MY_ASSERT(layout_id.is_empty() || ret, return 0);
 	return ret;
+}
+
+static myvi::layout_t * build_layout(gen::meta_t * meta) {
+	return build_layout(meta->get_string_param("layout"), meta);
 }
 
 
@@ -65,6 +71,9 @@ static view_controller_t * build_controller(gen::view_meta_t * meta) {
 	} else if (controller_id == "parameter_view") {
 		ret = new custom::parameter_view_controller_t();
 
+	//} else if (controller_id == "btn") {
+	//	ret = new custom::button_view_controller_t();
+
 	}
 	_MY_ASSERT(controller_id.is_empty() || ret, return 0);
 	return ret;
@@ -86,6 +95,9 @@ static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx
 
 	} else if (view_id == "scroll_window") {
 		view = new custom::scroll_window_view_t();
+
+	} else if (view_id == "btn") {
+		view = new custom::button_view_t(ctx.get_view_meta());
 	}
 	_MY_ASSERT(view, return 0);
 	return view;
