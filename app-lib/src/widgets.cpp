@@ -5,14 +5,13 @@
 
 using namespace myvi;
 
-bool globals::gui_debug = false;
-modal_overlay_t globals::modal_overlay;
+modal_overlay_t modal_overlay_t::_instance;
 
 u32 rasterizer_t::colors[4] = {0x00ff00, 0x0000ff, 0xff0000, 0xff00ff};
 u32 rasterizer_t::deepLevel = 0;
 bool rasterizer_t::debug = false;
 
-focus_manager_t focus_manager_t::instance;
+focus_manager_t focus_manager_t::_instance;
 
 
 #define _TEXT_PADDING 2
@@ -245,7 +244,7 @@ void focus_aware_t::key_event(key_t::key_t key) {
 	gobject_t * _this = dynamic_cast<gobject_t*>(this);
 	_MY_ASSERT(_this && _this->visible && _this->enabled, return);
 	// מעהאול סמבûעטÿ הועÿל
-	focus_manager_t::instance.key_event(key, _this);
+	focus_manager_t::instance().key_event(key, _this);
 }
 
 

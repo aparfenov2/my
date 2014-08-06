@@ -107,7 +107,7 @@ void scrollable_window_t::alter_focus_intention(focus_intention_t &intention) {
 	}
 	if (!p) { // менеджер фокуса собирается перейти на чужой объект
 		// проверим, есть ли возможность перейти на обьект внутри нашего inerior
-		gobject_t *next = focus_manager_t::instance.locate_next(intention.direction, this->get_interior());
+		gobject_t *next = focus_manager_t::instance().locate_next(intention.direction, this->get_interior());
 		if (next) {
 			intention.next = next;
 		}

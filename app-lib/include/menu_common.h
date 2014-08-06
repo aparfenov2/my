@@ -92,7 +92,7 @@ class scrollable_window_t : public gobject_t, public subscriber_t<gobject_t *>, 
 public:
 public:
 	scrollable_window_t() {
-		focus_manager_t::instance.subscribe(this);
+		focus_manager_t::instance().subscribe(this);
 	}
 
 	gobject_t * get_interior() {
@@ -118,16 +118,6 @@ public:
 	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE ;
 };
 
-
-
-namespace globals {
-	namespace dialogs {
-
-		extern void init();
-
-		extern void show(gobject_t *dlg);
-	}
-}
 
 
 
