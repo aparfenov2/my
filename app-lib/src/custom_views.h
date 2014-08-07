@@ -355,7 +355,14 @@ public:
 
 class decorator_t {
 public:
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) = 0;
+	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) {
+	}
+
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) {
+	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) {
+	}
 };
 
 
@@ -380,11 +387,11 @@ public:
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
 		if (decorator) {
-			decorator->render(this, dst, true);
+			decorator->render_before(this, dst);
 		}
 		TBase::render(dst);
 		if (decorator) {
-			decorator->render(this, dst, false);
+			decorator->render_after(this, dst);
 		}
 	}
 	
@@ -395,6 +402,12 @@ public:
 		}
 	}
 
+	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+		TBase::get_preferred_size(pw, ph);
+		if (decorator) {
+			decorator->adjust_preferred_size(this, pw, ph);
+		}
+	}
 };
 
 
@@ -417,8 +430,7 @@ public:
 		}
 	}
 
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
-		if (!beforeSuper) return;
+	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
 		s32 ax, ay;
 		obj->translate(ax,ay);
 		dst.ctx = ctx;
@@ -436,12 +448,17 @@ public:
 // рисует 3d рамку вокруг контрола
 class d3_decorator_t : public decorator_t {
 public:
+	bool inversed;
 public:
 	d3_decorator_t(gen::meta_t *meta) {
+		inversed = false;
+
+		if (!meta->get_string_param("d3_inversed").is_empty()) {
+			inversed = meta->get_string_param("d3_inversed") == "true";
+		}
 	}
 
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
-		if (beforeSuper) return;
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
 
 		s32 x,y, w = obj->w, h = obj->h;
 		obj->translate(x, y);
@@ -451,32 +468,40 @@ public:
 		u32 white = 0xC3D4DB;
 		u32 gray = 0xA79FAA;
 
-		dst.ctx.pen_color = black;
+		dst.ctx.pen_color = inversed ? white : black;
 		dst.line(x,y,w,false);
-		dst.line(x,y+1,w,false);
 		dst.line(x,y,h,true);
-		dst.line(x+1,y,h,true);
 
-		dst.ctx.pen_color = white;
+		dst.ctx.pen_color = inversed ? gray : black;
+		dst.line(x+1,y+1,w-1,false);
+		dst.line(x+1,y+1,h-1,true);
+
+		dst.ctx.pen_color = inversed ? black : white;
 		dst.line(x,y+h-1,w,false);
 		dst.line(x+w-1,y,h,true);
 
-		dst.ctx.pen_color = gray;
+		dst.ctx.pen_color = inversed ? black : gray;
 		dst.line(x+1,y+h-2,w-2,false);
 		dst.line(x+w-2,y+1,h-2,true);
 
 	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
+		pw += 4;
+		ph += 4;
+	}
+
 };
 
 // рисует галочку у cbox-a
 class cbox_decorator_t : public decorator_t {
+	typedef decorator_t super;
 public:
 public:
 	cbox_decorator_t(gen::meta_t *meta) {
 	}
 
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
-		if (beforeSuper) return;
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
 
 		u32 black = 0x222625;
 		u32 gray = 0x909986;
@@ -485,7 +510,7 @@ public:
 		s32 x,y, w = obj->w, h = obj->h;
 		obj->translate(x, y);
 
-		s32 w1 = 15;
+		s32 w1 = h;
 
 		if (w < w1) return;
 
@@ -508,13 +533,18 @@ public:
 		dst.ctx.pen_color = gray;
 		dst.fill(x,y,w,h);
 
-		x += 2; y += 2;
+		x += w1/3; y += h/3;
 
 		dst.ctx.pen_color = black;
 		dst.line(x,y,x+6,y);
 		dst.line(x,y,x+3,y+6);
 		dst.line(x+6,y,x+3,y+6);
 	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
+		pw += ph;
+	}
+
 };
 
 
@@ -579,9 +609,6 @@ public:
 		}
 	}
 
-	virtual void child_request_size_change(myvi::gobject_t *child, s32 aw, s32 ah) OVERRIDE {
-		do_layout();
-	}
 
 	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
 		if (focus_master) {
@@ -741,10 +768,10 @@ public:
 		myvi::gobject_t::init();
 
 
-		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
 
 		visible = true;
-		this->ctx = ctx.lctx1;
+//		this->ctx = ctx.lctx1;
 
 		view_factory_t::instance().prepare_context(this->ctx, meta);
 
@@ -855,6 +882,7 @@ public:
 class button_view_t : 
 	public decorator_aware_impl_t<myvi::button_t>, 
 	public myvi::focus_aware_t, 
+	public mouse_aware_t,
 	public myvi::publisher_t<myvi::key_t::key_t, 1> {
 
 	typedef decorator_aware_impl_t<myvi::button_t> super;
@@ -869,9 +897,9 @@ public:
 		super::init();
 
 
-		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
 		this->l_mid.visible = true;
-		this->l_mid.ctx = ctx.lctx1;
+//		this->l_mid.ctx = ctx.lctx1;
 		this->l_mid.text = meta->get_string_param("name");
 
 		view_factory_t::instance().prepare_context(this->l_mid.ctx, meta);
@@ -880,6 +908,13 @@ public:
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
 		notify(key);
+	}
+
+	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
+		if (mkey == myvi::mkey_t::MK_1) {
+			myvi::key_t::key_t key = myvi::key_t::K_ENTER;
+			notify(key);
+		}
 	}
 };
 
@@ -954,10 +989,10 @@ public:
 	virtual void init() OVERRIDE {
 		super::init();
 
-		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
 
 		this->visible = true;
-		this->lab.ctx = ctx.lctx1;
+//		this->lab.ctx = ctx.lctx1;
 
 		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
 
@@ -1063,10 +1098,10 @@ public:
 	virtual void init() OVERRIDE {
 		super::init();
 
-		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
 
 		this->visible = true;
-		this->lab.ctx = ctx.lctx1;
+//		this->lab.ctx = ctx.lctx1;
 
 		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
 	}
@@ -1085,7 +1120,11 @@ public:
 
 */
 
-class cbox_controller_t : public view_controller_impl_base_t {
+class cbox_controller_t : 
+	public view_controller_impl_base_t,
+	public myvi::subscriber_t<model_message_t>,
+	public myvi::subscriber_t<myvi::combobox_item_t *> {
+
 	typedef view_controller_impl_base_t super;
 public:
 	//units
@@ -1093,13 +1132,22 @@ public:
 	//textbox*
 	//combobox*
 	myvi::combo_box_t *cb;
+	myvi::iterator_t<myvi::combobox_item_t> *values;
 public:
 	cbox_controller_t() {
 		cb = 0;
+		values = 0;
 	}
 
 	virtual void init(view_build_context_t &ctx) OVERRIDE  {
 		super::init(ctx);
+// 0. –егистрирует поле в модели , если его ещЄ там нет
+		register_in_model(ctx);
+
+// 1. «аполн€ет поле начальным значением из модели
+
+		variant_t value;
+		model_t::instance()->read(this->parameter_path, value, this->type);
 
 		cb = dynamic_cast<myvi::combo_box_t *>(ctx.get_view());
 		_MY_ASSERT(cb, return);
@@ -1108,10 +1156,49 @@ public:
 		_MY_ASSERT(type_meta->is_enum(), return);
 
 
-		myvi::iterator_t<myvi::combobox_item_t> *iter = type_meta->get_combobox_iterator();
-		cb->values = iter;
-		cb->value = iter->next(0);
+		values = type_meta->get_combobox_iterator();
+		cb->values = values;
+		// устанавливаем начальное значение
+		set_value(value.get_int_value());
 
+
+// 2. ѕодписываетс€ на изменени€ в модели и обновлени€ пол€
+		model_t::instance()->subscribe(this);
+
+// 3. ѕодписываетс€ на изменени€ пол€ и обновлени€ модели
+		cb->subscribe(this);
+
+	}
+
+	void set_value(s32 val) {
+		myvi::combobox_item_t * p = values->next(0);
+		while (p) {
+			if (p->get_int_value() == val) {
+				cb->value = p;
+				return;
+			}
+			p = values->next(p);
+		}
+		_WEAK_ASSERT(0, return);
+	}
+
+	// обновление от модели
+	virtual void accept(model_message_t &msg) OVERRIDE {
+
+		if (!(msg.path == this->parameter_path)) {
+			return;
+		}
+		variant_t value = msg.value;
+		_MY_ASSERT(value.type == this->type, return);
+
+		set_value(value.get_int_value());
+		this->cb->dirty = true;
+	}
+
+	// обновление от виджета
+	virtual void accept(myvi::combobox_item_t * &msg) OVERRIDE {
+		variant_t value(msg->get_int_value());
+		model_t::instance()->update(this->parameter_path, value);
 	}
 };
 
@@ -1306,9 +1393,10 @@ public:
 			}
 			child = iter.next();
 		}
-		if (this->view->w && this->view->h) {
-			this->view->do_layout();
-		}
+		this->view->child_request_size_change(selected_child);
+		//if (this->view->w && this->view->h) {
+		//	this->view->do_layout();
+		//}
 		update_name(selected_child);
 
 		this->view->dirty = true;
@@ -1371,9 +1459,15 @@ public:
 class stack_meta_layout_t : public myvi::stack_layout_t {
 public:
 	stack_meta_layout_t(gen::meta_t *meta) {
-		this->vertical = meta->get_string_param("vertical") == "true";
-		this->preferred_item_size = meta->get_string_param("preferred_item_size") == "true";
-		this->stretch_last = meta->get_string_param("stretch_last") == "true";
+		if (!meta->get_string_param("vertical").is_empty()) {
+			this->vertical = meta->get_string_param("vertical") == "true";
+		}
+		if (!meta->get_string_param("preferred_item_size").is_empty()) {
+			this->preferred_item_size = meta->get_string_param("preferred_item_size") == "true";
+		}
+		if (!meta->get_string_param("stretch_last").is_empty()) {
+			this->stretch_last = meta->get_string_param("stretch_last") == "true";
+		}
 		if (meta->get_int_param("bw") != _NAN) {
 			this->bw = meta->get_int_param("bw");
 		}

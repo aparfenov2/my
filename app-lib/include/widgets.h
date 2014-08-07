@@ -405,13 +405,30 @@ public:
 		}
 	}
 	// дитё запрашивает изменение своего размера
-	virtual void child_request_size_change(gobject_t *child, s32 new_w, s32 new_h) {
+	virtual void child_request_size_change(gobject_t *child) {
+		s32 pw, ph;
+		this->get_preferred_size(pw,ph);
+
+		if (pw != this->w || ph != this->h) {
+			if (parent) {
+				parent->child_request_size_change(this);
+			} else {
+				do_layout();
+			}
+		} else {
+			do_layout();
+		}
 	}
 
 
 	virtual void get_preferred_size(s32 &pw, s32 &ph) {
-		_MY_ASSERT(layout,return);
-		layout->get_preferred_size(this, pw,ph);
+
+		pw = this->w;
+		ph = this->h;
+
+		if (layout) {
+			layout->get_preferred_size(this, pw,ph);
+		}
 	}
 
 	// размещает детей в пространстве родителя
@@ -534,7 +551,7 @@ public:
 	stack_layout_t() {
 		spx=5,spy=5,vertical=(true);
 		bw=20,bh=20;
-		preferred_item_size = false;
+		preferred_item_size = true;
 		stretch_last = false;
 	}
 
@@ -723,6 +740,7 @@ public:
 class combobox_item_t {
 public:
 	virtual string_t get_string_value() = 0;
+	virtual s32 get_int_value() = 0;
 };
 
 // метка с функцией выбора из списка значений
