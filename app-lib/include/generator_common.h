@@ -155,7 +155,7 @@ public:
 		virtual myvi::string_t get_string_value() OVERRIDE {
 			return get_string_param("name");
 		}
-		s32 get_vlaue() {
+		virtual s32 get_int_value() OVERRIDE {
 			return get_int_param("value");
 		}
 };
@@ -186,7 +186,7 @@ public:
 			if (!child_meta) break;
 
 			if (child_meta->match_id(id)) {
-				return child_meta->get_vlaue();
+				return child_meta->get_int_value();
 			}
 		}
 		_MY_ASSERT(0, return -1);

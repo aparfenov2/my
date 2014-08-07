@@ -144,11 +144,25 @@ public:
 		children.push_back(child);
 	}
 
-	virtual void render(myvi::gobject_t *obj, myvi::surface_t &dst, bool beforeSuper) OVERRIDE {
+	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
 		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->render(obj, dst, beforeSuper);
+			(*iter)->render_before(obj, dst);
 		}
 	}
+
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->render_after(obj, dst);
+		}
+	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->adjust_preferred_size(obj, pw, ph);
+		}
+	}
+
 };
 
 

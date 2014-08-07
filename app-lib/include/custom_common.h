@@ -7,6 +7,10 @@
 
 namespace custom {
 
+class mouse_aware_t {
+public:
+	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) = 0;
+};
 
 class keyboard_filter_t {
 public:

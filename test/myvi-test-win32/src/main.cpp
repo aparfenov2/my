@@ -72,6 +72,7 @@ public:
 		h = TFT_HEIGHT;
 //		rasterizer_t::debug = true;
 
+/*
 		button_context_t bctx1;
 		bctx1.bk_sel_color = 0x292929; // gray
 		bctx1.bk_color = 0x203E95; // blue
@@ -79,7 +80,7 @@ public:
 		label_context_t lctx1;
 		lctx1.sctx.pen_color = 0x010101;
 		lctx1.font = &res.ttf;
-		lctx1.font_size = font_size_t::FS_8;
+		lctx1.font_size = font_size_t::FS_15;
 
 		label_context_t lctxg;
 		lctxg.sctx.pen_color = 0x010101;
@@ -89,6 +90,7 @@ public:
 		menu_context_t::instance().bctx1 = bctx1;
 		menu_context_t::instance().lctx1 = lctx1;
 		menu_context_t::instance().lctxg = lctxg;
+*/
 
 		gen::view_meta_t *root_view_meta = gen::meta_registry_t::instance().find_view_meta("root");
 		gobject_t *root_view = custom::view_meta_ex_t(root_view_meta).build_view_no_ctx();
@@ -146,10 +148,33 @@ public:
 		std::cout << "set size to " << w << "x" << h << std::endl;
 	}
 
+	void process_mouse(s32 mx, s32 my, mkey_t::mkey_t mkey) {
+
+		myvi::gobject_t::iterator_visible_deep_t iter = gobj->iterator_visible_deep();
+		myvi::gobject_t *p = iter.next();
+		while(p) {
+			s32 ax, ay;
+			p->translate(ax, ay);
+			if (ax < mx && mx < ax + p->w && ay < my && my < ay + p->h && mkey) {
+				custom::mouse_aware_t * ma = dynamic_cast<custom::mouse_aware_t *>(p);
+				if (ma) {
+					ma->mouse_event(mkey);
+				}
+			}
+			p = iter.next();
+		}
+	}
+
 	virtual bool callback(key_t::key_t key, s32 mx, s32 my, mkey_t::mkey_t mkey) OVERRIDE {
 
 		if (key == key_t::K_SAVE) {
 			save_ttcache();
+		}
+
+		if (mkey) {
+			mx = mx / kx;
+			my = my / ky;
+			process_mouse(mx,my,mkey);
 		}
 
 		if (key) {

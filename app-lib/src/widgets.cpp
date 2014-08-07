@@ -642,11 +642,9 @@ void text_box_t::key_event(key_t::key_t key) {
 	return;
 lab_update_input:
 	lab.text = _value;
-	s32 aw,ah;
-	get_preferred_size(aw,ah);
 
 	if (parent) {
-		parent->child_request_size_change(this, aw,ah);
+		parent->child_request_size_change(this);
 	}
 	dirty = true;
 	notify(textbox_msg_t(textbox_msg_t::EDIT, _value));
@@ -722,10 +720,8 @@ lab_update_cbox:
 		_str_value = _value->get_string_value();;
 		lab.text = _str_value;
 	}
-	s32 aw,ah;
-	get_preferred_size(aw,ah);
 	if (parent)
-		parent->child_request_size_change(this, aw,ah);
+		parent->child_request_size_change(this);
 	dirty = true;
 
 	notify(_value);
@@ -755,7 +751,6 @@ void label_t::render(surface_t &dst) {
 	translate(ax,ay);
 
 	ax += _TEXT_PADDING;
-	ay += _TEXT_PADDING;
 
 	if (!text32.is_empty()) {
 		// glyph string
@@ -791,8 +786,5 @@ void label_t::get_preferred_size(s32 &aw, s32 &ah)  {
 		string_t cs1 = string_t("1");
 		ctx.font->get_string_size(cs1, aw, ah);
 	}
-
-	aw += _TEXT_PADDING * 2;
-	ah += _TEXT_PADDING * 2;
 
 }

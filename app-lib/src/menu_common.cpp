@@ -9,7 +9,7 @@
 
 using namespace myvi;
 
-myvi::menu_context_t myvi::menu_context_t::_instance;
+//myvi::menu_context_t myvi::menu_context_t::_instance;
 
 void scrollable_window_t::accept(gobject_t* &sel) {
 	// если это наш объект (или одно из детей наших детей)
