@@ -96,7 +96,7 @@
 		<view id="tbox" controller="tbox" predefined="tbox" decorator="background,3d" background="BACKGROUND_WHITE" fontSize="FS_30" /> <!-- textbox -->
 		<view id="cbox" controller="cbox" predefined="cbox" decorator="background,3d,cbox" background="BACKGROUND_WHITE" fontSize="FS_30" /> <!-- combobox -->
 		<view id="lab" controller="lab" predefined="lab" font="TTF" fontSize="FS_30" /> <!-- label -->
-		<view id="btn" controller="btn" predefined="btn" decorator="3d" d3_inversed="true" layout="center" fontSize="FS_20" /> <!-- button -->
+		<view id="btn" controller="btn" predefined="btn" decorator="3d" d3_inversed="true" layout="center" padding="10" fontSize="FS_20" /> <!-- button -->
 		
 <!-- textbox + combobox -->		
 		<view id="tbox_cbox" layout="stack" vertical="false"  focusMaster="tbox_cbox" > 
@@ -145,11 +145,11 @@
 					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" listen="menu_name" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
 				</view>
 				<view id="scroll_window" predefined="scroll_window" >
-					<view id="scroll_interior" layout="stretch" >
+					<view id="scroll_interior" layout="stretch" padding="10" >
 <!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
 						<view id="window_selector" initial="main" layout="stretch" controller="window_selector" listen="menu_select" event="menu_name" >
 							<view id="main" name="Главное" layout="center" >
-								<view id="main_innher" name="Главное"  layout="stack" vertical="false" preferred_item_size="false" bw="120" height="80" >
+								<view id="main_innher" name="Главное"  layout="stack" vertical="false" preferred_item_size="false" bw="150" height="80" >
 									<view id="sub1" layout="center" decorator="background" background="BACKGROUND_BLUE" >
 										<view id="bt1" inherited="btn" name="Управление" event="menu_select" arg0="control" />
 									</view>
@@ -191,6 +191,9 @@
 			<parameterRef id="req_span" />
 			<parameterRef id="rsp_span" />
 			<parameterRef id="mode_ctl" />
+			
+			<parameterRef id="brightness" />
+			<parameterRef id="dsp_onoff" />
 		</menu>
 		<menu id="screen" name="Экран">
 			<parameterRef id="brightness" />

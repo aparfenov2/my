@@ -12,6 +12,22 @@ public:
 	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) = 0;
 };
 
+template<typename TBase>
+class mouse_aware_impl_t : public TBase, public mouse_aware_t {
+public:
+
+	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
+		// static assert that TBase derived from focus_client_t
+		bool b = this->selected;
+
+		if (mkey == myvi::mkey_t::MK_1) {
+			myvi::gobject_t *_this = dynamic_cast<myvi::gobject_t *>(this);
+			_MY_ASSERT(_this, return);
+			myvi::focus_manager_t::instance().select(_this);
+		}
+	}
+};
+
 class keyboard_filter_t {
 public:
 	virtual bool processKey(myvi::key_t::key_t key) = 0;

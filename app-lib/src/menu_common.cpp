@@ -32,22 +32,54 @@ void scrollable_window_t::accept(gobject_t* &sel) {
 void scrollable_window_t::do_layout()  {
 	_MY_ASSERT(w && h, return);
 
+	gobject_t *in = this->get_interior();
 	s32 ipw,iph;
-	get_interior()->get_preferred_size(ipw,iph);
-
-	this->get_interior()->w = w;
-	this->get_interior()->h = h;
+	in->get_preferred_size(ipw,iph);
+	in->x = in->y = 0;
+	in->w = w;
+	in->h = h;
 
 	// пока только вертикальный скролл
 	//if (ipw > this->get_interior()->w) {
 	//	this->get_interior()->w = ipw;
 	//}
-	if (iph > this->get_interior()->h) {
-		this->get_interior()->h = iph;
+	if (iph > in->h) {
+		in->h = iph;
 	}
 
-	this->get_interior()->do_layout();
+	in->do_layout();
 }
+
+void scrollable_window_t::render(surface_t &dst) {
+	gobject_t *in = this->get_interior();
+		
+	if (in->y < 0 || in->y + in->h > this->h) {
+		if (in->h == 0) {
+			return;
+		}
+		s32 bar_height = (this->h * this->h ) / in->h;
+		s32 bar_y = -in->y;
+
+		if (bar_y < 0) {
+			bar_height += bar_y;
+			bar_y = 0;
+		}
+
+		if (bar_y + bar_height > this->h) {
+			bar_height = this->h - bar_y;
+		}
+
+		s32 ax,ay;
+		translate(ax,ay);
+
+		dst.ctx.reset();
+		dst.ctx.pen_color = 0x000000;
+		dst.line(ax+this->w-1,ay+bar_y, bar_height, true);
+		dst.line(ax+this->w-2,ay+bar_y, bar_height, true);
+	}
+
+}
+
 
 
 // прокрутить чтобы выбранный children стал виден

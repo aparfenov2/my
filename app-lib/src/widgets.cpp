@@ -34,11 +34,11 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 	}
 
 
-	if (key != key_t::K_LEFT && key != key_t::K_RIGHT && key != key_t::K_UP && key != key_t::K_DOWN) {
+	if (key != key_t::K_LEFT && key != key_t::K_RIGHT) {
 
 		// проверим что selected не отпустил захавт только что (combobox_t)
 		if (selected) {
-			gobject_t *selected_g = dynamic_cast<gobject_t*>(selected);
+			gobject_t *selected_g = (selected);
 			_MY_ASSERT(selected_g && selected_g->visible && selected_g->enabled, return);
 			focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(selected);
 			if (focus_aware) {
@@ -49,12 +49,35 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 	}
 
 
-	if (!selected) {
-		gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
-		select(iter.next());
-		return;
+	gobject_t::iterator_selectable_deep_t iter = root->iterator_selectable_deep();
+	gobject_t *p , *first = iter.next(), *pp = 0;
+	bool selected_found = false;
+
+	p = first;
+	while (p) {
+		if (p == selected) {
+			selected_found = true;
+			if (key == key_t::K_LEFT) {
+				if (pp) {
+					select(pp);
+				}
+			}
+			if (key == key_t::K_RIGHT) {
+				p = iter.next();
+				if (p) {
+					select(p);
+				}
+			}
+			break;
+		}
+		pp = p;
+		p = iter.next();
+	}
+	if (!selected_found) {
+		select(first);
 	}
 
+/*
 	focus_intention_t intention;
 
 	if (key == key_t::K_UP) {
@@ -70,7 +93,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 		intention.direction = direction_t::RIGHT;
 	}
 
-	intention.current = dynamic_cast<gobject_t*>(selected);
+	intention.current = (selected);
 	intention.next = locate_next(intention.direction, root);
 
 	if (intention.next) {
@@ -98,6 +121,7 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 		}
 		select(intention.next);
 	}
+*/
 }
 
 // предидущее значение направления для сравнения с текущим
@@ -359,7 +383,7 @@ bool rasterizer_t::render(gobject_t *p, surface_t &dst, bool force_redreaw, s32 
 	return ret;
 }
 
-
+/*
 void center_layout_t::layout(gobject_t *parent) {
 
 	gobject_t::iterator_visible_t iter = parent->iterator_visible();
@@ -404,7 +428,7 @@ void center_layout_t::layout(gobject_t *parent) {
 		p = iter.next();
 	}
 }
-
+*/
 
 
 void stack_layout_t::get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) {
@@ -461,8 +485,8 @@ void stack_layout_t::layout(gobject_t *parent) {
 			child->w = parent->w;
 			py += child->h + spy;
 
-			if (py > parent->h && preferred_item_size) {
-				// пробуем урезать последний элемент (случай со скроллом внизу стека)
+			if (py > parent->h) {
+				// пробуем урезать последний элемент 
 				_WEAK_ASSERT(!iter.next(), break); 
 				py -= child->h + spy; // rewind py
 				child->h = parent->h - py;
@@ -479,6 +503,15 @@ void stack_layout_t::layout(gobject_t *parent) {
 			} else child->w = bw;
 			child->h = parent->h;
 			px += child->w + spx;
+
+			if (px > parent->w) {
+				// пробуем урезать последний элемент 
+				_WEAK_ASSERT(!iter.next(), break); 
+				px -= child->w + spx; // rewind py
+				child->w = parent->w - px;
+				_MY_ASSERT(child->w > 0, break);
+				break;
+			}
 		}
 
 		pchild = child;
@@ -689,9 +722,11 @@ void combo_box_t::key_event(key_t::key_t key) {
 		}
 		goto lab_update_cbox;
 	}
-	//_MY_ASSERT(captured,return); - может и не быть захачена, если focus_manager_t не смог обработать кнопку
+	if (!captured) {
+		return;
+	}
 
-	if (key == key_t::K_UP) {
+	if (key == key_t::K_UP || key == key_t::K_LEFT) {
 		sprev = revit.next(sprev);
 		if (!sprev) {
 			sprev = revit.next(sprev);
@@ -700,7 +735,7 @@ void combo_box_t::key_event(key_t::key_t key) {
 		}
 		goto lab_update_cbox;
 	}
-	if (key == key_t::K_DOWN) {
+	if (key == key_t::K_DOWN || key == key_t::K_RIGHT) {
 		sprev = _values->next(sprev);
 		if (!sprev) {
 			sprev = _values->next(sprev);
