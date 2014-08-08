@@ -75,13 +75,13 @@ void surface_t::line(s32 x1,s32 y1, s32 len, bool isVertical) {
 	_MY_ASSERT(buf_sz,return);
 	_MY_ASSERT(x1 >=0 && y1>=0 && len > 0,return);
 	if (!isVertical) {
-		_WEAK_ASSERT(y1 < h,return);
+		if (y1 >= h) return;
 		if (x1+len > w) len = w-x1;
 		for (int x=x1; x<x1+len; x++) {
 			this->putpx_to(*this,x,y1,ctx.pen_color);
 		}
 	} else {
-		_WEAK_ASSERT(x1 < w,return);
+		if (x1 >= w) return;
 		if (y1+len > h) len = h-y1;
 		for (int y=y1; y<y1+len; y++) {
 			this->putpx_to(*this, x1,y,ctx.pen_color);

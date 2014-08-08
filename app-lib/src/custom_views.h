@@ -879,13 +879,14 @@ public:
 };
 
 
+typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::button_t>> _button_view_t_super_t;
+
 class button_view_t : 
-	public decorator_aware_impl_t<myvi::button_t>, 
+	public _button_view_t_super_t, 
 	public myvi::focus_aware_t, 
-	public mouse_aware_t,
 	public myvi::publisher_t<myvi::key_t::key_t, 1> {
 
-	typedef decorator_aware_impl_t<myvi::button_t> super;
+	typedef _button_view_t_super_t super;
 public:
 	gen::meta_t *meta;
 public:
@@ -911,6 +912,8 @@ public:
 	}
 
 	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
+		super::mouse_event(mkey);
+
 		if (mkey == myvi::mkey_t::MK_1) {
 			myvi::key_t::key_t key = myvi::key_t::K_ENTER;
 			notify(key);
@@ -977,8 +980,12 @@ public:
 
 };
 
-class tbox_view_t : public decorator_aware_impl_t<myvi::text_box_t> {
-	typedef decorator_aware_impl_t<myvi::text_box_t> super;
+
+
+typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::text_box_t>> _tbox_view_super_t;
+
+class tbox_view_t : public _tbox_view_super_t {
+	typedef _tbox_view_super_t super;
 public:
 	gen::meta_t *meta;
 public:
@@ -1085,8 +1092,10 @@ public:
 
 };
 
-class cbox_view_t : public decorator_aware_impl_t<myvi::combo_box_t> {
-	typedef myvi::combo_box_t super;
+typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::combo_box_t>> _cbox_view_super_t;
+
+class cbox_view_t : public _cbox_view_super_t {
+	typedef _cbox_view_super_t super;
 public:
 	gen::meta_t *meta;
 public:
@@ -1450,9 +1459,15 @@ private:
 */
 
 class stretch_meta_layout_t : public myvi::stretch_layout_t {
+	typedef myvi::stretch_layout_t super;
 public:
 	stretch_meta_layout_t(gen::meta_t *meta) {
+		padding = 0;
+		if (meta->get_int_param("padding") != _NAN) {
+			padding = meta->get_int_param("padding");
+		}
 	}
+
 };
 
 
@@ -1482,7 +1497,13 @@ public:
 // EXPECT: children.count == 1
 class center_meta_layout_t : public myvi::layout_t {
 public:
+	s32 padding;
+public:
 	center_meta_layout_t(gen::meta_t *meta) {
+		padding = 0;
+		if (meta->get_int_param("padding") != _NAN) {
+			padding = meta->get_int_param("padding");
+		}
 	}
 
 	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
@@ -1491,6 +1512,10 @@ public:
 		myvi::gobject_t *p = iter.next();
 		_MY_ASSERT(p,return);
 		p->get_preferred_size(aw,ah);
+
+		aw += padding * 2;
+		ah += padding * 2;
+
 		p = iter.next();
 		_MY_ASSERT(!p,return);
 	}
@@ -1502,15 +1527,13 @@ public:
 		_MY_ASSERT(p,return);
 
 		p->get_preferred_size(p->w,p->h);
-		if (p->h > parent->h) {
-			p->h = parent->h;
-		}
-		if (p->w > parent->w) {
-			p->w = parent->w;
-		}
 
-		p->y = (parent->h - p->h)/2;
+
+
+
 		p->x = (parent->w - p->w)/2;
+		p->y = (parent->h - p->h)/2;
+
 
 		p = iter.next();
 		_MY_ASSERT(!p,return);

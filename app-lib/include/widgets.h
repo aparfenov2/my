@@ -116,7 +116,6 @@ public:
 };
 
 
-
 // могут быть в фокусе, "выбраны"
 class focus_client_t {
 public:
@@ -514,7 +513,7 @@ public:
 	}
 };
 
-
+/*
 // выравнивает дочерние обьекты по центру
 class center_layout_t : public layout_t {
 public:
@@ -534,7 +533,7 @@ public:
 
 	virtual void layout(gobject_t *parent) OVERRIDE;
 };
-
+*/
 
 // располагает дочерние компоненты подр€д
 
@@ -565,13 +564,21 @@ public:
 // раст€гивает дочерний виджет на весь размер текущего
 class stretch_layout_t : public layout_t {
 public:
+	s32 padding;
 public:
+	stretch_layout_t() {
+		padding = 0;
+	}
+
 	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
 		gobject_t::iterator_visible_t iter = parent->iterator_visible();
 		gobject_t *child = iter.next();
 		_MY_ASSERT(child,return);
 
 		child->get_preferred_size(aw, ah);
+		aw += padding * 2;
+		ah += padding * 2;
+
 		_MY_ASSERT(!iter.next(),return); // нельз€ раст€нуть все обьекты
 	}
 
@@ -580,10 +587,10 @@ public:
 		gobject_t *child = iter.next();
 		_MY_ASSERT(child,return);
 
-		child->x = 0;
-		child->y = 0;
-		child->h = parent->h;
-		child->w = parent->w;
+		child->x = padding;
+		child->y = padding;
+		child->h = parent->h - padding * 2;
+		child->w = parent->w - padding * 2;
 
 		_MY_ASSERT(!iter.next(),return); // нельз€ раст€нуть все обьекты
 	}
@@ -615,7 +622,7 @@ public:
 	label_t l_mid;
 	label_t l_bot;
 	button_context_t ctx;
-	levels_layout_t levels_layout;
+//	levels_layout_t levels_layout;
 	property_t<bool, button_t> pressed;
 private:
 	bool _pressed;	// текущее состо€ние
@@ -631,15 +638,19 @@ private:
 public:
 	button_t() {
 		_pressed = (false);
-		layout = &levels_layout;
+//		layout = &levels_layout;
 		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
 
-		add_child(&l_top);
+//		add_child(&l_top);
 		add_child(&l_mid);
-		add_child(&l_bot);
+//		add_child(&l_bot);
 	}
 
 	virtual void render(surface_t &dst) OVERRIDE ;
+
+	//virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+	//	gobject_t::get_preferred_size(aw, ah);
+	//}
 
 };
 
@@ -706,8 +717,6 @@ public:
 	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		measure_cursor_pos();
 		lab.get_preferred_size(aw, ah);
-		//if (h < lab.h) h = lab.h;
-		//if (w < lab.w + 5) w = lab.w + 5;
 	}
 
 	virtual void do_layout() OVERRIDE {

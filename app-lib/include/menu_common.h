@@ -48,6 +48,9 @@ public:
 	virtual void do_layout() OVERRIDE ;
 
 	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE ;
+
+	virtual void render(surface_t &dst) OVERRIDE;
+
 };
 
 
