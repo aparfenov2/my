@@ -39,10 +39,6 @@ void scrollable_window_t::do_layout()  {
 	in->w = w;
 	in->h = h;
 
-	// пока только вертикальный скролл
-	//if (ipw > this->get_interior()->w) {
-	//	this->get_interior()->w = ipw;
-	//}
 	if (iph > in->h) {
 		in->h = iph;
 	}
@@ -122,27 +118,3 @@ void scrollable_window_t::scroll_to(gobject_t *interior_child) {
 	}
 }
 
-void scrollable_window_t::alter_focus_intention(focus_intention_t &intention) {
-
-	_MY_ASSERT(intention.current, return );
-	if (!intention.next) return;
-
-	gobject_t *p = (intention.current);
-	while (p && p->parent != get_interior()) {
-		p = p->parent;
-	}
-	_MY_ASSERT(p, return );
-
-	p = (intention.next);
-	while (p && p->parent != get_interior()) {
-		p = p->parent;
-	}
-	if (!p) { // менеджер фокуса собирается перейти на чужой объект
-		// проверим, есть ли возможность перейти на обьект внутри нашего inerior
-		gobject_t *next = focus_manager_t::instance().locate_next(intention.direction, this->get_interior());
-		if (next) {
-			intention.next = next;
-		}
-	}
-
-}

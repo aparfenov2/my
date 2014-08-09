@@ -5,6 +5,7 @@
 #ifndef _CUSTOM_VIEWS_H
 #define _CUSTOM_VIEWS_H
 
+
 #include "menu_common.h"
 #include "generator_common.h"
 #include "custom_common.h"
@@ -118,9 +119,13 @@ public:
 
 	// resolve path relative to root_meta
 	gen::parameter_meta_t * resolve(gen::parameter_meta_t *root_meta) {
-		_MY_ASSERT(meta_path.is_relative(), return 0);
-		meta_path_t::iterator_t iter = meta_path.iterator();
-		return resolve(iter, root_meta);
+		if (meta_path.is_relative()) {
+			_MY_ASSERT(root_meta, return 0);
+			meta_path_t::iterator_t iter = meta_path.iterator();
+			return resolve(iter, root_meta);
+		} else {
+			return resolve();
+		}
 	}
 
 
@@ -278,17 +283,16 @@ public:
 
 
 
+class view_build_context_aware_t {
+public:
+	virtual void init(view_build_context_t &ctx) = 0;
+};
 
 
 
 // интерфейс контроллера вида
-class view_controller_t {
+class view_controller_t : public view_build_context_aware_t {
 public:
-public:
-	// связывание с видом. Использует RTTI для определения класса вида, см. view_meta_t
-	virtual void init(view_build_context_t &ctx) {
-	}
-
 	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
 	virtual void on_view_init() {
 	}
@@ -300,57 +304,6 @@ public:
 
 
 
-class focus_master_mixin_t : public myvi::focus_master_t {
-public:
-	myvi::gobject_t *view;
-public:
-	focus_master_mixin_t(myvi::gobject_t *_view) {
-		view = _view;
-	}
-};
-
-
-class tbox_cbox_focus_master_mixin_t : public focus_master_mixin_t {
-public:
-	s32 selected_count;
-public:
-	tbox_cbox_focus_master_mixin_t(myvi::gobject_t *_view, gen::meta_t * meta) : focus_master_mixin_t(_view) {
-		selected_count = 0;
-	}
-
-	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
-
-		_MY_ASSERT(intention.current, return );
-		myvi::gobject_t *current_g = (intention.current);
-		_MY_ASSERT(current_g, return );
-		myvi::gobject_t *next_g = (intention.next);
-		_MY_ASSERT(next_g, return );
-
-		if (next_g->is_child_of(view)) {
-			selected_count++;
-
-		} else if (current_g->is_child_of(view)) {
-		// если intention.current наш, а intention.next не наш, т.е. выходим из области, то
-		
-		// если были_выбраны_оба, то не изменяем, и сбрасываем были_выбраны_оба
-			if (selected_count >= 1) {
-				selected_count = 0;
-			} else {
-		// иначе выбираем не выбранный
-				myvi::gobject_t::iterator_visible_t iter = view->iterator_visible();
-				myvi::gobject_t *p = iter.next();
-				while(p) {
-					if (p != current_g) {
-						intention.next = p;
-						selected_count++;
-						break;
-					}
-					p = iter.next();
-				}
-			}
-		}
-	}
-};
 
 
 class decorator_t {
@@ -385,16 +338,18 @@ public:
 		decorator = _drawer;
 	}
 
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
+	virtual void render_before(myvi::surface_t &dst) OVERRIDE {
 		if (decorator) {
 			decorator->render_before(this, dst);
 		}
-		TBase::render(dst);
+	}
+
+	virtual void render_after(myvi::surface_t &dst) OVERRIDE {
 		if (decorator) {
 			decorator->render_after(this, dst);
 		}
 	}
-	
+
 	virtual void set_dirty(bool dirty) OVERRIDE {
 		TBase::set_dirty(dirty);
 		if (dirty && parent && !decorator) {
@@ -402,8 +357,7 @@ public:
 		}
 	}
 
-	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
-		TBase::get_preferred_size(pw, ph);
+	virtual void adjust_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
 		if (decorator) {
 			decorator->adjust_preferred_size(this, pw, ph);
 		}
@@ -548,42 +502,32 @@ public:
 };
 
 
-typedef dynamic_view_mixin_aware_impl_t<
-								decorator_aware_impl_t<myvi::gobject_t>
-								> _dynamic_view_t_super_t;
+typedef decorator_aware_impl_t<myvi::gobject_t> decorator_aware_base_t;
 
-class dynamic_view_t : public _dynamic_view_t_super_t, public myvi::focus_master_t {
-	typedef _dynamic_view_t_super_t super;
+class dynamic_view_base_t : 
+	public decorator_aware_base_t,
+	public view_build_context_aware_t {
+
+	typedef decorator_aware_base_t super;
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
-	focus_master_mixin_t *focus_master;
 	s32 fw, fh;
 public:
-	dynamic_view_t(view_build_context_t &ctx) {
-		focus_master = 0;
+
+	dynamic_view_base_t() {
+		view_meta = 0;
+		view_controller = 0; // устанавливается позже
+
+		fw = fh = _NAN;
+	}
+
+	virtual void init(view_build_context_t &ctx) OVERRIDE {
 		view_meta = ctx.get_view_meta();
 		view_controller = 0; // устанавливается позже
 
-
-		myvi::string_t focus_master_id = view_meta->get_string_param("focusMaster");
-		if (!focus_master_id.is_empty()) {
-			focus_master = build_focus_master(focus_master_id, view_meta);
-		}
-
 		fw = this->view_meta->get_int_param("width");
 		fh = this->view_meta->get_int_param("height");
-
-	}
-
-
-	focus_master_mixin_t * build_focus_master(myvi::string_t focus_master_id, gen::meta_t * meta) {
-		focus_master_mixin_t *ret = 0;
-		if (focus_master_id == "tbox_cbox") {
-			ret = new tbox_cbox_focus_master_mixin_t(this, meta);
-		}
-		_MY_ASSERT(ret, return 0);
-		return ret;
 	}
 
 
@@ -610,15 +554,10 @@ public:
 	}
 
 
-	virtual void alter_focus_intention(myvi::focus_intention_t &intention) OVERRIDE {
-		if (focus_master) {
-			focus_master->alter_focus_intention(intention);
-		}
-	}
 	
-	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+	virtual void vget_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
 
-		super::get_preferred_size(pw,ph);
+		super::vget_preferred_size(pw,ph);
 
 		if (fw != _NAN) {
 			pw = fw;
@@ -629,6 +568,14 @@ public:
 	}
 
 };
+
+class dynamic_view_t : public dynamic_view_mixin_aware_impl_t<dynamic_view_base_t> {
+};
+
+class _mouse_decorator_aware_base_t : public dynamic_view_base_t, public myvi::focus_client_t {
+};
+
+typedef mouse_aware_impl_t<_mouse_decorator_aware_base_t> mouse_decorator_aware_base_t;
 
 
 class view_controller_impl_base_t : public view_controller_t {
@@ -663,17 +610,30 @@ public:
 			model_t::instance()->update(ctx.get_parameter_path().path, value);
 		}
 	}
+	
+	myvi::string_t get_parameter_path(myvi::gobject_t *view) {
+		myvi::string_t parameter_path;
+
+		while (view && parameter_path.is_empty()) {
+			dynamic_view_base_t *dv = dynamic_cast<dynamic_view_base_t *>(view);
+			if (dv) {
+				parameter_path = dv->get_view_meta()->get_string_param("parameterPath");
+			}
+			view = view->parent;
+		}
+		return parameter_path;
+	}
 
 	virtual void init(view_build_context_t &ctx) OVERRIDE {
 
 
-		myvi::string_t parameter_path = ctx.get_view_meta()->get_string_param("parameterPath");
+		myvi::string_t parameter_path = get_parameter_path(ctx.get_view());
 
 		if (!parameter_path.is_empty()) {
 			meta_path_t path = meta_path_t(parameter_path);
 			parameter_path_resolver_t resolver(path);
 
-			gen::parameter_meta_t *child_parameter_meta = resolver.resolve(ctx.get_parameter_meta());
+			gen::parameter_meta_t *child_parameter_meta = resolver.resolve(ctx.try_get_parameter_meta());
 			ctx.set_parameter_meta(child_parameter_meta);
 		}
 
@@ -753,28 +713,80 @@ public:
 };
 
 
-class lab_view_t : public myvi::label_t {
-public:
-	gen::meta_t *meta;
-public:
 
-	lab_view_t(view_build_context_t &ctx) {
+#define _TEXT_PADDING 2
 
-		meta = ctx.get_view_meta();
-		
+class label_t  : public myvi::gobject_t {
+public:
+	myvi::string_t text;  // текст
+	label_context_t ctx;
+public:
+	label_t() {
+		visible = false;
 	}
 
-	virtual void init() OVERRIDE {
-		myvi::gobject_t::init();
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+	
+		s32 ax = 0, ay = 0;
+		_MY_ASSERT(visible && ctx.font,return);
+		ctx.font->char_surface.ctx = ctx.sctx;
+		ctx.font->set_char_size_px(0,ctx.font_size);
 
+		translate(ax,ay);
 
-//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+		ax += _TEXT_PADDING;
 
+		if (!text.is_empty()) {
+			// text
+			ctx.font->print_to(ax,ay,dst,text);	
+		} else {
+			// do nothing
+		}
+	}
+
+	virtual void vget_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+		_MY_ASSERT(visible,return);
+		_MY_ASSERT(ctx.font,return);
+		ctx.font->set_char_size_px(0,ctx.font_size);
+		if (!text.is_empty()) {
+			// text
+			ctx.font->get_string_size(this->text, aw, ah);
+		} else {
+			// no content - try measure something
+			myvi::string_t cs1 = myvi::string_t("1");
+			ctx.font->get_string_size(cs1, aw, ah);
+		}
+	}
+};
+
+class button_context_t {
+public:
+	u32 bk_color;	// цвет не выбранной кнопки
+	u32 bk_sel_color;	// цвет выбранной кнопки
+	u32 bk_pressed_color;	// цвет нажатой кнопки
+	u32 bk_disabled_color; // цвет неактивной кнопки
+	myvi::surface_context_t sctx;
+public:
+	button_context_t() {
+		bk_color=(0xB8BDCF),bk_sel_color=(0x848794),bk_pressed_color=(0x6B8896);
+		bk_disabled_color = 0xA0A0A0;
+	}
+};
+
+class text_aware_t {
+public:
+	virtual label_context_t & get_text_context() = 0;
+};
+
+class lab_view_t : public label_t, public text_aware_t {
+public:
+
+	lab_view_t() {
 		visible = true;
-//		this->ctx = ctx.lctx1;
+	}
 
-		view_factory_t::instance().prepare_context(this->ctx, meta);
-
+	virtual label_context_t & get_text_context() OVERRIDE {
+		return ctx;
 	}
 
 };
@@ -783,7 +795,7 @@ public:
 class label_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<event_bus_msg_t> {
 	typedef view_controller_impl_base_t super;
 public:
-	myvi::label_t *lab;
+	label_t *lab;
 	myvi::string_t listen_event_name;
 public:
 
@@ -794,7 +806,7 @@ public:
 	virtual void init(view_build_context_t &ctx) OVERRIDE {
 		super::init(ctx);
 
-		lab = dynamic_cast<myvi::label_t *>(ctx.get_view());
+		lab = dynamic_cast<label_t *>(ctx.get_view());
 		_MY_ASSERT(lab, return);
 
 		this->listen_event_name = ctx.get_view_meta()->get_string_param("listen");
@@ -879,48 +891,63 @@ public:
 };
 
 
-typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::button_t>> _button_view_t_super_t;
 
-class button_view_t : 
-	public _button_view_t_super_t, 
-	public myvi::focus_aware_t, 
+class button_t : 
+	public mouse_decorator_aware_base_t,
+	public myvi::focus_aware_t,
 	public myvi::publisher_t<myvi::key_t::key_t, 1> {
-
-	typedef _button_view_t_super_t super;
 public:
-	gen::meta_t *meta;
-public:
-	button_view_t(gen::meta_t *_meta) {
-		meta = _meta;
+	button_context_t ctx;
+	myvi::property_t<bool, button_t> pressed;
+private:
+	bool _pressed;	// текущее состояние
+private:
+	bool get_pressed() {
+		return _pressed;
+	}
+	void set_pressed(bool apressed) {
+		_pressed = apressed;
+		dirty = true;
 	}
 
-	virtual void init() OVERRIDE {
-		super::init();
+public:
+	button_t() {
+		_pressed = (false);
+		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
+
+	}
 
 
-//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
-		this->l_mid.visible = true;
-//		this->l_mid.ctx = ctx.lctx1;
-		this->l_mid.text = meta->get_string_param("name");
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		dst.ctx = ctx.sctx;
+		if (!enabled) 
+			dst.ctx.pen_color = ctx.bk_disabled_color;
+		else if (pressed) 
+			dst.ctx.pen_color = ctx.bk_pressed_color;
+		else if (selected) 
+			dst.ctx.pen_color = ctx.bk_sel_color;
+		else 
+			dst.ctx.pen_color = ctx.bk_color;
 
-		view_factory_t::instance().prepare_context(this->l_mid.ctx, meta);
+		s32 ax = 0, ay = 0;
 
+		translate(ax,ay);
+
+		dst.ctx.alfa = 0xff;
+		dst.fill(ax,ay,w,h);
+
+		dst.ctx.pen_color = 0xffffff;
+		dst.ctx.alfa = 128;
+		dst.rect(ax,ay,w,h);
 	}
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
 		notify(key);
 	}
 
-	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
-		super::mouse_event(mkey);
-
-		if (mkey == myvi::mkey_t::MK_1) {
-			myvi::key_t::key_t key = myvi::key_t::K_ENTER;
-			notify(key);
-		}
-	}
 };
 
+typedef button_t button_view_t;
 
 
 class button_view_controller_t : 
@@ -941,6 +968,22 @@ public:
 		close = false;
 	}
 
+	label_t * find_label() {
+		_MY_ASSERT(button_view, return 0);
+		label_t *ret = 0;
+		myvi::gobject_t::iterator_visible_t iter = button_view->iterator_visible();
+		myvi::gobject_t *p = iter.next();
+		while(p) {
+			ret = dynamic_cast<label_t *>(p);
+			if (ret) {
+				return ret;
+			}
+			p = iter.next();
+		}
+		_MY_ASSERT(ret, return 0);
+		return ret;
+	}
+
 	virtual void init(view_build_context_t &ctx) OVERRIDE {
 		super::init(ctx);
 
@@ -950,6 +993,9 @@ public:
 
 		this->meta = ctx.get_view_meta();
 		_MY_ASSERT(this->meta, return);
+
+		label_t *lab = find_label();
+		lab->text = ctx.get_view_meta()->get_string_param("name");
 
 		this->popup_view_id = ctx.get_view_meta()->get_string_param("popup_view");
 		this->event_id = meta->get_string_param("event");
@@ -982,29 +1028,185 @@ public:
 
 
 
-typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::text_box_t>> _tbox_view_super_t;
+#define INPUT_MAX_LEN 30
+#define COLOR_SELECTED 0xAFBFCF
+#define COLOR_CAPTURED 0x267F00
 
-class tbox_view_t : public _tbox_view_super_t {
-	typedef _tbox_view_super_t super;
+class textbox_msg_t {
 public:
-	gen::meta_t *meta;
+	enum state_t {
+		EDIT, // значенеие еще редактируется
+		COMPLETE // пользователь нажал Enter и мы вышли из режима редактирования
+	} state;
+	myvi::string_t value;
 public:
-	tbox_view_t(gen::meta_t *_meta) {
-		meta = _meta;
+	textbox_msg_t(state_t _state, myvi::string_t _value) : state(_state), value(_value) {
+	}
+};
+
+class text_box_t : 
+	public mouse_decorator_aware_base_t, 
+	public myvi::focus_aware_t, 
+	public myvi::publisher_t<textbox_msg_t, 1> {
+	typedef gobject_t super;
+public:
+	myvi::property_t<myvi::string_t , text_box_t> value;
+	label_t lab;
+	bool cursor_visible;
+	u32 cursor_color;
+private:
+	myvi::string_impl_t<INPUT_MAX_LEN> _value;
+	s32 cursor_pos[INPUT_MAX_LEN];
+	s32 caret_pos;
+private:
+	void set_value(myvi::string_t cvalue) {
+		_value=(cvalue);
+		lab.text = _value;
+		caret_pos = _value.length();
 	}
 
-	virtual void init() OVERRIDE {
-		super::init();
+	myvi::string_t get_value() {
+		return _value;
+	}
+public:
+	text_box_t() {
+		value.init(this,&text_box_t::get_value, &text_box_t::set_value);
+		lab.ctx.sctx.pen_color = 0x00;
+		lab.visible = true;
+		caret_pos = 0;
+		cursor_visible = false;
+		cursor_color = 0x000000;
 
-//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
+		add_child(&lab);
+	}
 
-		this->visible = true;
-//		this->lab.ctx = ctx.lctx1;
+	void measure_cursor_pos() {
+		for (s32 i=1; i <= _value.length(); i++) {
+			lab.text = _value.sub(0,i);
+			s32 lw, lh;
+			lab.get_preferred_size(lw,lh);
+			cursor_pos[i-1] = lw;
+		}
+		lab.text = _value;
+	}
 
-		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
+	virtual void vget_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+		measure_cursor_pos();
+		lab.get_preferred_size(aw, ah);
+	}
+
+	virtual void do_layout() OVERRIDE {
+		lab.x = 0;
+		lab.y = 0;
+		lab.w = w; // место для курсора
+		lab.h = h;
+	}
+
+	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
+
+		s32 cur_len = _value.length();
+
+		if (key == myvi::key_t::K_ENTER) {
+			_MY_ASSERT(parent,return);
+			if (!cursor_visible) {
+				this->capture_focus();
+				cursor_visible = true;
+			} else {
+				this->release_focus();
+				cursor_visible = false;
+				notify(textbox_msg_t(textbox_msg_t::COMPLETE, _value));
+			}
+			goto lab_update_input;
+		}
+		// не должны редактироваться пока не перешли в активное состояние
+		if (!cursor_visible) {
+			return;
+		}
+
+		if (key == myvi::key_t::K_LEFT) {
+			if (caret_pos) caret_pos--;
+			goto lab_update_input;
+		}
+		if (key == myvi::key_t::K_RIGHT) {
+			if (caret_pos < cur_len) caret_pos++;
+			goto lab_update_input;
+		}
+
+		if ((key == myvi::key_t::K_BKSP && caret_pos) || (key == myvi::key_t::K_DELETE && caret_pos < cur_len)) {
+			if (key == myvi::key_t::K_BKSP) caret_pos--;
+			_value.delete_at(caret_pos);
+			goto lab_update_input;
+		}
+
+		if (caret_pos < INPUT_MAX_LEN-1) {
+			u8 ch = 0;
+			if (key == myvi::key_t::K_0) ch = '0';
+			if (key == myvi::key_t::K_1) ch = '1';
+			if (key == myvi::key_t::K_2) ch = '2';
+			if (key == myvi::key_t::K_3) ch = '3';
+			if (key == myvi::key_t::K_4) ch = '4';
+			if (key == myvi::key_t::K_5) ch = '5';
+			if (key == myvi::key_t::K_6) ch = '6';
+			if (key == myvi::key_t::K_7) ch = '7';
+			if (key == myvi::key_t::K_8) ch = '8';
+			if (key == myvi::key_t::K_9) ch = '9';
+			if (key == myvi::key_t::K_DOT) ch = '.';
+			if (key == myvi::key_t::K_F1) ch = '+';
+			if (key == myvi::key_t::K_F2) ch = '-';
+			if (ch) {
+				_value.insert_at(caret_pos, ch);
+				caret_pos++;
+				goto lab_update_input;
+			}
+		}
+		return;
+	lab_update_input:
+		lab.text = _value;
+
+		if (parent) {
+			parent->child_request_size_change(this);
+		}
+		dirty = true;
+		notify(textbox_msg_t(textbox_msg_t::EDIT, _value));
+	}
+
+
+	virtual void set_selected(bool selected) {
+		_MY_ASSERT(parent,return);
+		dirty = true;
+		focus_client_t::set_selected(selected);
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		translate(ax,ay);
+		if (selected) {
+			dst.ctx.reset();
+			dst.ctx.pen_color = cursor_visible ? COLOR_CAPTURED : COLOR_SELECTED;
+			dst.fill(ax,ay,w,h);
+		}
+		// draw vline
+		if (cursor_visible) {
+			dst.ctx.pen_color = cursor_color;
+			s32 acp = 0;
+			_MY_ASSERT(caret_pos <= INPUT_MAX_LEN,return);
+			if (caret_pos) 
+				acp += cursor_pos[caret_pos-1];
+
+			dst.line(ax + acp, ay, lab.h,true);
+		}
 
 	}
 
+};
+
+
+
+class tbox_view_t : public text_box_t, public text_aware_t {
+public:
+	virtual label_context_t & get_text_context() OVERRIDE {
+		return this->lab.ctx;
+	}
 
 };
 
@@ -1023,11 +1225,11 @@ public:
 class tbox_controller_t 
 	: public view_controller_impl_base_t, 
 	public myvi::subscriber_t<model_message_t>, 
-	public myvi::subscriber_t<myvi::textbox_msg_t> {
+	public myvi::subscriber_t<textbox_msg_t> {
 
 	typedef view_controller_impl_base_t super;
 public:
-	myvi::text_box_t *tb;
+	text_box_t *tb;
 	volatile_string_impl_t string_value;
 public:
 
@@ -1045,7 +1247,7 @@ public:
 		variant_t value;
 		model_t::instance()->read(this->parameter_path, value, type);
 
-		this->tb = dynamic_cast<myvi::text_box_t *>(ctx.get_view());
+		this->tb = dynamic_cast<text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
 
 		converter_t *conv = converter_factory_t::instance().for_type(type);
@@ -1075,9 +1277,9 @@ public:
 	}
 
 	// обновление от виджета
-	virtual void accept(myvi::textbox_msg_t &msg) OVERRIDE {
+	virtual void accept(textbox_msg_t &msg) OVERRIDE {
 
-		if (msg.state != myvi::textbox_msg_t::COMPLETE) {
+		if (msg.state != textbox_msg_t::COMPLETE) {
 			return; // в режиме редактирования ниче не меняем
 		}
 		converter_t *conv = converter_factory_t::instance().for_type(this->type);
@@ -1092,29 +1294,163 @@ public:
 
 };
 
-typedef mouse_aware_impl_t<decorator_aware_impl_t<myvi::combo_box_t>> _cbox_view_super_t;
 
-class cbox_view_t : public _cbox_view_super_t {
-	typedef _cbox_view_super_t super;
+typedef gen::combobox_item_proto_t combobox_item_t;
+
+// метка с функцией выбора из списка значений
+class combo_box_t : 
+	public mouse_decorator_aware_base_t, 
+	public myvi::focus_aware_t, 
+	public myvi::publisher_t<combobox_item_t *, 1> {
+
+	typedef gobject_t super;
+
+	class empty_iterator_t : public myvi::iterator_t<combobox_item_t> {
+	public:
+		virtual combobox_item_t* next(void* prev) OVERRIDE {
+			return 0;
+		}
+	};
 public:
-	gen::meta_t *meta;
-public:
-	cbox_view_t(gen::meta_t *_meta) {
-		meta = _meta;
+	label_t lab;
+	myvi::wo_property_t<myvi::iterator_t<combobox_item_t>*,combo_box_t> values;
+	myvi::property_t<combobox_item_t *, combo_box_t> value;
+private:
+	combobox_item_t * _value;
+	myvi::string_impl_t<INPUT_MAX_LEN> _str_value;
+	myvi::iterator_t<combobox_item_t> *_values;
+	bool captured;
+	combobox_item_t *sprev;
+	myvi::reverse_iterator_t<combobox_item_t> revit;
+	empty_iterator_t empty_iterator;
+private:
+	void set_values(myvi::iterator_t<combobox_item_t> *values) {
+		_values = values;
+		if (!values)
+			_values = &empty_iterator;
+		revit.assign(_values);
+		sprev = 0;
 	}
 
-
-	virtual void init() OVERRIDE {
-		super::init();
-
-//		myvi::menu_context_t &ctx = myvi::menu_context_t::instance();
-
-		this->visible = true;
-//		this->lab.ctx = ctx.lctx1;
-
-		view_factory_t::instance().prepare_context(this->lab.ctx, meta);
+	void set_value(combobox_item_t * value) {
+		_value=(value);
+		lab.text = _value->get_string_value();
 	}
 
+	combobox_item_t * get_value() {
+		return _value;
+	}
+public:
+
+	combo_box_t() {
+		captured = false;
+		_values = 0;
+		_value = 0;
+		sprev = 0;
+		lab.ctx.sctx.pen_color = 0x00;
+		lab.visible = true;
+		values.init(this,&combo_box_t::set_values);
+		value.init(this,&combo_box_t::get_value, &combo_box_t::set_value);
+
+		values = &empty_iterator;
+
+		add_child(&lab);
+	}
+
+	//virtual void set_dirty(bool dirty) OVERRIDE {
+	//	if (dirty && parent) {
+	//		parent->dirty = true;
+	//	}
+	//	super::set_dirty(dirty);
+	//}
+
+	virtual void vget_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
+		lab.get_preferred_size(aw,ah);
+		//if (h < lab.h) h = lab.h;
+		//if (w < lab.w + 5) w = lab.w + 5;
+	}
+
+	virtual void do_layout() OVERRIDE {
+		lab.x = 0;
+		lab.y = 0;
+		lab.w = w;
+		lab.h = h;
+	}
+
+	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
+		_MY_ASSERT(_values,return);
+
+		if (key == myvi::key_t::K_ENTER) {
+			_MY_ASSERT(parent,return);
+			if (!captured) {
+				this->capture_focus();
+				captured = true;
+			} else {
+				this->release_focus();
+				captured = false;
+			}
+			goto lab_update_cbox;
+		}
+		if (!captured) {
+			return;
+		}
+
+		if (key == myvi::key_t::K_UP || key == myvi::key_t::K_LEFT) {
+			sprev = revit.next(sprev);
+			if (!sprev) {
+				sprev = revit.next(sprev);
+				if (!sprev)
+					return;
+			}
+			goto lab_update_cbox;
+		}
+		if (key == myvi::key_t::K_DOWN || key == myvi::key_t::K_RIGHT) {
+			sprev = _values->next(sprev);
+			if (!sprev) {
+				sprev = _values->next(sprev);
+				if (!sprev)
+					return;
+			}
+			goto lab_update_cbox;
+		}
+		return;
+
+	lab_update_cbox:
+
+		if (sprev)
+			_value=(sprev);
+
+		if (_value) {
+			_str_value = _value->get_string_value();;
+			lab.text = _str_value;
+		}
+		if (parent)
+			parent->child_request_size_change(this);
+		dirty = true;
+
+		notify(_value);
+	}
+
+	virtual void render(myvi::surface_t &dst) OVERRIDE {
+		s32 ax, ay;
+		translate(ax,ay);
+		if (selected) {
+			dst.ctx.reset();
+			dst.ctx.pen_color = captured ? COLOR_CAPTURED : COLOR_SELECTED;
+			dst.fill(ax,ay,w,h);
+		}
+	}
+
+};
+
+
+
+
+class cbox_view_t : public combo_box_t, public text_aware_t {
+public:
+	virtual label_context_t & get_text_context() OVERRIDE {
+		return this->lab.ctx;
+	}
 };
 
 
@@ -1132,7 +1468,7 @@ public:
 class cbox_controller_t : 
 	public view_controller_impl_base_t,
 	public myvi::subscriber_t<model_message_t>,
-	public myvi::subscriber_t<myvi::combobox_item_t *> {
+	public myvi::subscriber_t<combobox_item_t *> {
 
 	typedef view_controller_impl_base_t super;
 public:
@@ -1140,8 +1476,8 @@ public:
 	//validators
 	//textbox*
 	//combobox*
-	myvi::combo_box_t *cb;
-	myvi::iterator_t<myvi::combobox_item_t> *values;
+	combo_box_t *cb;
+	myvi::iterator_t<combobox_item_t> *values;
 public:
 	cbox_controller_t() {
 		cb = 0;
@@ -1158,7 +1494,7 @@ public:
 		variant_t value;
 		model_t::instance()->read(this->parameter_path, value, this->type);
 
-		cb = dynamic_cast<myvi::combo_box_t *>(ctx.get_view());
+		cb = dynamic_cast<combo_box_t *>(ctx.get_view());
 		_MY_ASSERT(cb, return);
 
 		gen::type_meta_t * type_meta = ctx.get_parameter_meta()->get_type_meta();
@@ -1180,7 +1516,7 @@ public:
 	}
 
 	void set_value(s32 val) {
-		myvi::combobox_item_t * p = values->next(0);
+		combobox_item_t * p = values->next(0);
 		while (p) {
 			if (p->get_int_value() == val) {
 				cb->value = p;
@@ -1205,7 +1541,7 @@ public:
 	}
 
 	// обновление от виджета
-	virtual void accept(myvi::combobox_item_t * &msg) OVERRIDE {
+	virtual void accept(combobox_item_t * &msg) OVERRIDE {
 		variant_t value(msg->get_int_value());
 		model_t::instance()->update(this->parameter_path, value);
 	}
@@ -1254,21 +1590,14 @@ public:
 
 
 // вставляет вид, создаваемый параметром, в свой вид
-class parameter_view_controller_t : public view_controller_t {
+class parameter_view_controller_t : public view_controller_impl_base_t {
+	typedef view_controller_impl_base_t super;
 public:
 	virtual void init(view_build_context_t &ctx) OVERRIDE {
 
-		myvi::string_t parameter_path = ctx.get_view_meta()->get_string_param("parameterPath");
+		super::init(ctx);
 
-		_MY_ASSERT(!parameter_path.is_empty(), return);
-
-		meta_path_t path = meta_path_t(parameter_path);
-		parameter_path_resolver_t resolver(path);
-
-		gen::parameter_meta_t *child_parameter_meta = resolver.resolve();
-//			ctx.set_parameter_meta(child_parameter_meta);
-
-		myvi::gobject_t * child_view = parameter_meta_ex_t(child_parameter_meta).build_menu_view(ctx);
+		myvi::gobject_t * child_view = parameter_meta_ex_t(ctx.get_parameter_meta()).build_menu_view(ctx);
 		ctx.get_view()->add_child(child_view);
 
 	}

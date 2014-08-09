@@ -74,29 +74,6 @@ public:
 		captured.pop();
 	}
 
-	gobject_t * locate_next(direction_t::direction_t direction, gobject_t *root);
-
-};
-
-class focus_intention_t {
-public:
-	gobject_t *current;
-	gobject_t *next;
-	direction_t::direction_t direction;
-public:
-	focus_intention_t() {
-		current = 0;
-		next = 0;
-		direction = direction_t::UP;
-	}
-};
-
-
-// могут изменять назначения фокуса
-class focus_master_t {
-public:
-public:
-	virtual void alter_focus_intention(focus_intention_t &intention) = 0;
 };
 
 
@@ -219,9 +196,12 @@ public:
 			gobject_t * p = iter_visible_deep.next();
 
 			while (p) {
-				if (p->enabled && dynamic_cast<focus_client_t*>(p)) {
-					break;
-				}
+				if (p->enabled) {
+					focus_client_t *focus_client = dynamic_cast<focus_client_t*>(p);
+					if (focus_client) {
+						break;
+					}
+			}
 				p = iter_visible_deep.next();
 			}
 			return p;
@@ -355,7 +335,16 @@ public:
 		return pp ? pp : this;
 	}
 
+	virtual void render_before(surface_t &dst) {
+	}
 	virtual void render(surface_t &dst) {
+	}
+	virtual void render_after(surface_t &dst) {
+	}
+	void do_render(surface_t &dst) {
+		render_before(dst);
+		render(dst);
+		render_after(dst);
 	}
 	
 	// перечислитель всех дочерних обьектов
@@ -379,19 +368,6 @@ public:
 		return iterator_selectable_deep_t(iterator_visible_deep());
 	}
 
-
-	focus_master_t * get_focus_master() {
-
-		gobject_t *p = parent;
-		while (p) {
-			focus_master_t *ret = dynamic_cast<focus_master_t*>(p);
-			if (ret) {
-				return ret;
-			}
-			p = p->parent;
-		}
-		return 0;
-	}
 
 	// вызывает do_layout для каждого из детей
 	void layout_children() {
@@ -420,7 +396,7 @@ public:
 	}
 
 
-	virtual void get_preferred_size(s32 &pw, s32 &ph) {
+	virtual void vget_preferred_size(s32 &pw, s32 &ph) {
 
 		pw = this->w;
 		ph = this->h;
@@ -428,6 +404,14 @@ public:
 		if (layout) {
 			layout->get_preferred_size(this, pw,ph);
 		}
+	}
+
+	virtual void adjust_preferred_size(s32 &pw, s32 &ph) {
+	}
+
+	void get_preferred_size(s32 &pw, s32 &ph) {
+		vget_preferred_size(pw,ph);
+		adjust_preferred_size(pw,ph);
 	}
 
 	// размещает детей в пространстве родителя
@@ -468,72 +452,7 @@ namespace font_size_t {
 	};
 }
 
-class label_context_t {
-public:
-//	u32 text_color; // цвет текста и глифа
-	font_size_t::font_size_t font_size;    // размер текста \ глифа в пикселах
-	ttype_font_t *font;	// шрифт текста \ глифа
-	surface_context_t sctx;
-public:
-	label_context_t() {
-		font_size=font_size_t::FS_8;
-		font=(0);
-		sctx.pen_color = 0xffffff;
-	}
-};
 
-class label_t  : public gobject_t {
-public:
-	u32 glyph_code;	// глиф
-	string32_t text32;  // текст
-	string_t text;  // текст
-	label_context_t ctx;
-public:
-	label_t() {
-		glyph_code=(0x0000);
-		visible = false;
-	}
-
-	virtual void render(surface_t &dst) OVERRIDE ;
-
-	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE ;
-};
-
-class button_context_t {
-public:
-	u32 bk_color;	// цвет не выбранной кнопки
-	u32 bk_sel_color;	// цвет выбранной кнопки
-	u32 bk_pressed_color;	// цвет нажатой кнопки
-	u32 bk_disabled_color; // цвет неактивной кнопки
-	surface_context_t sctx;
-public:
-	button_context_t() {
-		bk_color=(0xB8BDCF),bk_sel_color=(0x848794),bk_pressed_color=(0x6B8896);
-		bk_disabled_color = 0xA0A0A0;
-	}
-};
-
-/*
-// выравнивает дочерние обьекты по центру
-class center_layout_t : public layout_t {
-public:
-	s32 spx;
-	s32 spy;
-	bool vertical;
-public:
-	center_layout_t() {
-		spx = 5, spy = 5;
-		vertical = true;
-	}
-
-
-	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) OVERRIDE {
-		_MY_ASSERT(0,return);
-	}
-
-	virtual void layout(gobject_t *parent) OVERRIDE;
-};
-*/
 
 // располагает дочерние компоненты подряд
 
@@ -615,224 +534,6 @@ public:
 };
 
 
-
-class button_t : public gobject_t, public focus_client_t {
-public:
-	label_t l_top;
-	label_t l_mid;
-	label_t l_bot;
-	button_context_t ctx;
-//	levels_layout_t levels_layout;
-	property_t<bool, button_t> pressed;
-private:
-	bool _pressed;	// текущее состояние
-private:
-	bool get_pressed() {
-		return _pressed;
-	}
-	void set_pressed(bool apressed) {
-		_pressed = apressed;
-		dirty = true;
-	}
-
-public:
-	button_t() {
-		_pressed = (false);
-//		layout = &levels_layout;
-		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
-
-//		add_child(&l_top);
-		add_child(&l_mid);
-//		add_child(&l_bot);
-	}
-
-	virtual void render(surface_t &dst) OVERRIDE ;
-
-	//virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
-	//	gobject_t::get_preferred_size(aw, ah);
-	//}
-
-};
-
-
-#define INPUT_MAX_LEN 30
-#define COLOR_SELECTED 0xAFBFCF
-#define COLOR_CAPTURED 0x267F00
-
-class textbox_msg_t {
-public:
-	enum state_t {
-		EDIT, // значенеие еще редактируется
-		COMPLETE // пользователь нажал Enter и мы вышли из режима редактирования
-	} state;
-	myvi::string_t value;
-public:
-	textbox_msg_t(state_t _state, myvi::string_t _value) : state(_state), value(_value) {
-	}
-};
-
-class text_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<textbox_msg_t, 1> {
-	typedef gobject_t super;
-public:
-	property_t<string_t , text_box_t> value;
-	label_t lab;
-	bool cursor_visible;
-	u32 cursor_color;
-private:
-	string_impl_t<INPUT_MAX_LEN> _value;
-	s32 cursor_pos[INPUT_MAX_LEN];
-	s32 caret_pos;
-private:
-	void set_value(string_t cvalue) {
-		_value=(cvalue);
-		lab.text = _value;
-		caret_pos = _value.length();
-	}
-
-	string_t get_value() {
-		return _value;
-	}
-public:
-	text_box_t() {
-		value.init(this,&text_box_t::get_value, &text_box_t::set_value);
-		lab.ctx.sctx.pen_color = 0x00;
-		lab.visible = true;
-		caret_pos = 0;
-		cursor_visible = false;
-		cursor_color = 0x000000;
-
-		add_child(&lab);
-	}
-
-	void measure_cursor_pos() {
-		for (s32 i=1; i <= _value.length(); i++) {
-			lab.text = _value.sub(0,i);
-			s32 lw, lh;
-			lab.get_preferred_size(lw,lh);
-			cursor_pos[i-1] = lw;
-		}
-		lab.text = _value;
-	}
-
-	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
-		measure_cursor_pos();
-		lab.get_preferred_size(aw, ah);
-	}
-
-	virtual void do_layout() OVERRIDE {
-		lab.x = 0;
-		lab.y = 0;
-		lab.w = w; // место для курсора
-		lab.h = h;
-	}
-
-	virtual void key_event(key_t::key_t key) OVERRIDE;
-
-	//virtual void set_dirty(bool dirty) OVERRIDE {
-	//	if (dirty && parent) {
-	//		parent->dirty = true;
-	//	}
-	//	super::set_dirty(dirty);
-	//}
-
-	virtual void set_selected(bool selected) {
-		_MY_ASSERT(parent,return);
-		dirty = true;
-		focus_client_t::set_selected(selected);
-	}
-
-	virtual void render(surface_t &dst) OVERRIDE;
-
-};
-
-// элемент в выпадающем списке
-class combobox_item_t {
-public:
-	virtual string_t get_string_value() = 0;
-	virtual s32 get_int_value() = 0;
-};
-
-// метка с функцией выбора из списка значений
-class combo_box_t : public gobject_t, public focus_client_t, public focus_aware_t, public publisher_t<combobox_item_t *, 1> {
-	typedef gobject_t super;
-
-	class empty_iterator_t : public iterator_t<combobox_item_t> {
-	public:
-		virtual combobox_item_t* next(void* prev) OVERRIDE {
-			return 0;
-		}
-	};
-public:
-	label_t lab;
-	wo_property_t<iterator_t<combobox_item_t>*,combo_box_t> values;
-	property_t<combobox_item_t *, combo_box_t> value;
-private:
-	combobox_item_t * _value;
-	string_impl_t<INPUT_MAX_LEN> _str_value;
-	iterator_t<combobox_item_t> *_values;
-	bool captured;
-	combobox_item_t *sprev;
-	reverse_iterator_t<combobox_item_t> revit;
-	empty_iterator_t empty_iterator;
-private:
-	void set_values(iterator_t<combobox_item_t> *values) {
-		_values = values;
-		if (!values)
-			_values = &empty_iterator;
-		revit.assign(_values);
-		sprev = 0;
-	}
-
-	void set_value(combobox_item_t * value) {
-		_value=(value);
-		lab.text = _value->get_string_value();
-	}
-
-	combobox_item_t * get_value() {
-		return _value;
-	}
-public:
-
-	combo_box_t() {
-		captured = false;
-		_values = 0;
-		_value = 0;
-		sprev = 0;
-		lab.ctx.sctx.pen_color = 0x00;
-		lab.visible = true;
-		values.init(this,&combo_box_t::set_values);
-		value.init(this,&combo_box_t::get_value, &combo_box_t::set_value);
-
-		values = &empty_iterator;
-
-		add_child(&lab);
-	}
-
-	//virtual void set_dirty(bool dirty) OVERRIDE {
-	//	if (dirty && parent) {
-	//		parent->dirty = true;
-	//	}
-	//	super::set_dirty(dirty);
-	//}
-
-	virtual void get_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
-		lab.get_preferred_size(aw,ah);
-		//if (h < lab.h) h = lab.h;
-		//if (w < lab.w + 5) w = lab.w + 5;
-	}
-
-	virtual void do_layout() OVERRIDE {
-		lab.x = 0;
-		lab.y = 0;
-		lab.w = w;
-		lab.h = h;
-	}
-
-	virtual void key_event(key_t::key_t key) OVERRIDE;
-
-	virtual void render(surface_t &dst) OVERRIDE;
-
-};
 
 
 // оверлей модальных диалогов - должен находиться в корне дерева отображения

@@ -150,7 +150,14 @@ public:
 class dynamic_parameter_meta_t : public dynamic_meta_t<dynamic_parameter_meta_t, parameter_meta_t> {
 };
 
-class enum_meta_t : public meta_t, public myvi::combobox_item_t {
+// элемент в выпадающем списке
+class combobox_item_proto_t {
+public:
+	virtual myvi::string_t get_string_value() = 0;
+	virtual s32 get_int_value() = 0;
+};
+
+class enum_meta_t : public meta_t, public combobox_item_proto_t {
 public:
 		virtual myvi::string_t get_string_value() OVERRIDE {
 			return get_string_param("name");
@@ -167,7 +174,7 @@ class dynamic_enum_meta_t : public dynamic_meta_t<dynamic_enum_meta_t, enum_meta
 class type_meta_t : public meta_t {
 public:
 	// итератор Enum для combobx-a
-	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() {
+	virtual myvi::iterator_t<combobox_item_proto_t> * get_combobox_iterator() {
 		return 0;
 	}
 
@@ -227,11 +234,11 @@ public:
 
 class dynamic_type_meta_t : public dynamic_meta_t<dynamic_type_meta_t, type_meta_t> {
 
-	class combobox_item_iterator_t : public myvi::iterator_t<myvi::combobox_item_t> {
+	class combobox_item_iterator_t : public myvi::iterator_t<combobox_item_proto_t> {
 	public:
 		dynamic_type_meta_t *type_meta;
 	public:
-		virtual myvi::combobox_item_t* next(void* prev) OVERRIDE {
+		virtual combobox_item_proto_t* next(void* prev) OVERRIDE {
 
 			bool go = !prev;
 
@@ -241,9 +248,9 @@ class dynamic_type_meta_t : public dynamic_meta_t<dynamic_type_meta_t, type_meta
 					return 0;
 				}
 				if (go) {
-					return static_cast<myvi::combobox_item_t *>(child_meta);
+					return static_cast<combobox_item_proto_t *>(child_meta);
 				}
-				if (static_cast<myvi::combobox_item_t *>(child_meta) == prev) {
+				if (static_cast<combobox_item_proto_t *>(child_meta) == prev) {
 					go = true;
 				}
 			}
@@ -284,7 +291,7 @@ public:
 		return enums[i];
 	}
 
-	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() OVERRIDE {
+	virtual myvi::iterator_t<combobox_item_proto_t> * get_combobox_iterator() OVERRIDE {
 		return &combobox_iterator;
 	}
 
@@ -334,7 +341,7 @@ public:
 	}
 
 
-	void mixin_params_from(const dynamic_view_meta_t &other) {
+	void mixin_params_from( dynamic_view_meta_t &other) {
 
 
 		for (_str_map::const_iterator it = other.string_param_map.begin(); it != other.string_param_map.end(); it++) {
@@ -345,6 +352,12 @@ public:
 		}
 		for (_float_map::const_iterator it = other.float_param_map.begin(); it != other.float_param_map.end(); it++) {
 			this->set_float_param((*it).first,(*it).second);
+		}
+
+		for (s32 i=0; ;i++) {
+			view_meta_t *child_meta = other.get_view_child(i);
+			if (!child_meta) break;
+			this->add_child(child_meta);
 		}
 	}
 

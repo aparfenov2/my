@@ -93,71 +93,80 @@
 
 	<views>
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
-		<view id="tbox" controller="tbox" predefined="tbox" decorator="background,3d" background="BACKGROUND_WHITE" fontSize="FS_30" /> <!-- textbox -->
-		<view id="cbox" controller="cbox" predefined="cbox" decorator="background,3d,cbox" background="BACKGROUND_WHITE" fontSize="FS_30" /> <!-- combobox -->
 		<view id="lab" controller="lab" predefined="lab" font="TTF" fontSize="FS_30" /> <!-- label -->
-		<view id="btn" controller="btn" predefined="btn" decorator="3d" d3_inversed="true" layout="center" padding="10" fontSize="FS_20" /> <!-- button -->
+		
+		<view id="tbox" controller="tbox" predefined="tbox" fontSize="FS_30" decorator="background,3d" background="BACKGROUND_WHITE" /> <!-- textbox -->
+		<view id="cbox" predefined="cbox" controller="cbox" fontSize="FS_30" decorator="background,3d,cbox" background="BACKGROUND_WHITE"  /> <!-- combobox -->
+		<view id="btn" controller="btn" predefined="btn" layout="center" padding="10"
+			decorator="background,3d" d3_inversed="true"  background="BACKGROUND_WHITE" > <!-- button \-->
+			<view inherited="lab" fontSize="FS_20" staticText="btn" />
+		</view>
 		
 <!-- textbox + combobox -->		
-		<view id="tbox_cbox" layout="stack" vertical="false"  focusMaster="tbox_cbox" > 
-			<view id="tbox" inherited="tbox" />
-			<view id="cbox" inherited="cbox" />
+		<view id="tbox_cbox" layout="stack" vertical="false"  > 
+			<view inherited="tbox" />
+			<view inherited="cbox" />
 		</view>
 <!-- textbox + label -->
 		<view id="tbox_label" layout="stack" vertical="false" preferred_item_size="true">
-			<view id="tbox" inherited="tbox" />
-			<view id="lab" inherited="lab" labelSource="label" /> <!-- взять значение label из аттрибута label, а не name -->
+			<view inherited="tbox" />
+			<view inherited="lab" labelSource="label" /> <!-- взять значение label из аттрибута label, а не name -->
 		</view>
 
 
 <!-- генерируемые виды -->
-		<view id="dme" layout="stack" vertical="false"  focusMaster="tbox_cbox" > 
-			<view id="ch" inherited="tbox" parameterPath=".ch" /> <!-- относительный путь внутри параметра dme -->
-			<view id="sfx" inherited="cbox" parameterPath=".sfx" />
+		<view id="dme" layout="stack" vertical="false" > 
+			<view inherited="tbox" parameterPath=".ch" /> <!-- относительный путь внутри параметра dme -->
+			<view inherited="cbox" parameterPath=".sfx" />
 		</view>
 
 		
 		<view id="default_composite_template" layout="stack" vertical="true" preferred_item_size="true"/>
 <!-- popup demo
 		<view id="popup_demo" layout="center">
-			<view id="bt1" inherited="btn" name="Нажми" popup_view="foo_popup" />
+			<view  inherited="btn" name="Нажми" popup_view="foo_popup" />
 		</view>
 		
 		<view id="foo_popup" layout="center">
-			<view id="wnd" layout="center"  decorator="background" background="BACKGROUND_BLUE" width="300" height="200" >
-				<view id="centered1" layout="stack" vertical="true"  >
-					<view id="lab1" inherited="lab" staticText="Сообщение 1" />
-					<view id="bt1" inherited="btn" name="Закрыть" close="true" />
+			<view  layout="center"  decorator="background" background="BACKGROUND_BLUE" width="300" height="200" >
+				<view  layout="stack" vertical="true"  >
+					<view  inherited="lab" staticText="Сообщение 1" />
+					<view  inherited="btn" name="Закрыть" close="true" />
 				</view>
 			</view>
 		</view>
 -->		
 		
 		<view id="root" layout="stack" vertical="true"  stretch_last="true" decorator="background" background="BACKGROUND_GRAY" >
-
-			<view id="header" layout="stack" vertical="false"  >
-				<view id="hdr_freq" layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
-				<view id="hdr_lvl" layout="stretch" controller="parameter_view" parameterPath="header_level"/> 
+<!--
+			<view layout="stack" vertical="false">
+				<view inherited="btn" name="RF ON" />
+				<view inherited="btn" name="MOD OFF" />
+			</view>
+-->			
+			<view layout="stack" vertical="false">
+				<view layout="stretch" controller="parameter_view" parameterPath="header_freq"/> 
+				<view layout="stretch" controller="parameter_view" parameterPath="header_level"/> 
 			</view>
 
-			<view id="menu" layout="stack" vertical="true"  stretch_last="true">
-				<view id="menu_header" decorator="background" background="BACKGROUND_BLUE" layout="stretch">
-					<view id="menu_name_lab" inherited="lab" staticText="Название меню!" listen="menu_name" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
+			<view layout="stack" vertical="true"  stretch_last="true">
+				<view decorator="background" background="BACKGROUND_BLUE" layout="stretch">
+					<view inherited="lab" staticText="xxx" listen="menu_name" font="TTF_BOLD" fontSize="FS_8" fontColor="FONT_WHITE"  /> 
 				</view>
-				<view id="scroll_window" predefined="scroll_window" >
-					<view id="scroll_interior" layout="stretch" padding="10" >
+				<view predefined="scroll_window" >
+					<view layout="stretch" padding="10" >
 <!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
-						<view id="window_selector" initial="main" layout="stretch" controller="window_selector" listen="menu_select" event="menu_name" >
+						<view initial="main" layout="stretch" controller="window_selector" listen="menu_select" event="menu_name" >
 							<view id="main" name="Главное" layout="center" >
-								<view id="main_innher" name="Главное"  layout="stack" vertical="false" preferred_item_size="false" bw="150" height="80" >
-									<view id="sub1" layout="center" decorator="background" background="BACKGROUND_BLUE" >
-										<view id="bt1" inherited="btn" name="Управление" event="menu_select" arg0="control" />
+								<view layout="stack" vertical="false" preferred_item_size="false" bw="150" height="80" >
+									<view layout="center" decorator="background" background="BACKGROUND_BLUE" >
+										<view inherited="btn" name="Управление" event="menu_select" arg0="control" />
 									</view>
-									<view id="sub2"  layout="center" decorator="background" background="BACKGROUND_BLUE">
-										<view id="bt2" inherited="btn" name="Калибровка" event="menu_select" arg0="parameters" />
+									<view layout="center" decorator="background" background="BACKGROUND_BLUE">
+										<view inherited="btn" name="Калибровка" event="menu_select" arg0="parameters" />
 									</view>
-									<view id="sub3" layout="center" decorator="background" background="BACKGROUND_BLUE">
-										<view id="bt3" inherited="btn" name="Настройки"  event="menu_select" arg0="settings" />
+									<view layout="center" decorator="background" background="BACKGROUND_BLUE">
+										<view inherited="btn" name="Настройки"  event="menu_select" arg0="settings" />
 									</view>
 								</view>
 							</view>
@@ -172,20 +181,20 @@
 		
 		
 		<view id="menu_item" layout="menu_item">
-			<view id="lab" inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
+			<view inherited="lab" /> <!-- по умолчанию контроллер label выводит параметр "name" из меты параметра -->
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>
 	
 	<menus>
-		<menu id="main" name="Главное">
+		<menu id="main">
 			<parameterRef id="measure_ctl" />
 			<parameterRef id="dme" />
 			<parameterRef id="output_mode" />
 			<parameterRef id="out_level" />
 			<parameterRef id="start_ctl" />
 		</menu>
-		<menu id="parameters" name="Параметры">
+		<menu id="parameters">
 			<parameterRef id="req_period" />
 			<parameterRef id="req_freq" />
 			<parameterRef id="req_span" />
@@ -195,7 +204,7 @@
 			<parameterRef id="brightness" />
 			<parameterRef id="dsp_onoff" />
 		</menu>
-		<menu id="screen" name="Экран">
+		<menu id="screen">
 			<parameterRef id="brightness" />
 			<parameterRef id="dsp_onoff" />
 		</menu>

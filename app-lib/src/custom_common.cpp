@@ -85,19 +85,19 @@ static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx
 	myvi::string_t view_id = ctx.get_view_meta()->get_predefined_id();
 
 	if (view_id == "cbox") {
-		view = new custom::cbox_view_t(ctx.get_view_meta());
+		view = new custom::cbox_view_t();
 
 	} else if (view_id == "tbox") {
-		view = new custom::tbox_view_t(ctx.get_view_meta());
+		view = new custom::tbox_view_t();
 
 	} else if (view_id == "lab") {
-		view = new custom::lab_view_t(ctx);
+		view = new custom::lab_view_t();
 
 	} else if (view_id == "scroll_window") {
 		view = new custom::scroll_window_view_t();
 
 	} else if (view_id == "btn") {
-		view = new custom::button_view_t(ctx.get_view_meta());
+		view = new custom::button_view_t();
 	}
 	_MY_ASSERT(view, return 0);
 	return view;
@@ -125,7 +125,7 @@ static void build_child_views_of_view(view_build_context_t ctx) {
 		gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(i);
 		if (!child_meta) break;
 		myvi::gobject_t *child_view = view_meta_ex_t(child_meta).build_view(ctx);
-		if (dvmx) {
+		if (dvmx && !child_meta->get_id().is_empty()) {
 			dvmx->add_child(child_view,child_meta->get_id());
 		} else {
 			ctx.get_view()->add_child(child_view);
@@ -220,6 +220,7 @@ static decorator_t * build_decorator(myvi::string_t decorator_id, gen::meta_t * 
 	return ret;
 }
 
+static void prepare_context(label_context_t &ret, gen::meta_t *meta);
 
 // метод фабрики вида по умолчанию для составного вида
 myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
@@ -242,6 +243,7 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 			ctx.set_view_meta(combined_meta);
 		}
 	}
+	myvi::gobject_t *parent_view = ctx.try_get_view();
 	ctx.set_view(0);
 	if (ctx.get_view_meta()->is_predefined()) {
 		ctx.set_view(
@@ -249,7 +251,14 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 			);
 
 	} else {
-		ctx.set_view (new custom::dynamic_view_t(ctx));
+		ctx.set_view (new custom::dynamic_view_t());
+	}
+
+	ctx.get_view()->parent = parent_view;
+
+	view_build_context_aware_t *ctx_aware = dynamic_cast<view_build_context_aware_t *>(ctx.get_view());
+	if (ctx_aware) {
+		ctx_aware->init(ctx);
 	}
 
 	myvi::layout_t *layout = build_layout(ctx.get_view_meta());
@@ -267,6 +276,10 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 			);
 	}
 
+	text_aware_t * text_aware = dynamic_cast<text_aware_t *>(ctx.get_view());
+	if (text_aware) {
+		prepare_context(text_aware->get_text_context(), ctx.get_view_meta());
+	}
 
 	build_child_views_of_view(ctx);
 
@@ -399,7 +412,7 @@ myvi::string_t meta_path_base_t::iterator_t::next() {
 }
 
 
-u32 view_factory_t::parse_color(myvi::string_t color) {
+static u32 _parse_color(myvi::string_t color) {
 	if (color == "BACKGROUND_WHITE") {
 		return 0xF9FFF4;
 	} else if (color == "BACKGROUND_BLUE") {
@@ -413,6 +426,10 @@ u32 view_factory_t::parse_color(myvi::string_t color) {
 	}
 	_MY_ASSERT(0, return 0);
 	return 0;
+}
+
+u32 view_factory_t::parse_color(myvi::string_t color) {
+	return _parse_color(color);
 }
 
 static myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id) {
@@ -450,7 +467,7 @@ static myvi::ttype_font_t * resolve_font(myvi::string_t font_id) {
 	return 0;
 }
 
-void view_factory_t::prepare_context(myvi::label_context_t &ret, gen::meta_t *meta) {
+static void prepare_context(label_context_t &ret, gen::meta_t *meta) {
 
 
 	myvi::string_t font_id = meta->get_string_param("font");
@@ -469,7 +486,7 @@ void view_factory_t::prepare_context(myvi::label_context_t &ret, gen::meta_t *me
 
 	myvi::string_t font_color_id = meta->get_string_param("fontColor");
 	if (!font_color_id.is_empty()) {
-		ret.sctx.pen_color = parse_color(font_color_id);
+		ret.sctx.pen_color = _parse_color(font_color_id);
 	} else {
 		ret.sctx.pen_color = 0;
 	}

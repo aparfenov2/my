@@ -120,6 +120,9 @@ void surface_t::line(s32 x1,s32 y1, s32 x2,s32 y2) {
 
     int error = deltaX - deltaY;
 
+	if (x2 < 0 || y2 <0 || x2 >= w || y2 >= h) 
+		return;
+
     this->putpx_to(*this,x2, y2, ctx.pen_color);
 	s32 cnt = w + h;
 

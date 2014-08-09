@@ -168,10 +168,10 @@ public:
 
 class view_build_context_t {
 private:
-	myvi::gobject_t *view;
 	gen::view_meta_t *view_meta;
 	gen::parameter_meta_t *parameter_meta;
 	volatile_path_t parameter_path; // полный путь до параметра
+	myvi::gobject_t *view;
 public:
 	view_build_context_t() {
 		view = 0;
@@ -181,6 +181,10 @@ public:
 
 	myvi::gobject_t * get_view() {
 		_MY_ASSERT(view, return 0);
+		return view;
+	}
+
+	myvi::gobject_t * try_get_view() {
 		return view;
 	}
 
@@ -215,6 +219,19 @@ public:
 };
 
 
+class label_context_t {
+public:
+//	u32 text_color; // цвет текста и глифа
+	myvi::font_size_t::font_size_t font_size;    // размер текста \ глифа в пикселах
+	myvi::ttype_font_t *font;	// шрифт текста \ глифа
+	myvi::surface_context_t sctx;
+public:
+	label_context_t() {
+		font_size = myvi::font_size_t::FS_8;
+		font=(0);
+		sctx.pen_color = 0xffffff;
+	}
+};
 
 
 // фабрика дочерних видов. Её задача создать вид и связать его с контроллерм
@@ -237,8 +254,6 @@ public:
 	myvi::gobject_t * build_menu_view(view_build_context_t ctx);
 
 	u32 parse_color(myvi::string_t color);
-
-	void prepare_context(myvi::label_context_t &ret, gen::meta_t *meta);
 
 };
 
@@ -271,11 +286,12 @@ public:
 public:
 	// добавляет дочерний вид с привязкой идентификатора
 	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
-		_MY_ASSERT(child, return);
+		_MY_ASSERT(child && !id.is_empty(), return);
 		id_map[id] = child;
 	}
 
 	myvi::gobject_t *get_child(myvi::string_t id) {
+		_MY_ASSERT(!id.is_empty(), return 0);
 		return id_map[id];
 	}
 
