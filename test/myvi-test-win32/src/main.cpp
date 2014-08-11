@@ -179,7 +179,7 @@ public:
 
 		if (key) {
 			// сначала отдаем на перехват фильтрам клавиатуры
-			if (!custom::keyboard_filter_chain_t::instance().processKey(key)) {
+			if (!custom::keyboard_filter_chain_t::instance().process_key(key)) {
 
 				focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
 				if (focus_aware) {

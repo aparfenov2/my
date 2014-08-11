@@ -17,12 +17,6 @@ keyboard_filter_chain_t keyboard_filter_chain_t::_instance;
 
 
 
-void view_build_context_t::set_parameter_meta(gen::parameter_meta_t *_parameter_meta) {
-	parameter_meta = _parameter_meta;
-	parameter_path.add_absolute(_parameter_meta->get_id());
-}
-
-
 static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * meta) {
 
 	myvi::layout_t * ret = 0;
@@ -133,38 +127,6 @@ static void build_child_views_of_view(view_build_context_t ctx) {
 	}
 }
 
-class decorator_array_t : public decorator_t {
-public:
-	std::vector<decorator_t *> children;
-public:
-	decorator_array_t(gen::meta_t *meta) {
-	}
-
-	void add_child(decorator_t *child) {
-		children.push_back(child);
-	}
-
-	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->render_before(obj, dst);
-		}
-	}
-
-	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->render_after(obj, dst);
-		}
-	}
-
-	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
-
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->adjust_preferred_size(obj, pw, ph);
-		}
-	}
-
-};
-
 
 
 static decorator_t * build_decorator_simple(myvi::string_t decorator_id, gen::meta_t * meta) {
@@ -271,7 +233,7 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 		decorator_aware_t *drawer_aware = dynamic_cast<decorator_aware_t *>(ctx.get_view());
 		_MY_ASSERT(drawer_aware, return 0);
 
-		drawer_aware->set_drawer(
+		drawer_aware->set_decorator(
 			build_decorator(drawer_id, ctx.get_view_meta())
 			);
 	}
@@ -411,21 +373,22 @@ myvi::string_t meta_path_base_t::iterator_t::next() {
 	return 0;
 }
 
+static u32 parse_hex(myvi::string_t color) {
+	_MY_ASSERT(color.length() > 2, return 0);
+	if (color.sub(0,2) == "0x") {
+		color = color.sub(2);
+	}
+	char *end;
+	s32 ival = std::strtol(color.c_str(), &end, 16);
+	_MY_ASSERT(*end == 0, return 0);
+	return (u32)ival;
+}
 
 static u32 _parse_color(myvi::string_t color) {
-	if (color == "BACKGROUND_WHITE") {
-		return 0xF9FFF4;
-	} else if (color == "BACKGROUND_BLUE") {
-		return 0x679AB9;
-
-	} else if (color == "BACKGROUND_GRAY") {
-		return 0x97A39F;
-
-	} else if (color == "FONT_WHITE") {
-		return 0xE5E9F2;
+	if (color.length() > 2 && color.sub(0,2) == "0x") {
+		return parse_hex(color);
 	}
-	_MY_ASSERT(0, return 0);
-	return 0;
+	return gen::meta_registry_t::instance().resolve_color(color);
 }
 
 u32 view_factory_t::parse_color(myvi::string_t color) {
@@ -433,20 +396,7 @@ u32 view_factory_t::parse_color(myvi::string_t color) {
 }
 
 static myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id) {
-	if (font_size_id == "FS_8") {
-		return myvi::font_size_t::FS_8;
-
-	} else if (font_size_id == "FS_15") {
-		return myvi::font_size_t::FS_15;
-
-	} else if (font_size_id == "FS_20") {
-		return myvi::font_size_t::FS_20;
-
-	} else if (font_size_id == "FS_30") {
-		return myvi::font_size_t::FS_30;
-	}
-	_MY_ASSERT(0, return (myvi::font_size_t::font_size_t) 0);
-	return (myvi::font_size_t::font_size_t) 0;
+	return (myvi::font_size_t::font_size_t) gen::meta_registry_t::instance().resolve_font_size(font_size_id);
 }
 
 
@@ -471,20 +421,18 @@ static void prepare_context(label_context_t &ret, gen::meta_t *meta) {
 
 
 	myvi::string_t font_id = meta->get_string_param("font");
-	if (!font_id.is_empty()) {
-		ret.font = resolve_font(font_id);
-	} else {
-		ret.font = resolve_font("TTF");
+	if (font_id.is_empty()) {
+		font_id = gen::meta_registry_t::instance().get_default_font_id();
 	}
+	ret.font = resolve_font(font_id);
 
-	myvi::string_t font_size_id = meta->get_string_param("fontSize");
-	if (!font_size_id.is_empty()) {
-		ret.font_size = parse_font_size(font_size_id);
-	} else {
-		ret.font_size = parse_font_size("FS_20");
+	myvi::string_t font_size_id = meta->get_string_param("font_size");
+	if (font_size_id.is_empty()) {
+		font_size_id = gen::meta_registry_t::instance().get_default_font_size_id();
 	}
+	ret.font_size = parse_font_size(font_size_id);
 
-	myvi::string_t font_color_id = meta->get_string_param("fontColor");
+	myvi::string_t font_color_id = meta->get_string_param("font_color");
 	if (!font_color_id.is_empty()) {
 		ret.sctx.pen_color = _parse_color(font_color_id);
 	} else {

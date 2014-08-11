@@ -147,12 +147,19 @@ private:
 class dynamic_model_t : public model_t { 
 
 public:
-	std::unordered_map<myvi::string_t, variant_holder_t *, gen::string_t_hash_t> children;
+	typedef std::unordered_map<u32, variant_holder_t *> children_map_t;
+	children_map_t children;
 public:
 
+	variant_holder_t *get_holder(myvi::string_t key) {
+		u32 ikey = gen::string_t_hash_t()(key);
+		children_map_t::iterator iter = children.find(ikey);
+		if(iter != children.end()) return iter->second;
+		return 0;
+	}
+
 	virtual void update(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
-//		variant_holder_t * holder = get_or_make_holder(parameter_path, value.type);
-		variant_holder_t *holder = children[parameter_path];
+		variant_holder_t *holder = get_holder(parameter_path);
 		_MY_ASSERT(holder, return);
 		holder->assign(value);
 		notify(model_message_t(parameter_path, value));
@@ -160,14 +167,14 @@ public:
 
 
 	virtual void read(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
-		variant_holder_t *holder = children[parameter_path];
+		variant_holder_t *holder = get_holder(parameter_path);
 		_MY_ASSERT(holder, return);
 		value = holder->get_value();
 	}
 
 	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) OVERRIDE  {
 
-		variant_holder_t *holder = children[parameter_path];
+		variant_holder_t *holder = get_holder(parameter_path);
 		if (holder) {
 			_MY_ASSERT(holder->type == expected_type, return);
 			return;
@@ -181,12 +188,12 @@ public:
 
 private:
 	variant_holder_t * get_or_make_holder(myvi::string_t parameter_path, variant_type_t::variant_type_t expected_type) {
-		variant_holder_t *ret = children[parameter_path];
-		if (!ret) {
-			ret = new variant_holder_t(expected_type);
-			children[parameter_path] = ret;
+		variant_holder_t *holder = get_holder(parameter_path);
+		if (!holder) {
+			holder = new variant_holder_t(expected_type);
+			children[gen::string_t_hash_t()(parameter_path)] = holder;
 		}
-		return ret;
+		return holder;
 	}
 };
 
@@ -238,6 +245,7 @@ public:
 
 		while (len > 1 && (buf[len-1] == '0' || buf[len-1] == '.')) {
 			--len;
+			if (buf[len] == '.') break;
 		}
 		str.set_length(len);
 	}
@@ -285,22 +293,20 @@ public:
 
 class view_build_context_aware_t {
 public:
-	virtual void init(view_build_context_t &ctx) = 0;
+	virtual void init(view_build_context_t ctx) = 0;
 };
 
 
 
 // интерфейс контроллера вида
-class view_controller_t : public view_build_context_aware_t {
+class view_controller_t {
 public:
+	virtual void init(view_build_context_t ctx) = 0;
 	// dynamic_view вызывает этот метод на этапе инициализации вида, когда g-дерево полностью построено
 	virtual void on_view_init() {
 	}
 
 };
-
-
-
 
 
 
@@ -316,85 +322,151 @@ public:
 
 	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) {
 	}
+
+	virtual void set_selected(myvi::gobject_t *obj, bool selected) {
+	}
+
+	virtual void set_enabled(myvi::gobject_t *obj, bool enabled) {
+	}
+
+	virtual void set_captured(myvi::gobject_t *obj, bool captured) {
+	}
+
+};
+
+
+class decorator_array_t : public decorator_t {
+public:
+	std::vector<decorator_t *> children;
+public:
+	decorator_array_t(gen::meta_t *meta) {
+	}
+
+	void add_child(decorator_t *child) {
+		children.push_back(child);
+	}
+
+	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->render_before(obj, dst);
+		}
+	}
+
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->render_after(obj, dst);
+		}
+	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->adjust_preferred_size(obj, pw, ph);
+		}
+	}
+
+	virtual void set_selected(myvi::gobject_t *obj, bool selected) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->set_selected(obj, selected);
+		}
+	}
+
+	virtual void set_enabled(myvi::gobject_t *obj, bool enabled) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->set_enabled(obj, enabled);
+		}
+	}
+
+	virtual void set_captured(myvi::gobject_t *obj, bool captured) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->set_captured(obj, captured);
+		}
+	}
+
 };
 
 
 class decorator_aware_t {
 public:
-	virtual void set_drawer(decorator_t *decorator) = 0;
+	virtual void set_decorator(decorator_t *decorator) = 0;
 };
 
-
-template<typename TBase>
-class decorator_aware_impl_t : public TBase,  public decorator_aware_t {
-public:
-	decorator_t *decorator;
-public:
-	decorator_aware_impl_t() {
-		decorator = 0;
-	}
-
-	virtual void set_drawer(decorator_t *_drawer) OVERRIDE {
-		decorator = _drawer;
-	}
-
-	virtual void render_before(myvi::surface_t &dst) OVERRIDE {
-		if (decorator) {
-			decorator->render_before(this, dst);
-		}
-	}
-
-	virtual void render_after(myvi::surface_t &dst) OVERRIDE {
-		if (decorator) {
-			decorator->render_after(this, dst);
-		}
-	}
-
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		TBase::set_dirty(dirty);
-		if (dirty && parent && !decorator) {
-			parent->dirty = true;
-		}
-	}
-
-	virtual void adjust_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
-		if (decorator) {
-			decorator->adjust_preferred_size(this, pw, ph);
-		}
-	}
-};
 
 
 // вид с фоном
 class background_decorator_t : public decorator_t  {
 public:
-	myvi::surface_context_t ctx;
-	bool hasBorder;
+	bool selected;
+	bool captured;
+	bool disabled;
+
+	u32  default_color;
+	u32  selected_color;
+	u32  captured_color;
+	u32  disabled_color;
 public:
 	background_decorator_t(gen::meta_t *meta) {
 
-		hasBorder = false;
-		ctx.alfa = 0;
+		selected = false;
+		captured = false;
+		disabled = false;
 
-		myvi::string_t color = meta->get_string_param("background");
+		default_color = 0xffffff;
+		selected_color = 0xffffff;
+		captured_color = 0xffffff;
+		disabled_color = 0xffffff;
 
-		this->ctx.pen_color = view_factory_t::instance().parse_color(color);
-		if (this->ctx.pen_color > 0) {
-			this->ctx.alfa = 0xff;
+		myvi::string_t color = meta->get_string_param("default_color");
+		_MY_ASSERT(!color.is_empty(), return);
+
+		this->default_color = view_factory_t::instance().parse_color(color);
+
+		color = meta->get_string_param("selected_color");
+		if (!color.is_empty()) {
+			this->selected_color = view_factory_t::instance().parse_color(color);
 		}
+		color = meta->get_string_param("captured_color");
+		if (!color.is_empty()) {
+			this->captured_color = view_factory_t::instance().parse_color(color);
+		}
+		color = meta->get_string_param("disabled_color");
+		if (!color.is_empty()) {
+			this->disabled_color = view_factory_t::instance().parse_color(color);
+		}
+
+	}
+
+	virtual void set_selected(myvi::gobject_t *obj, bool _selected) {
+		this->selected = _selected;
+	}
+
+	virtual void set_enabled(myvi::gobject_t *obj, bool _enabled) {
+		this->disabled = !_enabled;
+	}
+
+	virtual void set_captured(myvi::gobject_t *obj, bool _captured) {
+		this->captured = _captured;
 	}
 
 	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
 		s32 ax, ay;
 		obj->translate(ax,ay);
-		dst.ctx = ctx;
+		dst.ctx.reset();
 
-		if (ctx.alfa) {
-			dst.fill(ax,ay,obj->w,obj->h);
+		dst.ctx.pen_color = this->default_color;
+		if (this->selected) {
+			dst.ctx.pen_color = this->selected_color;
 		}
-		if (hasBorder) {
-			dst.rect(ax,ay,obj->w,obj->h);
+		if (this->captured) {
+			dst.ctx.pen_color = this->captured_color;
+		} 
+		if (this->disabled) {
+			dst.ctx.pen_color = this->disabled_color;
 		}
+		dst.fill(ax,ay,obj->w,obj->h);
 	}
 };
 
@@ -502,13 +574,58 @@ public:
 };
 
 
-typedef decorator_aware_impl_t<myvi::gobject_t> decorator_aware_base_t;
+class decorator_aware_view_t : public myvi::gobject_t,  public decorator_aware_t {
+	typedef myvi::gobject_t super;
+public:
+	decorator_t *decorator;
+public:
+	decorator_aware_view_t() {
+		decorator = 0;
+	}
+
+	virtual void set_decorator(decorator_t *_drawer) OVERRIDE {
+		decorator = _drawer;
+	}
+
+	virtual void set_enabled(bool enabled) {
+		super::set_enabled(enabled);
+		if (decorator) {
+			decorator->set_enabled(this, enabled);
+		}
+	}
+
+	virtual void render_before(myvi::surface_t &dst) OVERRIDE {
+		if (decorator) {
+			decorator->render_before(this, dst);
+		}
+	}
+
+	virtual void render_after(myvi::surface_t &dst) OVERRIDE {
+		if (decorator) {
+			decorator->render_after(this, dst);
+		}
+	}
+
+	virtual void set_dirty(bool dirty) OVERRIDE {
+		super::set_dirty(dirty);
+		if (dirty && parent && !decorator) {
+			parent->dirty = true;
+		}
+	}
+
+	virtual void adjust_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+		if (decorator) {
+			decorator->adjust_preferred_size(this, pw, ph);
+		}
+	}
+};
+
 
 class dynamic_view_base_t : 
-	public decorator_aware_base_t,
+	public decorator_aware_view_t,
 	public view_build_context_aware_t {
 
-	typedef decorator_aware_base_t super;
+	typedef decorator_aware_view_t super;
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
@@ -522,7 +639,7 @@ public:
 		fw = fh = _NAN;
 	}
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 		view_meta = ctx.get_view_meta();
 		view_controller = 0; // устанавливается позже
 
@@ -569,92 +686,106 @@ public:
 
 };
 
-class dynamic_view_t : public dynamic_view_mixin_aware_impl_t<dynamic_view_base_t> {
+typedef dynamic_view_base_t widget_t;
+
+class dynamic_view_t : public dynamic_view_mixin_aware_impl_t<widget_t> {
 };
 
-class _mouse_decorator_aware_base_t : public dynamic_view_base_t, public myvi::focus_client_t {
+
+
+class selectable_widget_t : public widget_t, public myvi::focus_client_t, public mouse_aware_t {
+	typedef widget_t super;
+public:
+
+
+	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
+		// static assert that TBase derived from focus_client_t
+		bool b = this->selected;
+
+		if (mkey == myvi::mkey_t::MK_1) {
+			myvi::gobject_t *_this = dynamic_cast<myvi::gobject_t *>(this);
+			_MY_ASSERT(_this, return);
+			myvi::focus_manager_t::instance().select(_this);
+		}
+	}
+
+	virtual void set_selected(bool selected) OVERRIDE {
+		if (this->decorator) {
+			this->decorator->set_selected(this,selected);
+		}
+		dirty = true;
+	}
 };
 
-typedef mouse_aware_impl_t<_mouse_decorator_aware_base_t> mouse_decorator_aware_base_t;
 
 
 class view_controller_impl_base_t : public view_controller_t {
-public:
-	volatile_string_impl_t parameter_path;
+protected:
+	volatile_path_t parameter_path;
 	variant_type_t::variant_type_t type;
-public:
+protected:
 	view_controller_impl_base_t() {
 		type = variant_type_t::STRING;
 	}
 
-	void set_initial(view_build_context_t &ctx, variant_t &value) {
+	void set_initial(view_build_context_t ctx, variant_t &value) {
 
 		myvi::string_t initial_str = ctx.get_parameter_meta()->get_string_param("initial");
 		if (!initial_str.is_empty()) {
 			_MY_ASSERT(type == variant_type_t::STRING, return);
 			value.set_value(initial_str);
-			model_t::instance()->update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 
 		s32 initial_int = ctx.get_parameter_meta()->get_int_param("initial");
 		if (initial_int != _NAN) {
 			_MY_ASSERT(type == variant_type_t::INT, return);
 			value.set_value(initial_int);
-			model_t::instance()->update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 
 		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
 			_MY_ASSERT(type == variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
-			model_t::instance()->update(ctx.get_parameter_path().path, value);
+			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 	}
 	
-	myvi::string_t get_parameter_path(myvi::gobject_t *view) {
-		myvi::string_t parameter_path;
+	// вызыается первым из потомков, изменяет локальную копию контекста !
+	void init(view_build_context_t &ctx) {
 
-		while (view && parameter_path.is_empty()) {
-			dynamic_view_base_t *dv = dynamic_cast<dynamic_view_base_t *>(view);
-			if (dv) {
-				parameter_path = dv->get_view_meta()->get_string_param("parameterPath");
+		this->parameter_path = ctx.get_parameter_path();
+
+		
+		dynamic_view_base_t *dv = dynamic_cast<dynamic_view_base_t *>(ctx.get_view());
+		if (dv) {
+			myvi::string_t parameter_path_attr = dv->get_view_meta()->get_string_param("parameter_path");
+
+			if (!parameter_path_attr.is_empty()) {
+				meta_path_t path = meta_path_t(parameter_path_attr);
+				parameter_path_resolver_t resolver(path);
+
+				ctx.set_parameter_meta(
+					resolver.resolve(ctx.try_get_parameter_meta())
+				);
+				this->parameter_path.add(path);
+				ctx.set_parameter_path(this->parameter_path);
 			}
-			view = view->parent;
-		}
-		return parameter_path;
-	}
-
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
-
-
-		myvi::string_t parameter_path = get_parameter_path(ctx.get_view());
-
-		if (!parameter_path.is_empty()) {
-			meta_path_t path = meta_path_t(parameter_path);
-			parameter_path_resolver_t resolver(path);
-
-			gen::parameter_meta_t *child_parameter_meta = resolver.resolve(ctx.try_get_parameter_meta());
-			ctx.set_parameter_meta(child_parameter_meta);
 		}
 
-//		_MY_ASSERT(ctx.get_parameter_meta(), return); - меты параметра может и не быть
-
-//		_LOG1(ctx.get_parameter_path().path.c_str());
-
-// 0. Регистрирует поле в модели , если его ещё там нет
 	}
 
 	// вызывается из контроллера texbox/combobox
-	void register_in_model(view_build_context_t &ctx) {
+	void register_in_model(view_build_context_t ctx) {
 
 		gen::type_meta_t *type_meta = ctx.get_parameter_meta()->get_type_meta();
 		_MY_ASSERT(!type_meta->is_complex(), return);
 
 		variant_t value;
-		this->parameter_path = ctx.get_parameter_path().path;
 		this->type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
 		value.type = type;
-		model_t::instance()->try_register_path(this->parameter_path, value, type);
+		model_t::instance()->try_register_path(ctx.get_parameter_path().path(), value, type);
 		set_initial(ctx, value);
 
 	}
@@ -756,22 +887,11 @@ public:
 			myvi::string_t cs1 = myvi::string_t("1");
 			ctx.font->get_string_size(cs1, aw, ah);
 		}
+		aw += 2 * _TEXT_PADDING;
+		ah += 1 * _TEXT_PADDING;
 	}
 };
 
-class button_context_t {
-public:
-	u32 bk_color;	// цвет не выбранной кнопки
-	u32 bk_sel_color;	// цвет выбранной кнопки
-	u32 bk_pressed_color;	// цвет нажатой кнопки
-	u32 bk_disabled_color; // цвет неактивной кнопки
-	myvi::surface_context_t sctx;
-public:
-	button_context_t() {
-		bk_color=(0xB8BDCF),bk_sel_color=(0x848794),bk_pressed_color=(0x6B8896);
-		bk_disabled_color = 0xA0A0A0;
-	}
-};
 
 class text_aware_t {
 public:
@@ -803,7 +923,7 @@ public:
 		lab = 0;
 	}
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 		super::init(ctx);
 
 		lab = dynamic_cast<label_t *>(ctx.get_view());
@@ -811,13 +931,13 @@ public:
 
 		this->listen_event_name = ctx.get_view_meta()->get_string_param("listen");
 
-		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("staticText");
+		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("static_text");
 		if (!static_text.is_empty()) {
 
 			lab->text = static_text;
 		} else {
 
-			myvi::string_t label_source = ctx.get_view_meta()->get_string_param("labelSource");
+			myvi::string_t label_source = ctx.get_view_meta()->get_string_param("label_source");
 			if (label_source.is_empty()) {
 				label_source = "name";
 			}
@@ -891,60 +1011,27 @@ public:
 };
 
 
+class button_clicked_msg_t {
+};
+
 
 class button_t : 
-	public mouse_decorator_aware_base_t,
+	public selectable_widget_t,
 	public myvi::focus_aware_t,
-	public myvi::publisher_t<myvi::key_t::key_t, 1> {
+	public myvi::publisher_t<button_clicked_msg_t, 1> {
+		typedef selectable_widget_t super;
 public:
-	button_context_t ctx;
-	myvi::property_t<bool, button_t> pressed;
-private:
-	bool _pressed;	// текущее состояние
-private:
-	bool get_pressed() {
-		return _pressed;
-	}
-	void set_pressed(bool apressed) {
-		_pressed = apressed;
-		dirty = true;
-	}
-
-public:
-	button_t() {
-		_pressed = (false);
-		pressed.init(this,&button_t::get_pressed, &button_t::set_pressed);
-
-	}
-
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		dst.ctx = ctx.sctx;
-		if (!enabled) 
-			dst.ctx.pen_color = ctx.bk_disabled_color;
-		else if (pressed) 
-			dst.ctx.pen_color = ctx.bk_pressed_color;
-		else if (selected) 
-			dst.ctx.pen_color = ctx.bk_sel_color;
-		else 
-			dst.ctx.pen_color = ctx.bk_color;
-
-		s32 ax = 0, ay = 0;
-
-		translate(ax,ay);
-
-		dst.ctx.alfa = 0xff;
-		dst.fill(ax,ay,w,h);
-
-		dst.ctx.pen_color = 0xffffff;
-		dst.ctx.alfa = 128;
-		dst.rect(ax,ay,w,h);
-	}
-
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
-		notify(key);
+		if (key == myvi::key_t::K_ENTER) {
+			notify(button_clicked_msg_t());
+		}
 	}
-
+	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
+		super::mouse_event(mkey);
+		if (mkey == myvi::mkey_t::MK_1) {
+			notify(button_clicked_msg_t());
+		}
+	}
 };
 
 typedef button_t button_view_t;
@@ -952,7 +1039,7 @@ typedef button_t button_view_t;
 
 class button_view_controller_t : 
 	public view_controller_impl_base_t, 
-	public myvi::subscriber_t<myvi::key_t::key_t> {
+	public myvi::subscriber_t<button_clicked_msg_t> {
 
 	typedef view_controller_impl_base_t super;
 public:
@@ -984,7 +1071,7 @@ public:
 		return ret;
 	}
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 		super::init(ctx);
 
 		this->button_view = dynamic_cast<button_view_t *>(ctx.get_view());
@@ -1002,25 +1089,22 @@ public:
 		this->close = meta->get_string_param("close") == "true";
 	}
 
-	virtual void accept(myvi::key_t::key_t & key) OVERRIDE {
+	virtual void accept(button_clicked_msg_t &msg) OVERRIDE {
 
-		if (key == myvi::key_t::K_ENTER) {
-
-			if (!this->event_id.is_empty()) {
-				variant_t arg0 = meta_ex_t(meta).get_variant_param("arg0");
-				if (!arg0.is_empty()) {
-					event_bus_t::instance().notify(event_bus_msg_t(event_id, arg0));
-				}
-
-			} 
-			
-			if (!this->popup_view_id.is_empty()) {
-				popup_manager_t::instance().popup(this->popup_view_id);
-			} 
-
-			if (this->close) {
-				popup_manager_t::instance().popdown();
+		if (!this->event_id.is_empty()) {
+			variant_t arg0 = meta_ex_t(meta).get_variant_param("arg0");
+			if (!arg0.is_empty()) {
+				event_bus_t::instance().notify(event_bus_msg_t(event_id, arg0));
 			}
+
+		} 
+			
+		if (!this->popup_view_id.is_empty()) {
+			popup_manager_t::instance().popup(this->popup_view_id);
+		} 
+
+		if (this->close) {
+			popup_manager_t::instance().popdown();
 		}
 	}
 
@@ -1029,8 +1113,6 @@ public:
 
 
 #define INPUT_MAX_LEN 30
-#define COLOR_SELECTED 0xAFBFCF
-#define COLOR_CAPTURED 0x267F00
 
 class textbox_msg_t {
 public:
@@ -1045,10 +1127,10 @@ public:
 };
 
 class text_box_t : 
-	public mouse_decorator_aware_base_t, 
+	public selectable_widget_t, 
 	public myvi::focus_aware_t, 
 	public myvi::publisher_t<textbox_msg_t, 1> {
-	typedef gobject_t super;
+	typedef selectable_widget_t super;
 public:
 	myvi::property_t<myvi::string_t , text_box_t> value;
 	label_t lab;
@@ -1068,6 +1150,14 @@ private:
 	myvi::string_t get_value() {
 		return _value;
 	}
+
+	void set_captured(bool _captured) {
+		this->cursor_visible = _captured;
+		if (this->decorator) {
+			this->decorator->set_captured(this, _captured);
+		}
+	}
+
 public:
 	text_box_t() {
 		value.init(this,&text_box_t::get_value, &text_box_t::set_value);
@@ -1110,10 +1200,10 @@ public:
 			_MY_ASSERT(parent,return);
 			if (!cursor_visible) {
 				this->capture_focus();
-				cursor_visible = true;
+				set_captured(true);
 			} else {
 				this->release_focus();
-				cursor_visible = false;
+				set_captured(false);
 				notify(textbox_msg_t(textbox_msg_t::COMPLETE, _value));
 			}
 			goto lab_update_input;
@@ -1171,20 +1261,9 @@ public:
 	}
 
 
-	virtual void set_selected(bool selected) {
-		_MY_ASSERT(parent,return);
-		dirty = true;
-		focus_client_t::set_selected(selected);
-	}
-
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
 		s32 ax, ay;
 		translate(ax,ay);
-		if (selected) {
-			dst.ctx.reset();
-			dst.ctx.pen_color = cursor_visible ? COLOR_CAPTURED : COLOR_SELECTED;
-			dst.fill(ax,ay,w,h);
-		}
 		// draw vline
 		if (cursor_visible) {
 			dst.ctx.pen_color = cursor_color;
@@ -1238,14 +1317,14 @@ public:
 	}
 
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 // 0. Регистрирует поле в модели , если его ещё там нет
 		super::init(ctx);
 		register_in_model(ctx);
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
-		model_t::instance()->read(this->parameter_path, value, type);
+		model_t::instance()->read(this->parameter_path.path(), value, type);
 
 		this->tb = dynamic_cast<text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
@@ -1264,7 +1343,7 @@ public:
 	// обновление от модели
 	virtual void accept(model_message_t &msg) OVERRIDE {
 
-		if (!(msg.path == this->parameter_path)) {
+		if (!(msg.path == this->parameter_path.path())) {
 			return;
 		}
 		variant_t value = msg.value;
@@ -1287,7 +1366,7 @@ public:
 		variant_t value;
 		bool ret = conv->from_string(msg.value, value);
 		if (ret) {
-			model_t::instance()->update(this->parameter_path, value);
+			model_t::instance()->update(this->parameter_path.path(), value);
 		}
 	}
 
@@ -1299,7 +1378,7 @@ typedef gen::combobox_item_proto_t combobox_item_t;
 
 // метка с функцией выбора из списка значений
 class combo_box_t : 
-	public mouse_decorator_aware_base_t, 
+	public selectable_widget_t, 
 	public myvi::focus_aware_t, 
 	public myvi::publisher_t<combobox_item_t *, 1> {
 
@@ -1340,6 +1419,14 @@ private:
 	combobox_item_t * get_value() {
 		return _value;
 	}
+
+	void set_captured(bool _captured) {
+		this->captured = _captured;
+		if (this->decorator) {
+			this->decorator->set_captured(this, _captured);
+		}
+	}
+
 public:
 
 	combo_box_t() {
@@ -1384,10 +1471,10 @@ public:
 			_MY_ASSERT(parent,return);
 			if (!captured) {
 				this->capture_focus();
-				captured = true;
+				set_captured(true);
 			} else {
 				this->release_focus();
-				captured = false;
+				set_captured(false);
 			}
 			goto lab_update_cbox;
 		}
@@ -1429,16 +1516,6 @@ public:
 		dirty = true;
 
 		notify(_value);
-	}
-
-	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		s32 ax, ay;
-		translate(ax,ay);
-		if (selected) {
-			dst.ctx.reset();
-			dst.ctx.pen_color = captured ? COLOR_CAPTURED : COLOR_SELECTED;
-			dst.fill(ax,ay,w,h);
-		}
 	}
 
 };
@@ -1484,7 +1561,7 @@ public:
 		values = 0;
 	}
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE  {
+	virtual void init(view_build_context_t ctx) OVERRIDE  {
 		super::init(ctx);
 // 0. Регистрирует поле в модели , если его ещё там нет
 		register_in_model(ctx);
@@ -1492,7 +1569,7 @@ public:
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
-		model_t::instance()->read(this->parameter_path, value, this->type);
+		model_t::instance()->read(this->parameter_path.path(), value, this->type);
 
 		cb = dynamic_cast<combo_box_t *>(ctx.get_view());
 		_MY_ASSERT(cb, return);
@@ -1530,7 +1607,7 @@ public:
 	// обновление от модели
 	virtual void accept(model_message_t &msg) OVERRIDE {
 
-		if (!(msg.path == this->parameter_path)) {
+		if (!(msg.path == this->parameter_path.path())) {
 			return;
 		}
 		variant_t value = msg.value;
@@ -1543,7 +1620,7 @@ public:
 	// обновление от виджета
 	virtual void accept(combobox_item_t * &msg) OVERRIDE {
 		variant_t value(msg->get_int_value());
-		model_t::instance()->update(this->parameter_path, value);
+		model_t::instance()->update(this->parameter_path.path(), value);
 	}
 };
 
@@ -1552,13 +1629,14 @@ public:
 // контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
 class menu_controller_t : public view_controller_t {
 public:
+	volatile_path_t parameter_path; // размещаем в куче
 public:
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 
-		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menuRef");
+		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menu_ref");
 		_MY_ASSERT(!menu_id.is_empty(), return);
 
-		myvi::string_t item_template_id = ctx.get_view_meta()->get_string_param("itemTemplateView");
+		myvi::string_t item_template_id = ctx.get_view_meta()->get_string_param("item_template_view");
 		_MY_ASSERT(!item_template_id.is_empty(), return);
 
 		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
@@ -1572,14 +1650,19 @@ public:
 			if (child_id.is_empty()) break;
 
 			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
-			myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(ctx);
 
 			// создаем обёртку для вида параметра на основе шаблона
 			view_build_context_t child_ctx = ctx;
 			child_ctx.set_view_meta(template_meta);
 			child_ctx.set_parameter_meta(child_meta);
 
+			parameter_path.reset();
+			parameter_path.add_absolute(child_meta->get_id());
+			child_ctx.set_parameter_path(parameter_path);
+
+
 			myvi::gobject_t *child_wrapper = view_meta_ex_t(template_meta).build_view(child_ctx);
+			myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(child_ctx);
 			child_wrapper->add_child(child_view);
 			ctx.get_view()->add_child(child_wrapper);
 		}
@@ -1593,7 +1676,7 @@ public:
 class parameter_view_controller_t : public view_controller_impl_base_t {
 	typedef view_controller_impl_base_t super;
 public:
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 
 		super::init(ctx);
 
@@ -1629,7 +1712,7 @@ public:
 			return p;
 		}
 
-		virtual bool processKey(myvi::key_t::key_t key) OVERRIDE {
+		virtual bool process_key(myvi::key_t::key_t key) OVERRIDE {
 
 			if (key == myvi::key_t::K_F1) {
 				if (myvi::gobject_t *child = get_child(0)) {
@@ -1674,7 +1757,7 @@ public:
 		initial_view = 0;
 	}
 
-	virtual void init(view_build_context_t &ctx) OVERRIDE {
+	virtual void init(view_build_context_t ctx) OVERRIDE {
 
 		this->view = ctx.get_view();
 		_MY_ASSERT(this->view, return);
@@ -1870,12 +1953,16 @@ public:
 
 };
 
-#define _META_LAYOUT_PERCENTAGE 0.6
 
 class menu_meta_layout_t : public myvi::layout_t {
-
+public:
+	double percent;
 public:
 	menu_meta_layout_t(gen::meta_t *meta) {
+		percent = 0.6;
+		if (meta->get_float_param("ratio") != _NANF) {
+			percent = meta->get_float_param("ratio");
+		}
 	}
 
 	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
@@ -1887,7 +1974,7 @@ public:
 
 		s32 w1, h1;
 		first->get_preferred_size(w1, h1);
-		pw = (s32)(w1 / _META_LAYOUT_PERCENTAGE);
+		pw = (s32)(w1 / percent);
 		ph = h1;
 
 		// 2st child
@@ -1911,7 +1998,7 @@ public:
 		// 1st child
 		myvi::gobject_t *first  = iter.next();
 		_MY_ASSERT(first, return);
-		first->w = (s32)(parent->w * _META_LAYOUT_PERCENTAGE);
+		first->w = (s32)(parent->w * percent);
 		first->h = parent->h;
 		// 2st child
 		myvi::gobject_t *second  = iter.next();

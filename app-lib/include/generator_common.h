@@ -411,6 +411,15 @@ private:
 	std::vector<parameter_meta_t *> parameters;
 	std::vector<type_meta_t *> types;
 	std::vector<view_meta_t *> views;
+	typedef std::unordered_map<myvi::string_t, u32, string_t_hash_t> colors_map_t;
+	colors_map_t colors;
+	typedef std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> fonts_map_t;
+	fonts_map_t fonts;
+	myvi::string_t default_font_id;
+	typedef std::unordered_map<myvi::string_t, s32, string_t_hash_t> font_sizes_map_t;
+	font_sizes_map_t font_sizes;
+	myvi::string_t default_font_size_id;
+
 private:
 	meta_registry_t() {
 	}
@@ -433,6 +442,15 @@ private:
 		return 0;
 	}
 
+	template<typename TMap, typename Tret>
+	Tret map_get(TMap &map, myvi::string_t id) {
+		TMap::iterator iter = map.find(id);
+		if(iter != map.end()) return iter->second;
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+
 public:
 
 	static meta_registry_t & instance() {
@@ -454,6 +472,28 @@ public:
 	}
 	view_meta_t * find_view_meta(myvi::string_t id) {
 		return find_meta<view_meta_t>(id, views);
+	}
+
+	u32 resolve_color(myvi::string_t id) {
+		return map_get<colors_map_t, u32>(colors, id);
+	}
+
+	u32 resolve_font_size(myvi::string_t id) {
+		return map_get<font_sizes_map_t, u32>(font_sizes, id);
+	}
+
+	myvi::string_t resolve_font_name(myvi::string_t id) {
+		return map_get<fonts_map_t, myvi::string_t>(fonts, id);
+	}
+
+	myvi::string_t get_default_font_id() {
+		_MY_ASSERT(!this->default_font_id.is_empty(), return 0);
+		return this->default_font_id;
+	}
+
+	myvi::string_t get_default_font_size_id() {
+		_MY_ASSERT(!this->default_font_size_id.is_empty(), return 0);
+		return this->default_font_size_id;
 	}
 };
 

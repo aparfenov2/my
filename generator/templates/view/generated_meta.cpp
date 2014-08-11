@@ -59,7 +59,7 @@
 <#macro emit_menu_meta menu tab="">
 	<#lt>${tab}(new dynamic_menu_meta_t())
 	<@emit_set_params menu tab+"\t"/>
-	<#list menu.parameterRef as child>
+	<#list menu.parameter_ref as child>
 		<#lt>${tab+"\t"}->add_child("${child.@id}")
 	</#list>
 </#macro>
@@ -69,6 +69,27 @@
 using namespace gen;
 
 void meta_registry_t::init() {
+
+/*
+ * =================== ײגועא, רנטפעû טען. ==========================
+*/
+<#list schema.schema.colors.color as color>
+	colors["${color.@id}"] = ${color.@hex};
+</#list>
+
+<#list schema.schema.fonts.font as font>
+	fonts["${font.@id}"] = "${font.@name}";
+	<#if font.@default?has_content && font.@default == "true">
+	default_font_id = "${font.@id}";
+	</#if>
+</#list>
+
+<#list schema.schema.font_sizes.font_size as font_size>
+	font_sizes["${font_size.@id}"] = ${font_size.@value};
+	<#if font_size.@default?has_content && font_size.@default == "true">
+	default_font_size_id = "${font_size.@id}";
+	</#if>
+</#list>
 
 /*
  * =================== ָֿׂÛ ==========================
