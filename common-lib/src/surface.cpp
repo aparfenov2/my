@@ -91,7 +91,7 @@ void surface_t::line(s32 x1,s32 y1, s32 len, bool isVertical) {
 
 
 void surface_t::rect(s32 x1,s32 y1, s32 rw, s32 rh) {
-	_MY_ASSERT(x1 >=0 && y1>=0 && (x1+rw-1 < w) && (y1+rh-1 < h),return);
+//	_MY_ASSERT(x1 >=0 && y1>=0 && (x1+rw-1 < w) && (y1+rh-1 < h),return);
 	line(x1,y1,rw,false);
 	line(x1,y1+rh-1,rw,false);
 	line(x1,y1,rh,true);

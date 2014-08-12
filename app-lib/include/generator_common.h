@@ -200,6 +200,20 @@ public:
 		return -1;
 	}
 
+	enum_meta_t * get_enum_by_value(s32 v) {
+
+		for (s32 i=0; ;i++) {
+			enum_meta_t *child_meta = this->get_enum_child(i);
+			if (!child_meta) break;
+
+			if (child_meta->get_int_value() == v) {
+				return child_meta;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
 	bool is_basic() {
 		return this->get_string_param("type") == "base";
 	}
@@ -340,6 +354,22 @@ public:
 		return children[i];
 	}
 
+	void mixin_param_from(view_meta_t *other, myvi::string_t param_id) {
+
+		_MY_ASSERT(other, return);
+		if (!other->get_string_param(param_id).is_empty()) {
+			this->set_string_param(param_id, other->get_string_param(param_id));
+
+		} else if (other->get_int_param(param_id) != _NAN) {
+			this->set_int_param(param_id, other->get_int_param(param_id));
+
+		} else if (other->get_float_param(param_id) != _NANF) {
+			this->set_float_param(param_id, other->get_float_param(param_id));
+
+		} else {
+			_MY_ASSERT(0, return); // no such param
+		}
+	}
 
 	void mixin_params_from( dynamic_view_meta_t &other) {
 

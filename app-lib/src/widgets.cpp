@@ -314,7 +314,7 @@ void stack_layout_t::layout(gobject_t *parent) {
 				py -= pchild->h + spy; // rewind py
 				pchild->h = parent->h - py;
 			} else {
-				px -= pchild->x + spx; // rewind px
+				px -= pchild->w + spx; // rewind px
 				pchild->w = parent->w - px;
 			}
 			break;

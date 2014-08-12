@@ -46,14 +46,13 @@ public:
 typedef myvi::string_impl_t<255> volatile_string_impl_t;
 
 
-// путь до обьекта мета-модели
-class meta_path_base_t {
+class splitted_string_t {
 public:
 	class iterator_t {
 	public:
 		s32 lasti;
 		bool has_next;
-		meta_path_base_t *that;
+		splitted_string_t *that;
 	public:
 		iterator_t() {
 			lasti = 0;
@@ -61,13 +60,55 @@ public:
 			has_next = true;
 		}
 
+		iterator_t(splitted_string_t *_that) {
+			lasti = 0;
+			that = _that;
+			has_next = true;
+		}
+
 		myvi::string_t next();
+
+	};
+public:
+	myvi::string_t string;
+	char splitter;
+	bool allow_spaces;
+public:
+	splitted_string_t() {
+		splitter = ',';
+		allow_spaces = true;
+	}
+
+	splitted_string_t(myvi::string_t _string, char _splitter, bool _allow_spaces) {
+		string = _string;
+		splitter = _splitter;
+		allow_spaces = _allow_spaces;
+	}
+
+	iterator_t iterator() {
+		return iterator_t(this);
+	}
+};
+
+// путь до обьекта мета-модели
+class meta_path_base_t {
+public:
+	class iterator_t {
+	public:
+		splitted_string_t sps;
+		splitted_string_t::iterator_t iter;
+	public:
+		iterator_t(myvi::string_t spath) {
+			sps = splitted_string_t(spath, '.', false);
+			iter = sps.iterator();
+		}
+		myvi::string_t next() {
+			return iter.next();
+		}
 
 	};
 protected:
 	myvi::string_t * spath;
-private:
-	iterator_t _iterator;
 public:
 
 	meta_path_base_t() {
@@ -77,7 +118,6 @@ public:
 	meta_path_base_t(myvi::string_t &_spath)  {
 		spath = &_spath;
 		_MY_ASSERT(!_spath.is_empty(), return); // case 0
-		_iterator.that = this;
 	}
 
 	bool is_relative() const {
@@ -85,7 +125,7 @@ public:
 	}
 
 	iterator_t iterator() {
-		return _iterator;
+		return iterator_t(*spath);
 	}
 
 	myvi::string_t path() const {

@@ -573,6 +573,34 @@ public:
 
 };
 
+class box_decorator_t : public decorator_t {
+	typedef decorator_t super;
+public:
+	u32 box_color;
+public:
+	box_decorator_t(gen::meta_t *meta) {
+		box_color = 0x00FF00;
+		myvi::string_t color = meta->get_string_param("box_color");
+		if (!color.is_empty()) {
+			this->box_color = view_factory_t::instance().parse_color(color);
+		}
+	}
+
+	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
+		s32 x,y;
+		obj->translate(x, y);
+		dst.ctx.reset();
+		dst.ctx.pen_color = box_color;
+		dst.rect(x,y,obj->w,obj->h);
+	}
+
+	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
+		pw += 2;
+		ph += 2;
+	}
+
+};
+
 
 class decorator_aware_view_t : public myvi::gobject_t,  public decorator_aware_t {
 	typedef myvi::gobject_t super;
@@ -722,31 +750,31 @@ public:
 class view_controller_impl_base_t : public view_controller_t {
 protected:
 	volatile_path_t parameter_path;
-	variant_type_t::variant_type_t type;
+	variant_type_t::variant_type_t parameter_type;
 protected:
 	view_controller_impl_base_t() {
-		type = variant_type_t::STRING;
+		parameter_type = variant_type_t::STRING;
 	}
 
 	void set_initial(view_build_context_t ctx, variant_t &value) {
 
 		myvi::string_t initial_str = ctx.get_parameter_meta()->get_string_param("initial");
 		if (!initial_str.is_empty()) {
-			_MY_ASSERT(type == variant_type_t::STRING, return);
+			_MY_ASSERT(parameter_type == variant_type_t::STRING, return);
 			value.set_value(initial_str);
 			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 
 		s32 initial_int = ctx.get_parameter_meta()->get_int_param("initial");
 		if (initial_int != _NAN) {
-			_MY_ASSERT(type == variant_type_t::INT, return);
+			_MY_ASSERT(parameter_type == variant_type_t::INT, return);
 			value.set_value(initial_int);
 			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 
 		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
-			_MY_ASSERT(type == variant_type_t::FLOAT, return);
+			_MY_ASSERT(parameter_type == variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
 			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
@@ -757,21 +785,17 @@ protected:
 
 		this->parameter_path = ctx.get_parameter_path();
 
-		
-		dynamic_view_base_t *dv = dynamic_cast<dynamic_view_base_t *>(ctx.get_view());
-		if (dv) {
-			myvi::string_t parameter_path_attr = dv->get_view_meta()->get_string_param("parameter_path");
+		myvi::string_t parameter_path_attr = ctx.get_view_meta()->get_string_param("parameter_path");
 
-			if (!parameter_path_attr.is_empty()) {
-				meta_path_t path = meta_path_t(parameter_path_attr);
-				parameter_path_resolver_t resolver(path);
+		if (!parameter_path_attr.is_empty()) {
+			meta_path_t path = meta_path_t(parameter_path_attr);
+			parameter_path_resolver_t resolver(path);
 
-				ctx.set_parameter_meta(
-					resolver.resolve(ctx.try_get_parameter_meta())
-				);
-				this->parameter_path.add(path);
-				ctx.set_parameter_path(this->parameter_path);
-			}
+			ctx.set_parameter_meta(
+				resolver.resolve(ctx.try_get_parameter_meta())
+			);
+			this->parameter_path.add(path);
+			ctx.set_parameter_path(this->parameter_path);
 		}
 
 	}
@@ -783,9 +807,9 @@ protected:
 		_MY_ASSERT(!type_meta->is_complex(), return);
 
 		variant_t value;
-		this->type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
-		value.type = type;
-		model_t::instance()->try_register_path(ctx.get_parameter_path().path(), value, type);
+		this->parameter_type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
+		value.type = parameter_type;
+		model_t::instance()->try_register_path(ctx.get_parameter_path().path(), value, parameter_type);
 		set_initial(ctx, value);
 
 	}
@@ -848,12 +872,20 @@ public:
 #define _TEXT_PADDING 2
 
 class label_t  : public myvi::gobject_t {
+private:
+	myvi::string_t _text;  // текст
 public:
-	myvi::string_t text;  // текст
+	myvi::wo_property_t<myvi::string_t,label_t> text;
 	label_context_t ctx;
+private:
+	void set_text(myvi::string_t text) {
+		_text = text;
+		dirty = true;
+	}
 public:
 	label_t() {
 		visible = false;
+		text.init(this,&label_t::set_text);
 	}
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
@@ -867,9 +899,9 @@ public:
 
 		ax += _TEXT_PADDING;
 
-		if (!text.is_empty()) {
+		if (!_text.is_empty()) {
 			// text
-			ctx.font->print_to(ax,ay,dst,text);	
+			ctx.font->print_to(ax,ay,dst,_text);	
 		} else {
 			// do nothing
 		}
@@ -879,9 +911,9 @@ public:
 		_MY_ASSERT(visible,return);
 		_MY_ASSERT(ctx.font,return);
 		ctx.font->set_char_size_px(0,ctx.font_size);
-		if (!text.is_empty()) {
+		if (!_text.is_empty()) {
 			// text
-			ctx.font->get_string_size(this->text, aw, ah);
+			ctx.font->get_string_size(this->_text, aw, ah);
 		} else {
 			// no content - try measure something
 			myvi::string_t cs1 = myvi::string_t("1");
@@ -912,15 +944,40 @@ public:
 };
 
 
-class label_controller_t : public view_controller_impl_base_t, public myvi::subscriber_t<event_bus_msg_t> {
+class label_controller_t : 
+	public view_controller_impl_base_t, 
+	public myvi::subscriber_t<event_bus_msg_t>, 
+	public myvi::subscriber_t<model_message_t> {
+
 	typedef view_controller_impl_base_t super;
 public:
 	label_t *lab;
 	myvi::string_t listen_event_name;
+	volatile_string_impl_t *string_value;
+	converter_t *conv;
+	gen::type_meta_t *type_meta;
 public:
 
 	label_controller_t() {
 		lab = 0;
+		conv = 0;
+		string_value = 0;
+		type_meta = 0;
+	}
+
+	void set_value(variant_t value) {
+
+		_MY_ASSERT(type_meta, return);
+
+		if (!type_meta->is_enum()) {
+			_MY_ASSERT(conv && string_value, return);
+			conv->to_string(value, *string_value);
+			lab->text = *string_value;
+
+		} else {
+			gen::enum_meta_t * enum_item = type_meta->get_enum_by_value(value.get_int_value());
+			lab->text = enum_item->get_string_value();
+		}
 	}
 
 	virtual void init(view_build_context_t ctx) OVERRIDE {
@@ -931,21 +988,47 @@ public:
 
 		this->listen_event_name = ctx.get_view_meta()->get_string_param("listen");
 
-		myvi::string_t static_text = ctx.get_view_meta()->get_string_param("static_text");
-		if (!static_text.is_empty()) {
+		if (!ctx.get_view_meta()->get_string_param("static_text").is_empty()) {
+			lab->text = ctx.get_view_meta()->get_string_param("static_text");
 
-			lab->text = static_text;
-		} else {
+		} else if (!ctx.get_view_meta()->get_string_param("text_source").is_empty()) {
 
-			myvi::string_t label_source = ctx.get_view_meta()->get_string_param("label_source");
-			if (label_source.is_empty()) {
-				label_source = "name";
-			}
+			myvi::string_t label_source = ctx.get_view_meta()->get_string_param("text_source");
 			lab->text = ctx.get_parameter_meta()->get_string_param(label_source);
+
+		} else if (!ctx.get_view_meta()->get_string_param("dynamic_source").is_empty()) {
+			if (ctx.get_view_meta()->get_string_param("dynamic_source") == "parameter_value") {
+
+				register_in_model(ctx);
+				this->type_meta = ctx.get_parameter_meta()->get_type_meta();
+				model_t::instance()->subscribe(this);
+
+				if (!this->type_meta->is_enum()) {
+					conv = converter_factory_t::instance().for_type(parameter_type);
+					string_value = new volatile_string_impl_t();
+				}
+
+				variant_t value;
+				model_t::instance()->read(this->parameter_path.path(), value);
+
+				set_value(value);
+
+			} else {
+				_MY_ASSERT(0, return);
+			}
+		} else {
+			_MY_ASSERT(0, return);
 		}
 
 		if (! this->listen_event_name.is_empty()) {
 			event_bus_t::instance().subscribe(this);
+		}
+	}
+
+	virtual void accept(model_message_t &msg) OVERRIDE {
+
+		if (msg.path == this->parameter_path.path()) {
+			set_value(msg.value);
 		}
 	}
 
@@ -1324,12 +1407,12 @@ public:
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
-		model_t::instance()->read(this->parameter_path.path(), value, type);
+		model_t::instance()->read(this->parameter_path.path(), value, parameter_type);
 
 		this->tb = dynamic_cast<text_box_t *>(ctx.get_view());
 		_MY_ASSERT(tb, return);
 
-		converter_t *conv = converter_factory_t::instance().for_type(type);
+		converter_t *conv = converter_factory_t::instance().for_type(parameter_type);
 		conv->to_string(value, string_value);
 		this->tb->value = string_value;
 
@@ -1347,9 +1430,9 @@ public:
 			return;
 		}
 		variant_t value = msg.value;
-		_MY_ASSERT(value.type == this->type, return);
+		_MY_ASSERT(value.type == this->parameter_type, return);
 
-		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+		converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
 		conv->to_string(value, string_value);
 		this->tb->value = string_value;
 		this->tb->dirty = true;
@@ -1361,7 +1444,7 @@ public:
 		if (msg.state != textbox_msg_t::COMPLETE) {
 			return; // в режиме редактирования ниче не меняем
 		}
-		converter_t *conv = converter_factory_t::instance().for_type(this->type);
+		converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
 
 		variant_t value;
 		bool ret = conv->from_string(msg.value, value);
@@ -1569,7 +1652,7 @@ public:
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
-		model_t::instance()->read(this->parameter_path.path(), value, this->type);
+		model_t::instance()->read(this->parameter_path.path(), value, this->parameter_type);
 
 		cb = dynamic_cast<combo_box_t *>(ctx.get_view());
 		_MY_ASSERT(cb, return);
@@ -1596,7 +1679,8 @@ public:
 		combobox_item_t * p = values->next(0);
 		while (p) {
 			if (p->get_int_value() == val) {
-				cb->value = p;
+				this->cb->value = p;
+				this->cb->dirty = true;
 				return;
 			}
 			p = values->next(p);
@@ -1611,10 +1695,10 @@ public:
 			return;
 		}
 		variant_t value = msg.value;
-		_MY_ASSERT(value.type == this->type, return);
+		_MY_ASSERT(value.type == this->parameter_type, return);
 
 		set_value(value.get_int_value());
-		this->cb->dirty = true;
+		
 	}
 
 	// обновление от виджета
@@ -1904,6 +1988,61 @@ public:
 	}
 };
 
+// размещает внутренний вид справа \ снизу родительского
+class right_bottom_layout_t : public myvi::layout_t {
+public:
+	s32 padding;
+	bool vertical;
+public:
+	right_bottom_layout_t(gen::meta_t *meta) {
+		padding = 0;
+		vertical = false;
+
+		if (meta->get_int_param("padding") != _NAN) {
+			padding = meta->get_int_param("padding");
+		}
+		if (!meta->get_string_param("vertical").is_empty()) {
+			this->vertical = meta->get_string_param("vertical") == "true";
+		}
+	}
+
+	virtual void get_preferred_size(myvi::gobject_t *parent, s32 &pw, s32 &ph) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t *p = iter.next();
+		_MY_ASSERT(p,return);
+		p->get_preferred_size(pw,ph);
+
+		pw += !vertical ? padding : 0;
+		ph += vertical ? padding : 0;
+
+		p = iter.next();
+		_MY_ASSERT(!p,return);
+	}
+
+	virtual void layout(myvi::gobject_t *parent) OVERRIDE {
+
+		myvi::gobject_t::iterator_visible_t iter = parent->iterator_visible();
+		myvi::gobject_t *p = iter.next();
+		_MY_ASSERT(p,return);
+
+		p->get_preferred_size(p->w,p->h);
+		p->x = p->y = 0;
+
+		if (vertical) {
+			p->y = parent->h - p->h - padding;
+			p->w = parent->w;
+		} else {
+			p->x = parent->w - p->w - padding;
+			p->h = parent->h;
+		}
+
+
+		p = iter.next();
+		_MY_ASSERT(!p,return);
+	}
+};
+
 
 // центрирует дочерний виджет по обеим осям родительского
 // EXPECT: children.count == 1
@@ -1939,9 +2078,6 @@ public:
 		_MY_ASSERT(p,return);
 
 		p->get_preferred_size(p->w,p->h);
-
-
-
 
 		p->x = (parent->w - p->w)/2;
 		p->y = (parent->h - p->h)/2;
