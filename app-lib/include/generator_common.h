@@ -150,7 +150,14 @@ public:
 class dynamic_parameter_meta_t : public dynamic_meta_t<dynamic_parameter_meta_t, parameter_meta_t> {
 };
 
-class enum_meta_t : public meta_t, public myvi::combobox_item_t {
+// элемент в выпадающем списке
+class combobox_item_proto_t {
+public:
+	virtual myvi::string_t get_string_value() = 0;
+	virtual s32 get_int_value() = 0;
+};
+
+class enum_meta_t : public meta_t, public combobox_item_proto_t {
 public:
 		virtual myvi::string_t get_string_value() OVERRIDE {
 			return get_string_param("name");
@@ -167,7 +174,7 @@ class dynamic_enum_meta_t : public dynamic_meta_t<dynamic_enum_meta_t, enum_meta
 class type_meta_t : public meta_t {
 public:
 	// итератор Enum для combobx-a
-	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() {
+	virtual myvi::iterator_t<combobox_item_proto_t> * get_combobox_iterator() {
 		return 0;
 	}
 
@@ -191,6 +198,20 @@ public:
 		}
 		_MY_ASSERT(0, return -1);
 		return -1;
+	}
+
+	enum_meta_t * get_enum_by_value(s32 v) {
+
+		for (s32 i=0; ;i++) {
+			enum_meta_t *child_meta = this->get_enum_child(i);
+			if (!child_meta) break;
+
+			if (child_meta->get_int_value() == v) {
+				return child_meta;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
 	}
 
 	bool is_basic() {
@@ -227,11 +248,11 @@ public:
 
 class dynamic_type_meta_t : public dynamic_meta_t<dynamic_type_meta_t, type_meta_t> {
 
-	class combobox_item_iterator_t : public myvi::iterator_t<myvi::combobox_item_t> {
+	class combobox_item_iterator_t : public myvi::iterator_t<combobox_item_proto_t> {
 	public:
 		dynamic_type_meta_t *type_meta;
 	public:
-		virtual myvi::combobox_item_t* next(void* prev) OVERRIDE {
+		virtual combobox_item_proto_t* next(void* prev) OVERRIDE {
 
 			bool go = !prev;
 
@@ -241,9 +262,9 @@ class dynamic_type_meta_t : public dynamic_meta_t<dynamic_type_meta_t, type_meta
 					return 0;
 				}
 				if (go) {
-					return static_cast<myvi::combobox_item_t *>(child_meta);
+					return static_cast<combobox_item_proto_t *>(child_meta);
 				}
-				if (static_cast<myvi::combobox_item_t *>(child_meta) == prev) {
+				if (static_cast<combobox_item_proto_t *>(child_meta) == prev) {
 					go = true;
 				}
 			}
@@ -284,7 +305,7 @@ public:
 		return enums[i];
 	}
 
-	virtual myvi::iterator_t<myvi::combobox_item_t> * get_combobox_iterator() OVERRIDE {
+	virtual myvi::iterator_t<combobox_item_proto_t> * get_combobox_iterator() OVERRIDE {
 		return &combobox_iterator;
 	}
 
@@ -333,8 +354,24 @@ public:
 		return children[i];
 	}
 
+	void mixin_param_from(view_meta_t *other, myvi::string_t param_id) {
 
-	void mixin_params_from(const dynamic_view_meta_t &other) {
+		_MY_ASSERT(other, return);
+		if (!other->get_string_param(param_id).is_empty()) {
+			this->set_string_param(param_id, other->get_string_param(param_id));
+
+		} else if (other->get_int_param(param_id) != _NAN) {
+			this->set_int_param(param_id, other->get_int_param(param_id));
+
+		} else if (other->get_float_param(param_id) != _NANF) {
+			this->set_float_param(param_id, other->get_float_param(param_id));
+
+		} else {
+			_MY_ASSERT(0, return); // no such param
+		}
+	}
+
+	void mixin_params_from( dynamic_view_meta_t &other) {
 
 
 		for (_str_map::const_iterator it = other.string_param_map.begin(); it != other.string_param_map.end(); it++) {
@@ -345,6 +382,12 @@ public:
 		}
 		for (_float_map::const_iterator it = other.float_param_map.begin(); it != other.float_param_map.end(); it++) {
 			this->set_float_param((*it).first,(*it).second);
+		}
+
+		for (s32 i=0; ;i++) {
+			view_meta_t *child_meta = other.get_view_child(i);
+			if (!child_meta) break;
+			this->add_child(child_meta);
 		}
 	}
 
@@ -398,6 +441,15 @@ private:
 	std::vector<parameter_meta_t *> parameters;
 	std::vector<type_meta_t *> types;
 	std::vector<view_meta_t *> views;
+	typedef std::unordered_map<myvi::string_t, u32, string_t_hash_t> colors_map_t;
+	colors_map_t colors;
+	typedef std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> fonts_map_t;
+	fonts_map_t fonts;
+	myvi::string_t default_font_id;
+	typedef std::unordered_map<myvi::string_t, s32, string_t_hash_t> font_sizes_map_t;
+	font_sizes_map_t font_sizes;
+	myvi::string_t default_font_size_id;
+
 private:
 	meta_registry_t() {
 	}
@@ -420,6 +472,15 @@ private:
 		return 0;
 	}
 
+	template<typename TMap, typename Tret>
+	Tret map_get(TMap &map, myvi::string_t id) {
+		TMap::iterator iter = map.find(id);
+		if(iter != map.end()) return iter->second;
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+
 public:
 
 	static meta_registry_t & instance() {
@@ -441,6 +502,28 @@ public:
 	}
 	view_meta_t * find_view_meta(myvi::string_t id) {
 		return find_meta<view_meta_t>(id, views);
+	}
+
+	u32 resolve_color(myvi::string_t id) {
+		return map_get<colors_map_t, u32>(colors, id);
+	}
+
+	u32 resolve_font_size(myvi::string_t id) {
+		return map_get<font_sizes_map_t, u32>(font_sizes, id);
+	}
+
+	myvi::string_t resolve_font_name(myvi::string_t id) {
+		return map_get<fonts_map_t, myvi::string_t>(fonts, id);
+	}
+
+	myvi::string_t get_default_font_id() {
+		_MY_ASSERT(!this->default_font_id.is_empty(), return 0);
+		return this->default_font_id;
+	}
+
+	myvi::string_t get_default_font_size_id() {
+		_MY_ASSERT(!this->default_font_size_id.is_empty(), return 0);
+		return this->default_font_size_id;
 	}
 };
 

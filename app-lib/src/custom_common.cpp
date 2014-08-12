@@ -17,12 +17,6 @@ keyboard_filter_chain_t keyboard_filter_chain_t::_instance;
 
 
 
-void view_build_context_t::set_parameter_meta(gen::parameter_meta_t *_parameter_meta) {
-	parameter_meta = _parameter_meta;
-	parameter_path.add_absolute(_parameter_meta->get_id());
-}
-
-
 static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * meta) {
 
 	myvi::layout_t * ret = 0;
@@ -38,7 +32,11 @@ static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * met
 
 	} else if (layout_id == "center") {
 		ret = new custom::center_meta_layout_t(meta);
+
+	} else if (layout_id == "right_bottom") {
+		ret = new custom::right_bottom_layout_t(meta);
 	}
+	
 	_MY_ASSERT(layout_id.is_empty() || ret, return 0);
 	return ret;
 }
@@ -85,19 +83,19 @@ static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx
 	myvi::string_t view_id = ctx.get_view_meta()->get_predefined_id();
 
 	if (view_id == "cbox") {
-		view = new custom::cbox_view_t(ctx.get_view_meta());
+		view = new custom::cbox_view_t();
 
 	} else if (view_id == "tbox") {
-		view = new custom::tbox_view_t(ctx.get_view_meta());
+		view = new custom::tbox_view_t();
 
 	} else if (view_id == "lab") {
-		view = new custom::lab_view_t(ctx);
+		view = new custom::lab_view_t();
 
 	} else if (view_id == "scroll_window") {
 		view = new custom::scroll_window_view_t();
 
 	} else if (view_id == "btn") {
-		view = new custom::button_view_t(ctx.get_view_meta());
+		view = new custom::button_view_t();
 	}
 	_MY_ASSERT(view, return 0);
 	return view;
@@ -125,45 +123,13 @@ static void build_child_views_of_view(view_build_context_t ctx) {
 		gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(i);
 		if (!child_meta) break;
 		myvi::gobject_t *child_view = view_meta_ex_t(child_meta).build_view(ctx);
-		if (dvmx) {
+		if (dvmx && !child_meta->get_id().is_empty()) {
 			dvmx->add_child(child_view,child_meta->get_id());
 		} else {
 			ctx.get_view()->add_child(child_view);
 		}
 	}
 }
-
-class decorator_array_t : public decorator_t {
-public:
-	std::vector<decorator_t *> children;
-public:
-	decorator_array_t(gen::meta_t *meta) {
-	}
-
-	void add_child(decorator_t *child) {
-		children.push_back(child);
-	}
-
-	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->render_before(obj, dst);
-		}
-	}
-
-	virtual void render_after(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->render_after(obj, dst);
-		}
-	}
-
-	virtual void adjust_preferred_size(myvi::gobject_t *obj, s32 &pw, s32 &ph) OVERRIDE {
-
-		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
-			(*iter)->adjust_preferred_size(obj, pw, ph);
-		}
-	}
-
-};
 
 
 
@@ -177,6 +143,9 @@ static decorator_t * build_decorator_simple(myvi::string_t decorator_id, gen::me
 
 	} else if (decorator_id == "cbox") {
 		ret = new cbox_decorator_t(meta);
+
+	} else if (decorator_id == "box") {
+		ret = new box_decorator_t(meta);
 	}
 
 	_MY_ASSERT(ret, return 0);
@@ -188,45 +157,45 @@ static decorator_t * build_decorator(myvi::string_t decorator_id, gen::meta_t * 
 	bool multiple = false;
 	decorator_array_t *decorator_array = 0;
 
-	for (s32 i=0; i < decorator_id.length(); i++) {
-		if (decorator_id[i] == ',') {
-			multiple = true;
-			break;
-		}
-	}
+	splitted_string_t sps(decorator_id, ',', true);
+	splitted_string_t::iterator_t iter = sps.iterator();
+
+	myvi::string_t child_id = iter.next();
+	_MY_ASSERT(!child_id.is_empty(), return 0);
+	child_id = iter.next();
+	multiple = !child_id.is_empty();
+
 	if (multiple) {
 		decorator_array = new decorator_array_t(meta);
-		s32 lasti = 0;
-		for (s32 i=0; i < decorator_id.length(); i++) {
-			if (decorator_id[i] == ',') {
-				myvi::string_t child_id = decorator_id.sub(lasti, i-lasti);
-				lasti = i+1;
+		iter = sps.iterator();
 
-				decorator_t *child = build_decorator_simple(child_id, meta);
-				decorator_array->add_child(child);
-			}
+		child_id = iter.next();
+		while (!child_id.is_empty()) {
+			decorator_t *child = build_decorator_simple(child_id, meta);
+			decorator_array->add_child(child);
+			child_id = iter.next();
 		}
-		myvi::string_t child_id = decorator_id.sub(lasti, decorator_id.length()-lasti);
-		decorator_t *child = build_decorator_simple(child_id, meta);
-		decorator_array->add_child(child);
 	}
 
 	if (decorator_array) {
 		ret = decorator_array;
 	} else {
+		iter = sps.iterator();
+		decorator_id = iter.next();
 		ret = build_decorator_simple(decorator_id, meta);
 	}
 	_MY_ASSERT(ret, return 0);
 	return ret;
 }
 
+static void prepare_label_context(label_context_t &ret, gen::meta_t *meta);
+
 
 // метод фабрики вида по умолчанию для составного вида
 myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 
-	//if (ctx.get_view_meta()->get_id() == "menu_name_lab") {
-	//	int i = 0;
-	//}
+
+	bool meta_was_inherited = false;
 
 	if (ctx.get_view_meta()->is_inherited()) {
 		gen::view_meta_t * inherited_meta = gen::meta_registry_t::instance().find_view_meta(ctx.get_view_meta()->get_inherited_id());
@@ -237,11 +206,46 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 		if (dvm->is_extension_of(inherited_meta)) {
 
 			gen::dynamic_view_meta_t *combined_meta = new gen::dynamic_view_meta_t();
-
+			meta_was_inherited = true;
 			combine_view_meta(ctx.get_view_meta(),inherited_meta, combined_meta);
 			ctx.set_view_meta(combined_meta);
 		}
 	}
+
+	if (ctx.try_get_view()) {
+		dynamic_view_base_t *dv = dynamic_cast<dynamic_view_base_t *>(ctx.try_get_view());
+		if (dv) {
+			myvi::string_t propagated_params = dv->get_view_meta()->get_string_param("propagate");
+			if (!propagated_params.is_empty()) {
+
+				splitted_string_t sps(propagated_params, ',', true);
+				splitted_string_t::iterator_t iter = sps.iterator();
+				myvi::string_t param_id = iter.next();
+
+				while (!param_id.is_empty()) {
+					if (!meta_ex_t(dv->get_view_meta()).get_variant_param(param_id).is_empty()) {
+
+						gen::dynamic_view_meta_t *combined_meta = 0;
+						gen::dynamic_view_meta_t *ctx_meta = dynamic_cast<gen::dynamic_view_meta_t *>(ctx.get_view_meta());
+						_MY_ASSERT(ctx_meta, return 0);
+
+						if (meta_was_inherited) {
+							combined_meta = ctx_meta;
+						} else {
+							combined_meta = new gen::dynamic_view_meta_t();
+							meta_was_inherited = true;
+							combined_meta->mixin_params_from(*ctx_meta);
+							ctx.set_view_meta(combined_meta);
+						}
+						combined_meta->mixin_param_from(dv->get_view_meta(), param_id);
+					}
+					param_id = iter.next();
+				}
+			}
+		}
+	}
+
+	myvi::gobject_t *parent_view = ctx.try_get_view();
 	ctx.set_view(0);
 	if (ctx.get_view_meta()->is_predefined()) {
 		ctx.set_view(
@@ -249,7 +253,14 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 			);
 
 	} else {
-		ctx.set_view (new custom::dynamic_view_t(ctx));
+		ctx.set_view (new custom::dynamic_view_t());
+	}
+
+	ctx.get_view()->parent = parent_view;
+
+	view_build_context_aware_t *ctx_aware = dynamic_cast<view_build_context_aware_t *>(ctx.get_view());
+	if (ctx_aware) {
+		ctx_aware->init(ctx);
 	}
 
 	myvi::layout_t *layout = build_layout(ctx.get_view_meta());
@@ -262,11 +273,15 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 		decorator_aware_t *drawer_aware = dynamic_cast<decorator_aware_t *>(ctx.get_view());
 		_MY_ASSERT(drawer_aware, return 0);
 
-		drawer_aware->set_drawer(
+		drawer_aware->set_decorator(
 			build_decorator(drawer_id, ctx.get_view_meta())
 			);
 	}
 
+	text_aware_t * text_aware = dynamic_cast<text_aware_t *>(ctx.get_view());
+	if (text_aware) {
+		prepare_label_context(text_aware->get_text_context(), ctx.get_view_meta());
+	}
 
 	build_child_views_of_view(ctx);
 
@@ -346,32 +361,39 @@ myvi::gobject_t * view_factory_t::build_menu_view(view_build_context_t ctx) {
 }
 
 
-static bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_length) {
+static bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_length, char splitter, bool allow_spaces) {
 
 	if (lasti >= spath_length) {
 		return false;
 	}
+	while (allow_spaces && lasti < spath_length && spath[lasti] == ' ') lasti++;
+	bool was_dot = false;
+	if (lasti < spath_length && spath[lasti] == splitter) {was_dot = true; lasti++;}
+	while (allow_spaces && lasti < spath_length && spath[lasti] == ' ') lasti++;
 
-	if (spath[lasti] == '.') lasti++;
-	_MY_ASSERT(lasti < spath_length, return false); // путь не может заканчиваться точкой
-	_MY_ASSERT(spath[lasti] != '.', return false); // путь не может содержать несколько точек подряд
+	_MY_ASSERT(!was_dot || was_dot && lasti < spath_length, return false); // путь не может заканчиваться точкой
+	_MY_ASSERT(spath[lasti] != splitter, return false); // путь не может содержать несколько точек подряд
 
 	return true; 
 }
 
-myvi::string_t meta_path_base_t::iterator_t::next() {
+myvi::string_t splitted_string_t::iterator_t::next() {
 
-	myvi::string_t spath = * that->spath;
+	_MY_ASSERT(that, 0);
+
+	myvi::string_t spath = that->string;
 	s32 spath_length = spath.length();
 
 	if (!lasti) {
-		_MY_ASSERT(adjust_lasti(lasti, spath, spath_length), return 0);
+		_MY_ASSERT(adjust_lasti(lasti, spath, spath_length, that->splitter, that->allow_spaces), return 0);
 	}
 
 	if (has_next) {
 		for (s32 i=lasti; i < spath_length; i++) {
-
-			if (spath[i] == '.') { // case 2b, 2c, 3, 3a
+			if (that->allow_spaces && spath[i] == ' ') {
+				continue;
+			}
+			if (spath[i] == that->splitter) { // case 2b, 2c, 3, 3a
 
 				s32 param_length = i - lasti;
 
@@ -381,7 +403,7 @@ myvi::string_t meta_path_base_t::iterator_t::next() {
 					myvi::string_t param_id = spath.sub(lasti, param_length);
 					lasti = i;
 
-					has_next = adjust_lasti(lasti, spath, spath_length);
+					has_next = adjust_lasti(lasti, spath, spath_length, that->splitter, that->allow_spaces);
 
 					return param_id;
 				}
@@ -399,37 +421,30 @@ myvi::string_t meta_path_base_t::iterator_t::next() {
 }
 
 
-u32 view_factory_t::parse_color(myvi::string_t color) {
-	if (color == "BACKGROUND_WHITE") {
-		return 0xF9FFF4;
-	} else if (color == "BACKGROUND_BLUE") {
-		return 0x679AB9;
-
-	} else if (color == "BACKGROUND_GRAY") {
-		return 0x97A39F;
-
-	} else if (color == "FONT_WHITE") {
-		return 0xE5E9F2;
+static u32 parse_hex(myvi::string_t color) {
+	_MY_ASSERT(color.length() > 2, return 0);
+	if (color.sub(0,2) == "0x") {
+		color = color.sub(2);
 	}
-	_MY_ASSERT(0, return 0);
-	return 0;
+	char *end;
+	s32 ival = std::strtol(color.c_str(), &end, 16);
+	_MY_ASSERT(*end == 0, return 0);
+	return (u32)ival;
+}
+
+static u32 _parse_color(myvi::string_t color) {
+	if (color.length() > 2 && color.sub(0,2) == "0x") {
+		return parse_hex(color);
+	}
+	return gen::meta_registry_t::instance().resolve_color(color);
+}
+
+u32 view_factory_t::parse_color(myvi::string_t color) {
+	return _parse_color(color);
 }
 
 static myvi::font_size_t::font_size_t parse_font_size(myvi::string_t font_size_id) {
-	if (font_size_id == "FS_8") {
-		return myvi::font_size_t::FS_8;
-
-	} else if (font_size_id == "FS_15") {
-		return myvi::font_size_t::FS_15;
-
-	} else if (font_size_id == "FS_20") {
-		return myvi::font_size_t::FS_20;
-
-	} else if (font_size_id == "FS_30") {
-		return myvi::font_size_t::FS_30;
-	}
-	_MY_ASSERT(0, return (myvi::font_size_t::font_size_t) 0);
-	return (myvi::font_size_t::font_size_t) 0;
+	return (myvi::font_size_t::font_size_t) gen::meta_registry_t::instance().resolve_font_size(font_size_id);
 }
 
 
@@ -450,26 +465,24 @@ static myvi::ttype_font_t * resolve_font(myvi::string_t font_id) {
 	return 0;
 }
 
-void view_factory_t::prepare_context(myvi::label_context_t &ret, gen::meta_t *meta) {
+static void prepare_label_context(label_context_t &ret, gen::meta_t *meta) {
 
 
 	myvi::string_t font_id = meta->get_string_param("font");
-	if (!font_id.is_empty()) {
-		ret.font = resolve_font(font_id);
-	} else {
-		ret.font = resolve_font("TTF");
+	if (font_id.is_empty()) {
+		font_id = gen::meta_registry_t::instance().get_default_font_id();
 	}
+	ret.font = resolve_font(font_id);
 
-	myvi::string_t font_size_id = meta->get_string_param("fontSize");
-	if (!font_size_id.is_empty()) {
-		ret.font_size = parse_font_size(font_size_id);
-	} else {
-		ret.font_size = parse_font_size("FS_20");
+	myvi::string_t font_size_id = meta->get_string_param("font_size");
+	if (font_size_id.is_empty()) {
+		font_size_id = gen::meta_registry_t::instance().get_default_font_size_id();
 	}
+	ret.font_size = parse_font_size(font_size_id);
 
-	myvi::string_t font_color_id = meta->get_string_param("fontColor");
+	myvi::string_t font_color_id = meta->get_string_param("font_color");
 	if (!font_color_id.is_empty()) {
-		ret.sctx.pen_color = parse_color(font_color_id);
+		ret.sctx.pen_color = _parse_color(font_color_id);
 	} else {
 		ret.sctx.pen_color = 0;
 	}

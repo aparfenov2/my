@@ -12,25 +12,9 @@ public:
 	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) = 0;
 };
 
-template<typename TBase>
-class mouse_aware_impl_t : public TBase, public mouse_aware_t {
-public:
-
-	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
-		// static assert that TBase derived from focus_client_t
-		bool b = this->selected;
-
-		if (mkey == myvi::mkey_t::MK_1) {
-			myvi::gobject_t *_this = dynamic_cast<myvi::gobject_t *>(this);
-			_MY_ASSERT(_this, return);
-			myvi::focus_manager_t::instance().select(_this);
-		}
-	}
-};
-
 class keyboard_filter_t {
 public:
-	virtual bool processKey(myvi::key_t::key_t key) = 0;
+	virtual bool process_key(myvi::key_t::key_t key) = 0;
 };
 
 // агрегатор всех фильтров клавиатуры
@@ -47,9 +31,9 @@ public:
 		chain.push_back(filter);
 	}
 
-	bool processKey(myvi::key_t::key_t key) {
+	bool process_key(myvi::key_t::key_t key) {
 		for (std::vector<keyboard_filter_t *>::const_iterator it = chain.begin(); it != chain.end(); it++) {
-			if ((*it)->processKey(key)) {
+			if ((*it)->process_key(key)) {
 				return true;
 			}
 		}
@@ -62,14 +46,13 @@ public:
 typedef myvi::string_impl_t<255> volatile_string_impl_t;
 
 
-// путь до обьекта мета-модели
-class meta_path_base_t {
+class splitted_string_t {
 public:
 	class iterator_t {
 	public:
 		s32 lasti;
 		bool has_next;
-		meta_path_base_t *that;
+		splitted_string_t *that;
 	public:
 		iterator_t() {
 			lasti = 0;
@@ -77,13 +60,55 @@ public:
 			has_next = true;
 		}
 
+		iterator_t(splitted_string_t *_that) {
+			lasti = 0;
+			that = _that;
+			has_next = true;
+		}
+
 		myvi::string_t next();
+
+	};
+public:
+	myvi::string_t string;
+	char splitter;
+	bool allow_spaces;
+public:
+	splitted_string_t() {
+		splitter = ',';
+		allow_spaces = true;
+	}
+
+	splitted_string_t(myvi::string_t _string, char _splitter, bool _allow_spaces) {
+		string = _string;
+		splitter = _splitter;
+		allow_spaces = _allow_spaces;
+	}
+
+	iterator_t iterator() {
+		return iterator_t(this);
+	}
+};
+
+// путь до обьекта мета-модели
+class meta_path_base_t {
+public:
+	class iterator_t {
+	public:
+		splitted_string_t sps;
+		splitted_string_t::iterator_t iter;
+	public:
+		iterator_t(myvi::string_t spath) {
+			sps = splitted_string_t(spath, '.', false);
+			iter = sps.iterator();
+		}
+		myvi::string_t next() {
+			return iter.next();
+		}
 
 	};
 protected:
 	myvi::string_t * spath;
-private:
-	iterator_t _iterator;
 public:
 
 	meta_path_base_t() {
@@ -93,7 +118,6 @@ public:
 	meta_path_base_t(myvi::string_t &_spath)  {
 		spath = &_spath;
 		_MY_ASSERT(!_spath.is_empty(), return); // case 0
-		_iterator.that = this;
 	}
 
 	bool is_relative() const {
@@ -101,9 +125,13 @@ public:
 	}
 
 	iterator_t iterator() {
-		return _iterator;
+		return iterator_t(*spath);
 	}
 
+	myvi::string_t path() const {
+		_MY_ASSERT(spath, return 0);
+		return *spath;
+	}
 
 };
 
@@ -113,15 +141,34 @@ public:
 // изменяемый путь
 class volatile_path_t : public meta_path_base_t {
 	typedef meta_path_base_t super;
+private:
+	volatile_string_impl_t _path;
 public:
-	volatile_string_impl_t path;
-public:
-	volatile_path_t() : super(path) {
+	volatile_path_t() : super(_path) {
+	}
+
+	myvi::string_t path() const {
+		return _path;
 	}
 
 	volatile_path_t( const volatile_path_t & other) {
-		this->path = other.path;
-		this->spath = &path;
+		this->_path = other._path;
+		this->spath = &_path;
+	}
+
+    volatile_path_t & operator = (const meta_path_base_t & other) {
+		this->_path = other.path();
+		this->spath = &_path;
+        return *this;
+    }
+
+	void add(meta_path_base_t id) {
+		if (id.is_relative()) {
+			add_relative(id.path());
+		} else {
+			_MY_ASSERT(this->_path.is_empty(), return);
+			add_absolute(id.path());
+		}
 	}
 
 
@@ -129,49 +176,60 @@ public:
 
 		_MY_ASSERT(!id.is_empty(), return);
 		if (id[0] != '.') {
-			path += ".";
+			_path += ".";
 		}
-		path += id;
+		_path += id;
 	}
 
 	void add_absolute(myvi::string_t id) {
 		_MY_ASSERT(!id.is_empty(), return);
-		if (!path.is_empty() && id[0] != '.') {
-			path += ".";
+		if (!_path.is_empty() && id[0] != '.') {
+			_path += ".";
 		}
-		path += id;
+		_path += id;
 	}
+
+	void reset() {
+		_path.reset();
+	}
+
 };
 
 
 // неизменяемый путь
 class meta_path_t : public meta_path_base_t {
 	typedef meta_path_base_t super;
+private:
+	myvi::string_t _path;
 public:
-	myvi::string_t path;
-public:
-	meta_path_t(myvi::string_t _path) : path(_path), super(path) {
+	meta_path_t() : super(_path) {
+	}
+
+	meta_path_t(myvi::string_t __path) : _path(__path), super(_path) {
 	}
 
 	meta_path_t(const meta_path_t & other) {
-		path = other.path;
-		this->spath = &path;
+		_path = other._path;
+		this->spath = &_path;
 	}
 
 	meta_path_t(const volatile_path_t & other) {
-		path = other.path;
-		this->spath = &path;
+		_path = other.path();
+		this->spath = &_path;
 	}
 
+	myvi::string_t path() const {
+		return _path;
+	}
 };
 
 
 class view_build_context_t {
 private:
-	myvi::gobject_t *view;
 	gen::view_meta_t *view_meta;
 	gen::parameter_meta_t *parameter_meta;
-	volatile_path_t parameter_path; // полный путь до параметра
+	myvi::gobject_t *view;
+	meta_path_t parameter_path;
 public:
 	view_build_context_t() {
 		view = 0;
@@ -181,6 +239,10 @@ public:
 
 	myvi::gobject_t * get_view() {
 		_MY_ASSERT(view, return 0);
+		return view;
+	}
+
+	myvi::gobject_t * try_get_view() {
 		return view;
 	}
 
@@ -202,6 +264,10 @@ public:
 		return parameter_path;
 	}
 
+	void set_parameter_path(meta_path_t path) {
+		this->parameter_path = path;
+	}
+
 	void set_view(myvi::gobject_t *_view) {
 		view = _view;
 	}
@@ -210,11 +276,26 @@ public:
 		view_meta = _view_meta;
 	}
 
-	void set_parameter_meta(gen::parameter_meta_t *_parameter_meta);
+	void set_parameter_meta(gen::parameter_meta_t *_parameter_meta) {
+		parameter_meta = _parameter_meta;
+	}
 
 };
 
 
+class label_context_t {
+public:
+//	u32 text_color; // цвет текста и глифа
+	myvi::font_size_t::font_size_t font_size;    // размер текста \ глифа в пикселах
+	myvi::ttype_font_t *font;	// шрифт текста \ глифа
+	myvi::surface_context_t sctx;
+public:
+	label_context_t() {
+		font_size = myvi::font_size_t::FS_8;
+		font=(0);
+		sctx.pen_color = 0xffffff;
+	}
+};
 
 
 // фабрика дочерних видов. Её задача создать вид и связать его с контроллерм
@@ -237,8 +318,6 @@ public:
 	myvi::gobject_t * build_menu_view(view_build_context_t ctx);
 
 	u32 parse_color(myvi::string_t color);
-
-	void prepare_context(myvi::label_context_t &ret, gen::meta_t *meta);
 
 };
 
@@ -271,11 +350,12 @@ public:
 public:
 	// добавляет дочерний вид с привязкой идентификатора
 	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
-		_MY_ASSERT(child, return);
+		_MY_ASSERT(child && !id.is_empty(), return);
 		id_map[id] = child;
 	}
 
 	myvi::gobject_t *get_child(myvi::string_t id) {
+		_MY_ASSERT(!id.is_empty(), return 0);
 		return id_map[id];
 	}
 

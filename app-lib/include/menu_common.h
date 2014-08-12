@@ -19,7 +19,7 @@ public:
 */
 
 // окно с прокруткой.
-class scrollable_window_t : public gobject_t, public subscriber_t<gobject_t *>, public focus_master_t {
+class scrollable_window_t : public gobject_t, public subscriber_t<gobject_t *> {
 	typedef gobject_t super;
 public:
 public:
@@ -40,16 +40,29 @@ public:
 	// прокрутить чтобы выбранный children стал виден
 	void scroll_to(gobject_t *interior_child);
 
-	virtual void get_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+	virtual void vget_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
 		_MY_ASSERT(get_interior(),return);
 		get_interior()->get_preferred_size(pw,ph);
 	}
 
 	virtual void do_layout() OVERRIDE ;
 
-	virtual void alter_focus_intention(focus_intention_t &intention) OVERRIDE ;
-
 	virtual void render(surface_t &dst) OVERRIDE;
+
+	virtual void child_request_size_change(gobject_t *child) OVERRIDE {
+		if (!w || !h) return;
+		s32 ipw,iph;
+		myvi::gobject_t *in = get_interior();
+		_MY_ASSERT(child == in, return);
+		in->get_preferred_size(ipw,iph);
+		in->w = this->w;
+		in->h = this->h;
+		if (iph > in->h) {
+			in->h = iph;
+		}
+		in->do_layout();
+	}
+
 
 };
 
