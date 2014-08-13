@@ -54,6 +54,9 @@ static view_controller_t * build_controller(gen::view_meta_t * meta) {
 	if (controller_id == "menu") {
 		ret = new custom::menu_controller_t();
 
+	} else if (controller_id == "popup_menu") {
+		ret = new custom::popup_menu_controller_t();
+
 	} else if (controller_id == "lab") {
 		ret = new custom::label_controller_t();
 
@@ -300,7 +303,7 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 	return ctx.get_view();
 }
 
-
+/*
 // сопоставления типа и вида по умолчанию
 static myvi::string_t match_default_view_for_type (myvi::string_t type_id) {
 
@@ -316,6 +319,7 @@ static myvi::string_t match_default_view_for_type (myvi::string_t type_id) {
 	}
 	return 0;
 }
+*/
 
 static myvi::gobject_t * build_default_view_for_complex_type(view_build_context_t ctx) {
 
@@ -329,10 +333,18 @@ static myvi::gobject_t * build_default_view_for_complex_type(view_build_context_
 
 	_MY_ASSERT(type_meta->is_complex(), return 0);
 
+	volatile_path_t path(ctx.get_parameter_path());
+
+	volatile_path_t ppath;
 	for (s32 i=0; ;i++) {
 		gen::parameter_meta_t *child_meta = type_meta->get_parameter_child(i);
 		if (!child_meta) break;
+		ppath = path;
+		path.add_relative(child_meta->get_id());
+		ctx.set_parameter_path(path);
+
 		myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(ctx);
+		path = ppath;
 		view->add_child(child_view);
 	}
 	return view;
@@ -344,9 +356,9 @@ myvi::gobject_t * view_factory_t::build_menu_view(view_build_context_t ctx) {
 	myvi::gobject_t *view = 0;
 	myvi::string_t view_id = ctx.get_parameter_meta()->get_view_id();
 
-	if (view_id.is_empty()) {
-		view_id = match_default_view_for_type(ctx.get_parameter_meta()->get_type_id());
-	}
+	//if (view_id.is_empty()) {
+	//	view_id = match_default_view_for_type(ctx.get_parameter_meta()->get_type_id());
+	//}
 
 	if (!view_id.is_empty()) {
 		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);

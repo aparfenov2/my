@@ -42,7 +42,7 @@ class focus_aware_t;
 class focus_manager_t : public publisher_t<gobject_t *,_MAX_FOCUS_MANAGER_SUBSCRIBERS> {
 public:
 	gobject_t *selected;
-	stack_t<focus_aware_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
+	stack_t<gobject_t *, _MAX_GOBJECT_TREE_DEPTH> captured;
 
 
 private:
@@ -60,7 +60,7 @@ public:
 	void key_event(key_t::key_t key, gobject_t *root);
 	void select(gobject_t *p);
 
-	void capture_child(focus_aware_t *child) {
+	void capture_child(gobject_t *child) {
 		_MY_ASSERT(child,return);
 		if (captured.length()) {
 			_MY_ASSERT(captured.last() != child, return);
@@ -68,7 +68,7 @@ public:
 		captured.push(child);
 	}
 
-	void release_child(focus_aware_t *child) {
+	void release_child(gobject_t *child) {
 		_MY_ASSERT(child,return);
 		_MY_ASSERT(captured.last()  == child,return);
 		captured.pop();
@@ -81,14 +81,6 @@ public:
 class focus_aware_t {
 public:
 	virtual void key_event(key_t::key_t key);
-
-	void capture_focus() {
-		focus_manager_t::instance().capture_child(this);
-	}
-
-	void release_focus() {
-		focus_manager_t::instance().release_child(this);
-	}
 
 };
 
@@ -343,12 +335,21 @@ public:
 	}
 	virtual void render_after(surface_t &dst) {
 	}
+
 	void do_render(surface_t &dst) {
 		render_before(dst);
 		render(dst);
 		render_after(dst);
 	}
 	
+	void capture_focus() {
+		focus_manager_t::instance().capture_child(this);
+	}
+
+	void release_focus() {
+		focus_manager_t::instance().release_child(this);
+	}
+
 	// перечислитель всех дочерних обьектов
 	const iterator_all_t iterator_all() const {
 		return iterator_all_t(this);
@@ -418,7 +419,7 @@ public:
 
 	// размещает детей в пространстве родител€
 	virtual void do_layout() {
-		_MY_ASSERT(w && h,return);
+		if (!(w && h)) return;
 		// если layout не указан, то считаем, что все дети были расположены в init
 		if (layout) {
 			layout->layout(this);
@@ -466,19 +467,23 @@ public:
 	s32 bh;
 	bool vertical;
 	bool preferred_item_size;  // использовать предпочитаемый размер компонента вместо размера €чейки
-	bool stretch_last;
+	s32 stretch;
 public:
 	stack_layout_t() {
 		spx=5,spy=5,vertical=(true);
 		bw=20,bh=20;
 		preferred_item_size = true;
-		stretch_last = false;
+		stretch = -1;
 	}
 
 	virtual void get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) ;
 
 
 	virtual void layout(gobject_t *parent) OVERRIDE;
+private:
+	bool layout_item(gobject_t *parent ,gobject_t *child, s32 &px, s32 &py);
+	void truncate_last(gobject_t *parent ,gobject_t *child, s32 &px, s32 &py);
+	bool get_size(gobject_t *parent , s32 &px, s32 &py, gobject_t::iterator_visible_t &iter);
 };
 
 
@@ -557,7 +562,7 @@ public:
 		modal->dirty = true;
 	}
 
-	void pop_modal() {
+	gobject_t * pop_modal() {
 
 		gobject_t *modal = children.back();
 		children.pop_back();
@@ -565,6 +570,7 @@ public:
 //		_MY_ASSERT(modal == popped,return);
 		modal->parent = 0;
 		children.front()->dirty = true;
+		return modal;
 	}
 
 };
