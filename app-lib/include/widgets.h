@@ -226,16 +226,25 @@ public:
 	property_t<bool, gobject_t> dirty;
 
 	std::vector<gobject_t *> children;
+	bool initialized;
 
 private:
 	bool _enabled;
 	bool _dirty; // if true - shall render
 	gobject_t *last_selectable;
 
+private:	
+	bool get_dirty() {
+		return _dirty;
+	}
+	bool get_enabled() {
+		return _enabled;
+	}
 
 public:
 	gobject_t() {
 		parent = 0;
+		initialized = false;
 		x=(0),y=(0),w=(0),h=(0),_dirty=(false), 
 		visible = true, layout = 0,  _enabled = true;
 		enabled.init(this,&gobject_t::get_enabled, &gobject_t::set_enabled);
@@ -245,15 +254,8 @@ public:
 
 	virtual void init() {
 		init_children();
+		initialized = true;
 	}
-private:	
-	bool get_dirty() {
-		return _dirty;
-	}
-	bool get_enabled() {
-		return _enabled;
-	}
-public:
 
 	// если фон непрозрачный, обязательно перекрыть этот метод чтобы отрисовка не распространялась дальше !
 	virtual void set_dirty(bool dirty) {
