@@ -31,7 +31,7 @@
 		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
 		<!-- поэтому здесь для полей вид не указан -->
 		<type id="dme_t" name="Параметры DME" type="complex">
-			<parameter id="ch" name="Канал DME" type="u8" validators="range" initial="127" lo="-127" hi="128" />
+			<parameter id="ch" name="Канал DME" type="u8" validator="range" initial="127" lo="-127" hi="128" increment="1" />
 			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" initial="0" />
 		</type>
 		<type id="measure_ctl_t" name="Измерение" type="enum">
@@ -69,23 +69,23 @@
 		<parameter id="dme" type="dme_t"  name="Параметры DME" view="dme"  />
 		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" />
 		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0"  />
-		<parameter id="out_level" type="float" precision="0.1" validators="range" lo="-70" hi="70" initial="72.3"  name="Уровень" label="dBm" view="tbox_label" />
+		<parameter id="out_level" type="float" increment="0.1" validator="range" lo="-70.0" hi="70.0" initial="69.3"  name="Уровень" label="dBm" view="tbox_label" />
 		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" initial="0"  />
 		
 <!-- Параметры -->	
-		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" label="Имп. пар\\с" view="tbox_label" />
-		<parameter id="req_freq" type="float" name="Частота запроса" initial="1050.20" label="Мгц" view="tbox_label" />
-		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" label="мкс" view="tbox_label" />
-		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" label="мкс" view="tbox_label" />
+		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" increment="1" label="Имп. пар\\с" view="tbox_label" />
+		<parameter id="req_freq" type="float" name="Частота запроса" initial="1050.20" increment="0.1" label="Мгц" view="tbox_label" />
+		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" increment="0.1" label="мкс" view="tbox_label" />
+		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" increment="0.1" label="мкс" view="tbox_label" />
 		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" initial="0"  />
 		
 <!-- Экран -->	
-		<parameter id="brightness" type="u8" name="Яркость" initial="100" label="%" view="tbox_label" />
+		<parameter id="brightness" type="u8" name="Яркость" initial="100" increment="10" label="%" view="tbox_label" />
 		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" />
 <!-- Test -->	
 		<parameter id="str_foo" type="string" name="Foo" initial="abc" />
-		<parameter id="header_freq" type="float" initial="1.001" label="GHz" view="tbox_label" />
-		<parameter id="header_level" type="float" initial="13.00" label="dBm" view="tbox_label" />
+		<parameter id="header_freq" type="float" initial="1.001" increment="0.001" label="GHz" view="tbox_label" />
+		<parameter id="header_level" type="float" initial="13.00" increment="0.1" label="dBm" view="tbox_label" />
 		
 		<parameter id="rf_on" type="on_off_t" initial="1" name="RF"  />
 		<parameter id="mod_off" type="on_off_t" initial="0" name="MOD" />
@@ -98,6 +98,7 @@
 		<color id="FNT_WHITE" hex="0xE5E9F2"/>
 		<color id="SELECTED" hex="0xAFBFCF"/>
 		<color id="CAPTURED" hex="0x267F00"/>
+		<color id="INVALID" hex="0xFF0000"/>
 		<color id="BLACK" hex="0x000000"/>
 	</colors>
 	
@@ -118,8 +119,12 @@
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
 		<view id="lab" controller="lab" predefined="lab" font="TTF" font_size="FS_30" /> <!-- label -->
 		
-		<view id="tbox" predefined="tbox" controller="tbox" font_size="FS_30" decorator="background,3d" default_color="BK_WHITE" selected_color="SELECTED" captured_color="CAPTURED" /> <!-- textbox -->
-		<view id="cbox" predefined="cbox" controller="cbox" font_size="FS_30" decorator="background,3d,cbox" default_color="BK_WHITE" selected_color="SELECTED" captured_color="CAPTURED" /> <!-- combobox -->
+		<view id="tbox" predefined="tbox" controller="tbox" font_size="FS_30" decorator="background,3d" 
+			default_color="BK_WHITE" selected_color="SELECTED" captured_color="CAPTURED" invalid_color="INVALID" /> <!-- textbox -->
+			
+		<view id="cbox" predefined="cbox" controller="cbox" font_size="FS_30" decorator="background,3d,cbox" 
+			default_color="BK_WHITE" selected_color="SELECTED" captured_color="CAPTURED" /> <!-- combobox -->
+			
 		<view id="btn" controller="btn" predefined="btn" layout="center" padding="10"
 			decorator="background,3d" d3_inversed="true"  default_color="BK_WHITE" selected_color="SELECTED" > <!-- button \-->
 			<view inherited="lab" font_size="FS_20" static_text="btn" />

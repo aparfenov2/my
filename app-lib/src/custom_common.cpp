@@ -223,7 +223,9 @@ myvi::gobject_t * view_factory_t::build_view(custom::view_build_context_t ctx) {
 				myvi::string_t param_id = iter.next();
 
 				while (!param_id.is_empty()) {
-					if (!meta_ex_t(dv->get_view_meta()).get_variant_param(param_id).is_empty()) {
+					if (!meta_ex_t(dv->get_view_meta()).get_variant_param(param_id).is_empty() && // есть в источнике
+						meta_ex_t(ctx.get_view_meta()).get_variant_param(param_id).is_empty() // нет в детском виде
+						) {
 
 						gen::dynamic_view_meta_t *combined_meta = 0;
 						gen::dynamic_view_meta_t *ctx_meta = dynamic_cast<gen::dynamic_view_meta_t *>(ctx.get_view_meta());

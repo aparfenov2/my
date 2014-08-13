@@ -456,6 +456,54 @@ public:
 		return fval;
 	}
 
+	void inc (variant_tt & other) {
+		_MY_ASSERT(this->type != variant_type_t::STRING && other.type == this->type, return);
+		_MY_ASSERT(!this->is_empty() && !other.is_empty(), return);
+
+		if (this->type == variant_type_t::INT) {
+			this->set_value(this->get_int_value() + other.get_int_value());
+
+		} else if (this->type == variant_type_t::FLOAT) {
+			this->set_value(this->get_float_value() + other.get_float_value());
+		}
+	}
+
+	void dec (variant_tt & other) {
+		_MY_ASSERT(
+			this->type != variant_type_t::STRING && 
+			other.type == this->type && 
+			!this->is_empty() && !other.is_empty()
+			, return);
+
+		if (this->type == variant_type_t::INT) {
+			this->set_value(this->get_int_value() - other.get_int_value());
+
+		} else if (this->type == variant_type_t::FLOAT) {
+			this->set_value(this->get_float_value() - other.get_float_value());
+		}
+	}
+
+	s32 cmp (variant_tt & other) {
+		_MY_ASSERT(
+			this->type != variant_type_t::STRING && 
+			other.type == this->type && 
+			!this->is_empty() && !other.is_empty()
+			, return 0);
+
+		if (this->type == variant_type_t::INT) {
+			if (this->get_int_value() < other.get_int_value()) return -1;
+			if (this->get_int_value() > other.get_int_value()) return +1;
+			return 0;
+
+		} else if (this->type == variant_type_t::FLOAT) {
+			if (this->get_float_value() < other.get_float_value()) return -1;
+			if (this->get_float_value() > other.get_float_value()) return +1;
+			return 0;
+			
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
 };
 
 // служит только для передачи, но не для хранения значения !

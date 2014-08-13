@@ -332,6 +332,9 @@ public:
 	virtual void set_captured(myvi::gobject_t *obj, bool captured) {
 	}
 
+	virtual void set_valid(myvi::gobject_t *obj, bool valid) {
+	}
+
 };
 
 
@@ -386,6 +389,13 @@ public:
 		}
 	}
 
+	virtual void set_valid(myvi::gobject_t *obj, bool valid) OVERRIDE {
+
+		for (std::vector<decorator_t*>::const_iterator iter = children.begin(); iter != children.end(); iter++) {
+			(*iter)->set_valid(obj, valid);
+		}
+	}
+
 };
 
 
@@ -402,22 +412,26 @@ public:
 	bool selected;
 	bool captured;
 	bool disabled;
+	bool invalid;
 
 	u32  default_color;
 	u32  selected_color;
 	u32  captured_color;
 	u32  disabled_color;
+	u32  invalid_color;
 public:
 	background_decorator_t(gen::meta_t *meta) {
 
 		selected = false;
 		captured = false;
 		disabled = false;
+		invalid = false;
 
 		default_color = 0xffffff;
 		selected_color = 0xffffff;
 		captured_color = 0xffffff;
 		disabled_color = 0xffffff;
+		invalid_color = 0xffffff;
 
 		myvi::string_t color = meta->get_string_param("default_color");
 		_MY_ASSERT(!color.is_empty(), return);
@@ -436,6 +450,10 @@ public:
 		if (!color.is_empty()) {
 			this->disabled_color = view_factory_t::instance().parse_color(color);
 		}
+		color = meta->get_string_param("invalid_color");
+		if (!color.is_empty()) {
+			this->invalid_color = view_factory_t::instance().parse_color(color);
+		}
 
 	}
 
@@ -449,6 +467,10 @@ public:
 
 	virtual void set_captured(myvi::gobject_t *obj, bool _captured) {
 		this->captured = _captured;
+	}
+
+	virtual void set_valid(myvi::gobject_t *obj, bool _valid) {
+		this->invalid = !_valid;
 	}
 
 	virtual void render_before(myvi::gobject_t *obj, myvi::surface_t &dst) OVERRIDE {
@@ -465,6 +487,9 @@ public:
 		} 
 		if (this->disabled) {
 			dst.ctx.pen_color = this->disabled_color;
+		}
+		if (this->invalid) {
+			dst.ctx.pen_color = this->invalid_color;
 		}
 		dst.fill(ax,ay,obj->w,obj->h);
 	}
@@ -1204,8 +1229,12 @@ public:
 		COMPLETE // пользователь нажал Enter и мы вышли из режима редактирования
 	} state;
 	myvi::string_t value;
+	myvi::key_t::key_t key;
 public:
-	textbox_msg_t(state_t _state, myvi::string_t _value) : state(_state), value(_value) {
+	textbox_msg_t(myvi::key_t::key_t _key, state_t _state, myvi::string_t _value) {
+		state = _state;
+		key = _key;
+		value = _value;
 	}
 };
 
@@ -1218,12 +1247,14 @@ public:
 	myvi::property_t<myvi::string_t , text_box_t> value;
 	label_t lab;
 	bool cursor_visible;
+	bool captured;
+	bool allow_cursor;
 	u32 cursor_color;
-private:
+protected:
 	myvi::string_impl_t<INPUT_MAX_LEN> _value;
 	s32 cursor_pos[INPUT_MAX_LEN];
 	s32 caret_pos;
-private:
+protected:
 	void set_value(myvi::string_t cvalue) {
 		_value=(cvalue);
 		lab.text = _value;
@@ -1235,7 +1266,7 @@ private:
 	}
 
 	void set_captured(bool _captured) {
-		this->cursor_visible = _captured;
+		this->captured = _captured;
 		if (this->decorator) {
 			this->decorator->set_captured(this, _captured);
 		}
@@ -1248,6 +1279,8 @@ public:
 		lab.visible = true;
 		caret_pos = 0;
 		cursor_visible = false;
+		allow_cursor = true;
+		captured = false;
 		cursor_color = 0x000000;
 
 		add_child(&lab);
@@ -1281,19 +1314,31 @@ public:
 
 		if (key == myvi::key_t::K_ENTER) {
 			_MY_ASSERT(parent,return);
-			if (!cursor_visible) {
+			if (!captured) {
 				this->capture_focus();
 				set_captured(true);
+				if (allow_cursor) {
+					this->cursor_visible = true;
+				}
 			} else {
 				this->release_focus();
 				set_captured(false);
-				notify(textbox_msg_t(textbox_msg_t::COMPLETE, _value));
+				this->cursor_visible = false;
+				notify(textbox_msg_t(key, textbox_msg_t::COMPLETE, _value));
 			}
+
+			if (decorator) {
+				decorator->set_valid(this, true);
+			}
+
 			goto lab_update_input;
 		}
 		// не должны редактироваться пока не перешли в активное состояние
-		if (!cursor_visible) {
+		if (!captured) {
 			return;
+		}
+		if (!cursor_visible) {
+			goto lab_update_input;
 		}
 
 		if (key == myvi::key_t::K_LEFT) {
@@ -1333,16 +1378,18 @@ public:
 			}
 		}
 		return;
-	lab_update_input:
-		lab.text = _value;
+lab_update_input:
+		update();
+		notify(textbox_msg_t(key, textbox_msg_t::EDIT, _value));
+	}
 
-		if (parent) {
+	void update() {
+		lab.text = _value;
+		if (this->initialized && parent) {
 			parent->child_request_size_change(this);
 		}
 		dirty = true;
-		notify(textbox_msg_t(textbox_msg_t::EDIT, _value));
 	}
-
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
 		s32 ax, ay;
@@ -1364,14 +1411,73 @@ public:
 
 
 
-class tbox_view_t : public text_box_t, public text_aware_t {
+class tbox_view_t : 
+	public text_box_t, 
+	public text_aware_t {
+
+	typedef text_box_t super;
 public:
+	tbox_view_t() {
+		this->allow_cursor = false;
+	}
+
 	virtual label_context_t & get_text_context() OVERRIDE {
 		return this->lab.ctx;
 	}
 
 };
 
+class validator_t {
+public:
+	virtual void init(gen::meta_t *meta) = 0;
+	virtual bool validate(variant_t & value) = 0;
+};
+
+class range_validator_t : public validator_t {
+public:
+	variant_t lo;
+	variant_t hi;
+public:
+	virtual void init(gen::meta_t *meta) OVERRIDE {
+		lo = meta_ex_t(meta).get_variant_param("lo");
+		hi = meta_ex_t(meta).get_variant_param("hi");
+	}
+
+	virtual bool validate(variant_t & value) OVERRIDE {
+		return value.cmp(lo) >= 0 && value.cmp(hi) <= 0;
+	}
+};
+
+class validator_factory_t {
+
+private:
+	validator_factory_t() {
+	}
+public:
+
+	static validator_factory_t & instance() {
+		static validator_factory_t _instance;
+		return _instance;
+	}
+
+	validator_t * try_build_validator(gen::meta_t *meta) {
+
+		myvi::string_t validator_id = meta->get_string_param("validator");
+		if (validator_id.is_empty()) {
+			return 0;
+		}
+
+		validator_t * validator = 0;
+
+		if (validator_id == "range") {
+			validator = new range_validator_t();
+		}
+		_MY_ASSERT(validator, return 0);
+		validator->init(meta);
+
+		return validator;
+	}
+};
 
 /*
 Контроллер редактируемого строкового поля
@@ -1393,10 +1499,13 @@ class tbox_controller_t
 public:
 	text_box_t *tb;
 	volatile_string_impl_t string_value;
+	variant_t increment;
+	validator_t *validator;
 public:
 
 	tbox_controller_t() {
 		tb = 0;
+		validator = 0;
 	}
 
 
@@ -1404,6 +1513,9 @@ public:
 // 0. Регистрирует поле в модели , если его ещё там нет
 		super::init(ctx);
 		register_in_model(ctx);
+
+		increment = meta_ex_t(ctx.get_parameter_meta()).get_variant_param("increment");
+		validator = validator_factory_t::instance().try_build_validator(ctx.get_parameter_meta());
 // 1. Заполняет поле начальным значением из модели
 
 		variant_t value;
@@ -1429,27 +1541,50 @@ public:
 		if (!(msg.path == this->parameter_path.path())) {
 			return;
 		}
-		variant_t value = msg.value;
-		_MY_ASSERT(value.type == this->parameter_type, return);
+		_MY_ASSERT(msg.value.type == this->parameter_type, return);
+		update(msg.value);
+	}
 
+	void update(variant_t & value) {
 		converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
 		conv->to_string(value, string_value);
 		this->tb->value = string_value;
-		this->tb->dirty = true;
+		this->tb->update();
 	}
 
 	// обновление от виджета
 	virtual void accept(textbox_msg_t &msg) OVERRIDE {
+		if (!msg.value.is_empty()) {
 
-		if (msg.state != textbox_msg_t::COMPLETE) {
-			return; // в режиме редактирования ниче не меняем
-		}
-		converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
+			converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
 
-		variant_t value;
-		bool ret = conv->from_string(msg.value, value);
-		if (ret) {
-			model_t::instance()->update(this->parameter_path.path(), value);
+			variant_t value;
+			bool ret = conv->from_string(msg.value, value);
+			if (ret) {
+				if (!increment.is_empty()) {
+					variant_t tmp = value;
+					if (msg.key == myvi::key_t::K_LEFT || msg.key == myvi::key_t::K_DOWN) {
+						tmp.dec(increment);
+
+					} else if (msg.key == myvi::key_t::K_RIGHT || msg.key == myvi::key_t::K_UP) {
+						tmp.inc(increment);
+					}
+					if (validator) {
+						bool valid = validator->validate(tmp);
+						if (tb->decorator) {
+							tb->decorator->set_valid(tb, valid);
+						}
+						if (valid) {
+							value = tmp;
+						}
+					} else {
+						value = tmp;
+					}
+					update(value);
+				}
+
+				model_t::instance()->update(this->parameter_path.path(), value);
+			}
 		}
 	}
 
