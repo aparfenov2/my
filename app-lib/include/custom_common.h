@@ -151,8 +151,8 @@ public:
 		return _path;
 	}
 
-	volatile_path_t( const volatile_path_t & other) {
-		this->_path = other._path;
+	volatile_path_t( const meta_path_base_t & other) {
+		this->_path = other.path();
 		this->spath = &_path;
 	}
 
@@ -228,6 +228,7 @@ class view_build_context_t {
 private:
 	gen::view_meta_t *view_meta;
 	gen::parameter_meta_t *parameter_meta;
+	gen::type_meta_t *type_meta;
 	myvi::gobject_t *view;
 	meta_path_t parameter_path;
 public:
@@ -235,6 +236,7 @@ public:
 		view = 0;
 		view_meta = 0;
 		parameter_meta = 0;
+		type_meta = 0;
 	}
 
 	myvi::gobject_t * get_view() {
@@ -278,6 +280,14 @@ public:
 
 	void set_parameter_meta(gen::parameter_meta_t *_parameter_meta) {
 		parameter_meta = _parameter_meta;
+	}
+
+	void set_type_meta(gen::type_meta_t *_type_meta) {
+		type_meta = _type_meta;
+	}
+
+	gen::type_meta_t * get_type_meta() {
+		return type_meta;
 	}
 
 };

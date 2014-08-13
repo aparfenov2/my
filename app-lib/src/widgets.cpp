@@ -22,13 +22,16 @@ void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
 	
 
 	if (captured.length()) {
-		focus_aware_t *captured_child = captured.last();
+		gobject_t *captured_child = captured.last();
+		_MY_ASSERT(captured_child && captured_child->visible && captured_child->enabled, return);
 
-		gobject_t *captured_child_g = dynamic_cast<gobject_t*>(captured_child);
-		_MY_ASSERT(captured_child_g && captured_child_g->visible && captured_child_g->enabled, return);
-
-		if (captured_child_g != root) {
-			captured_child->key_event(key);
+		if (captured_child != root) {
+			focus_aware_t *focus_aware = dynamic_cast<focus_aware_t*>(captured_child);
+			if (focus_aware) {
+				focus_aware->key_event(key);
+			} else {
+				this->key_event(key, captured_child);
+			}
 			return;
 		}
 	}
@@ -251,77 +254,130 @@ void stack_layout_t::get_preferred_size(gobject_t *parent, s32 &aw, s32 &ah) {
 	if (!vertical && aw) aw -= spx;
 }
 
+bool stack_layout_t::layout_item(gobject_t *parent ,gobject_t *child, s32 &px, s32 &py) {
+	if (vertical) {
+		child->x = 0;
+		child->y = py;
+
+		if (preferred_item_size) {
+			s32 cw, ch;
+			child->get_preferred_size(cw,ch);
+			child->h = ch;
+		} else child->h = bh;
+
+		child->w = parent->w;
+		py += child->h + spy;
+
+		if (py > parent->h) {
+			return false;
+		}
+	} else {
+		child->x = px;
+		child->y = 0;
+		if (preferred_item_size) {
+			s32 cw, ch;
+			child->get_preferred_size(cw,ch);
+			child->w = cw;
+		} else child->w = bw;
+		child->h = parent->h;
+		px += child->w + spx;
+
+		if (px > parent->w) {
+			return false;
+		}
+	}
+	return true;
+}
+
+void stack_layout_t::truncate_last(gobject_t *parent ,gobject_t *child, s32 &px, s32 &py) {
+	if (vertical) {
+		_MY_ASSERT(py > parent->h, return);
+		py -= child->h + spy; // rewind py
+		child->h = parent->h - py;
+		_MY_ASSERT(child->h > 0, return );
+
+	} else {
+		_MY_ASSERT(px > parent->w, return);
+		px -= child->w + spx; // rewind px
+		child->w = parent->w - px;
+		_MY_ASSERT(child->w > 0, return );
+	}
+}
+
+bool stack_layout_t::get_size(gobject_t *parent , s32 &px, s32 &py, gobject_t::iterator_visible_t &iter) {
+	gobject_t *child = iter.next();
+	px = py = 0;
+	while (child) {
+		if (!layout_item(parent,child,px,py)) {
+			return false;
+		}
+		child = iter.next();
+	}
+	return true;
+}
 
 void stack_layout_t::layout(gobject_t *parent) {
 
 	_WEAK_ASSERT((vertical && bh) || (!vertical && bw),return);
 
 	gobject_t::iterator_visible_t iter = parent->iterator_visible();
-	gobject_t *child = iter.next(), *pchild = 0;
-
-	s32 px = 0;
-	s32 py = 0;
+	gobject_t *child = iter.next();
+	// подсчитаем общее количество элементов
+	s32 children_total = 0;
 	while (child) {
-		_WEAK_ASSERT(child->visible,return);
-
-		if (vertical) {
-			child->x = 0;
-			child->y = py;
-
-			if (preferred_item_size) {
-				s32 cw, ch;
-				child->get_preferred_size(cw,ch);
-				child->h = ch;
-			} else child->h = bh;
-
-			child->w = parent->w;
-			py += child->h + spy;
-
-			if (py > parent->h) {
-				// пробуем урезать последний элемент 
-				_WEAK_ASSERT(!iter.next(), break); 
-				py -= child->h + spy; // rewind py
-				child->h = parent->h - py;
-				_MY_ASSERT(child->h > 0, break);
-				break;
-			}
-		} else {
-			child->x = px;
-			child->y = 0;
-			if (preferred_item_size) {
-				s32 cw, ch;
-				child->get_preferred_size(cw,ch);
-				child->w = cw;
-			} else child->w = bw;
-			child->h = parent->h;
-			px += child->w + spx;
-
-			if (px > parent->w) {
-				// пробуем урезать последний элемент 
-				_WEAK_ASSERT(!iter.next(), break); 
-				px -= child->w + spx; // rewind py
-				child->w = parent->w - px;
-				_MY_ASSERT(child->w > 0, break);
-				break;
-			}
-		}
-
-		pchild = child;
+		children_total++;
 		child = iter.next();
+	}
 
-		if (!child && stretch_last) {
-			if (vertical) {
-				py -= pchild->h + spy; // rewind py
-				pchild->h = parent->h - py;
-			} else {
-				px -= pchild->w + spx; // rewind px
-				pchild->w = parent->w - px;
-			}
+	s32 px = 0, py = 0;
+	s32 child_num = 0;
+	iter = parent->iterator_visible();
+	child = iter.next();
+
+	while (child) {
+
+		if (!layout_item(parent,child,px,py)) {
+			truncate_last(parent,child,px,py);
 			break;
 		}
+
+		if (stretch >= 0 && (stretch >= 0xff && child_num >= children_total-1 || child_num == stretch)) {
+			// определим размеры оставшихся
+			gobject_t::iterator_visible_t iter1 = iter;
+			s32 remained_w = 0, remined_h = 0;
+
+			if (child_num < children_total-1) {
+				if (!get_size(parent,remained_w,remined_h, iter)) {
+					_MY_ASSERT(0, return);
+				}
+			}
+
+			iter = iter1;
+
+			if (vertical) {
+				py -= child->h;
+				child->h = parent->h - remined_h - py;
+				py += child->h;
+				_MY_ASSERT(child->h > 0, return);
+			} else {
+				px -= child->w;
+				child->w = parent->w - remained_w - px;
+				px += child->w;
+				_MY_ASSERT(child->w > 0, return);
+			}
+		}
+
+
+		child = iter.next();
+		child_num++;
+
 	}
+
 	if (!vertical && px) px -= spx;
 	if (vertical && py) py -= spy;
+	if (!((py <= parent->h) && (px <= parent->w))) {
+		int i = 0;
+	}
 	_WEAK_ASSERT((py <= parent->h) && (px <= parent->w),return);
 }
 

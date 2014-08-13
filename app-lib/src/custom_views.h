@@ -682,14 +682,14 @@ class dynamic_view_base_t :
 private:
 	gen::view_meta_t *view_meta;
 	view_controller_t *view_controller;
-	s32 fw, fh;
+	s32 fw, fh, min_w, min_h, max_w, max_h;
 public:
 
 	dynamic_view_base_t() {
 		view_meta = 0;
 		view_controller = 0; // устанавливается позже
 
-		fw = fh = _NAN;
+		fw = fh = min_w = min_h = max_w = max_h = _NAN;
 	}
 
 	virtual void init(view_build_context_t ctx) OVERRIDE {
@@ -698,6 +698,10 @@ public:
 
 		fw = this->view_meta->get_int_param("width");
 		fh = this->view_meta->get_int_param("height");
+		min_w = this->view_meta->get_int_param("min_width");
+		min_h = this->view_meta->get_int_param("min_height");
+		max_w = this->view_meta->get_int_param("max_width");
+		max_h = this->view_meta->get_int_param("max_height");
 	}
 
 
@@ -724,10 +728,9 @@ public:
 	}
 
 
-	
-	virtual void vget_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
+	virtual void adjust_preferred_size(s32 &pw, s32 &ph) OVERRIDE {
 
-		super::vget_preferred_size(pw,ph);
+		super::adjust_preferred_size(pw, ph);
 
 		if (fw != _NAN) {
 			pw = fw;
@@ -735,6 +738,21 @@ public:
 		if (fh != _NAN) {
 			ph = fh;
 		}
+
+		if (min_w != _NAN && pw < min_w) {
+			pw = min_w;
+		}
+		if (min_h != _NAN && ph < min_h) {
+			ph = min_h;
+		}
+
+		if (max_w != _NAN && pw > max_w) {
+			pw = max_w;
+		}
+		if (max_h != _NAN && ph > max_h) {
+			ph = max_h;
+		}
+
 	}
 
 };
@@ -820,8 +838,9 @@ protected:
 				resolver.resolve(ctx.try_get_parameter_meta())
 			);
 			this->parameter_path.add(path);
-			ctx.set_parameter_path(this->parameter_path);
 		}
+
+		ctx.set_parameter_path(this->parameter_path);
 
 	}
 
@@ -1075,14 +1094,14 @@ class view_cache_t {
 public:
 	vmap_t view_map;
 public:
-	myvi::gobject_t * get_view(myvi::string_t view_id) {
+	myvi::gobject_t * get_view(myvi::string_t view_id, view_build_context_t ctx) {
 		_MY_ASSERT(!view_id.is_empty(), return 0);
 
 		vmap_t::iterator iter = view_map.find(view_id);
 		if(iter != view_map.end()) return iter->second;
 
 		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
-		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view_no_ctx();
+		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view(ctx);
 		view->init();
 		view_map[view_id] = view;
 		return view;
@@ -1102,17 +1121,28 @@ public:
 		return _instance;
 	}
 
-
 	void popup(myvi::string_t view_id) {
-		myvi::gobject_t *view = view_cache.get_view(view_id);
+		popup(view_id, view_build_context_t() );
+	}
+
+	void popup(myvi::string_t view_id, view_build_context_t ctx) {
+
+		myvi::gobject_t *view = view_cache.get_view(view_id, ctx);
 		myvi::modal_overlay_t::instance().push_modal(view);
+
 		view->w = myvi::modal_overlay_t::instance().w;
 		view->h = myvi::modal_overlay_t::instance().h;
 		view->do_layout();
+
+		myvi::focus_manager_t::instance().capture_child(view);
+		myvi::focus_manager_t::instance().select(0);
+
 	}
 
+
 	void popdown() {
-		myvi::modal_overlay_t::instance().pop_modal();
+		myvi::gobject_t *view = myvi::modal_overlay_t::instance().pop_modal();
+		myvi::focus_manager_t::instance().release_child(view);
 		myvi::focus_manager_t::instance().select(0);
 	}
 
@@ -1153,6 +1183,7 @@ class button_view_controller_t :
 public:
 	button_view_t *button_view;
 	gen::meta_t *meta;
+	gen::type_meta_t *type_meta;
 	myvi::string_t popup_view_id;
 	myvi::string_t event_id;
 	bool close;
@@ -1161,8 +1192,10 @@ public:
 		button_view = 0;
 		meta = 0;
 		close = false;
+		type_meta = 0;
 	}
 
+	/*
 	label_t * find_label() {
 		_MY_ASSERT(button_view, return 0);
 		label_t *ret = 0;
@@ -1178,6 +1211,7 @@ public:
 		_MY_ASSERT(ret, return 0);
 		return ret;
 	}
+	*/
 
 	virtual void init(view_build_context_t ctx) OVERRIDE {
 		super::init(ctx);
@@ -1189,8 +1223,10 @@ public:
 		this->meta = ctx.get_view_meta();
 		_MY_ASSERT(this->meta, return);
 
-		label_t *lab = find_label();
-		lab->text = ctx.get_view_meta()->get_string_param("name");
+		this->type_meta = ctx.get_type_meta();
+
+		//label_t *lab = find_label();
+		//lab->text = ctx.get_view_meta()->get_string_param("name");
 
 		this->popup_view_id = ctx.get_view_meta()->get_string_param("popup_view");
 		this->event_id = meta->get_string_param("event");
@@ -1208,11 +1244,22 @@ public:
 		} 
 			
 		if (!this->popup_view_id.is_empty()) {
-			popup_manager_t::instance().popup(this->popup_view_id);
+			if (!this->type_meta) {
+				popup_manager_t::instance().popup(this->popup_view_id);
+			} else {
+				view_build_context_t ctx;
+				ctx.set_type_meta(this->type_meta);
+				popup_manager_t::instance().popup(this->popup_view_id, ctx);
+			}
 		} 
 
 		if (this->close) {
 			popup_manager_t::instance().popdown();
+		}
+
+		if (this->type_meta) {
+			//_LOG2("clicked: ", this->type_meta->get_id().c_str() );
+
 		}
 	}
 
@@ -1846,49 +1893,145 @@ public:
 
 
 // контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
-class menu_controller_t : public view_controller_t {
+class menu_controller_helper_t  {
 public:
-	volatile_path_t parameter_path; // размещаем в куче
+	class iterator_t {
+	public:
+		virtual gen::parameter_meta_t * next() = 0;
+	};
 public:
-	virtual void init(view_build_context_t ctx) OVERRIDE {
 
-		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menu_ref");
-		_MY_ASSERT(!menu_id.is_empty(), return);
+	void build_menu(view_build_context_t & ctx, iterator_t &iter)  {
 
 		myvi::string_t item_template_id = ctx.get_view_meta()->get_string_param("item_template_view");
 		_MY_ASSERT(!item_template_id.is_empty(), return);
 
-		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
+		myvi::string_t item_template_complex_id = ctx.get_view_meta()->get_string_param("item_template_view_complex");
+		_MY_ASSERT(!item_template_complex_id.is_empty(), return);
 
-		gen::menu_meta_t *menu_meta = gen::meta_registry_t::instance().find_menu_meta(menu_id);
+		gen::view_meta_t *template_meta = gen::meta_registry_t::instance().find_view_meta(item_template_id);
+		gen::view_meta_t *template_meta_complex = gen::meta_registry_t::instance().find_view_meta(item_template_complex_id);
+
+		gen::parameter_meta_t *child_meta = iter.next();
 
 		// здесь view - конетейнер меню
 		// вставляем элементы меню в данный нам вид
-		for (s32 i=0; ;i++) {
-			myvi::string_t child_id = menu_meta->get_parameter_child(i);
-			if (child_id.is_empty()) break;
-
-			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
-
+		while (child_meta) {
 			// создаем обёртку для вида параметра на основе шаблона
 			view_build_context_t child_ctx = ctx;
 			child_ctx.set_view_meta(template_meta);
 			child_ctx.set_parameter_meta(child_meta);
 
-			parameter_path.reset();
+			volatile_path_t parameter_path; 
 			parameter_path.add_absolute(child_meta->get_id());
 			child_ctx.set_parameter_path(parameter_path);
 
+			gen::type_meta_t *type_meta = child_meta->get_type_meta();
+			child_ctx.set_type_meta(type_meta);
 
-			myvi::gobject_t *child_wrapper = view_meta_ex_t(template_meta).build_view(child_ctx);
-			myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(child_ctx);
-			child_wrapper->add_child(child_view);
-			ctx.get_view()->add_child(child_wrapper);
+			if (type_meta->is_complex() && !type_meta->is_enum()) {
+				myvi::gobject_t *child_wrapper = view_meta_ex_t(template_meta_complex).build_view(child_ctx);
+				ctx.get_view()->add_child(child_wrapper);
+			} else {
+				myvi::gobject_t *child_wrapper = view_meta_ex_t(template_meta).build_view(child_ctx);
+				myvi::gobject_t *child_view = parameter_meta_ex_t(child_meta).build_menu_view(child_ctx);
+				child_wrapper->add_child(child_view);
+				ctx.get_view()->add_child(child_wrapper);
+			}
+			child_meta = iter.next();
 		}
 
-//		gen::view_factory_t::instance()->append_menu_view(view, menu_meta);
 	}
 };
+
+
+// контроллер вида меню, по menuRef получает мету меню, и достраивает вид, потом обрабытвает события от вида
+class menu_controller_t : public view_controller_t {
+protected:
+	class menu_iterator_t : public menu_controller_helper_t::iterator_t {
+	public:
+		menu_controller_t *that;
+		s32 lasti;
+	public:
+		menu_iterator_t(menu_controller_t *_that) {
+			that = _that;
+			lasti = 0;
+		}
+		virtual gen::parameter_meta_t * next() OVERRIDE {
+			myvi::string_t child_id = that->menu_meta->get_parameter_child(lasti++);
+			if (child_id.is_empty()) return 0;
+			gen::parameter_meta_t *child_meta = gen::meta_registry_t::instance().find_parameter_meta(child_id);
+			return child_meta;
+		}
+	};
+public:
+	
+	gen::menu_meta_t *menu_meta;
+	menu_controller_helper_t helper;
+public:
+	menu_controller_t() {
+		menu_meta = 0;
+	}
+
+	virtual void init(view_build_context_t ctx) OVERRIDE {
+		myvi::string_t menu_id = ctx.get_view_meta()->get_string_param("menu_ref");
+		_MY_ASSERT(!menu_id.is_empty(), return);
+		this->menu_meta = gen::meta_registry_t::instance().find_menu_meta(menu_id);
+
+
+		helper.build_menu(ctx, menu_iterator_t(this) );
+
+	}
+
+};
+
+
+/*
+*	контроллер меню в сплывающем окне.
+*	строит меню по ctx.type_meta
+*/
+
+class popup_menu_controller_t : public view_controller_t {
+protected:
+	class menu_iterator_t : public menu_controller_helper_t::iterator_t {
+	public:
+		popup_menu_controller_t *that;
+		s32 lasti;
+	public:
+		menu_iterator_t(popup_menu_controller_t *_that) {
+			that = _that;
+			lasti = 0;
+		}
+		virtual gen::parameter_meta_t * next() OVERRIDE {
+			return that->type_meta->get_parameter_child(lasti++);
+		}
+	};
+public:
+	gen::type_meta_t *type_meta;
+	menu_controller_helper_t helper;
+	myvi::string_t name_event_name;
+public:
+	popup_menu_controller_t() {
+		type_meta = 0;
+	}
+
+	virtual void init(view_build_context_t ctx) OVERRIDE {
+
+		this->type_meta = ctx.get_type_meta();
+		_MY_ASSERT(type_meta && type_meta->is_complex() && !type_meta->is_enum(), return);
+
+		this->name_event_name = ctx.get_view_meta()->get_string_param("name_event");
+
+		if (!name_event_name.is_empty()) {
+			event_bus_t::instance().notify(event_bus_msg_t(name_event_name, variant_t(type_meta->get_name())));
+		}
+
+		helper.build_menu(ctx, menu_iterator_t(this) );
+	}
+
+};
+
+
 
 
 // вставляет вид, создаваемый параметром, в свой вид
@@ -1983,7 +2126,7 @@ public:
 
 		myvi::string_t initial_view_id = ctx.get_view_meta()->get_string_param("initial");
 		this->event_name = ctx.get_view_meta()->get_string_param("listen");
-		this->name_event_name = ctx.get_view_meta()->get_string_param("event");
+		this->name_event_name = ctx.get_view_meta()->get_string_param("name_event");
 
 		if (initial_view_id.is_empty()) {
 			gen::view_meta_t *child_meta = ctx.get_view_meta()->get_view_child(0);
@@ -1994,10 +2137,12 @@ public:
 		this->initial_view = resolve_view(initial_view_id);
 		_MY_ASSERT(initial_view, return);
 
-
-		keyboard_filter_chain_t::instance().add_filter(&kbd_filter);
-
-		event_bus_t::instance().subscribe(this);
+		if (this->view->children.size() > 1) {
+			keyboard_filter_chain_t::instance().add_filter(&kbd_filter);
+		}
+		if (!this->event_name.is_empty()) {
+			event_bus_t::instance().subscribe(this);
+		}
 
 	}
 
@@ -2111,9 +2256,17 @@ public:
 		if (!meta->get_string_param("preferred_item_size").is_empty()) {
 			this->preferred_item_size = meta->get_string_param("preferred_item_size") == "true";
 		}
-		if (!meta->get_string_param("stretch_last").is_empty()) {
-			this->stretch_last = meta->get_string_param("stretch_last") == "true";
+		if (!meta->get_string_param("stretch").is_empty()) {
+			if (meta->get_string_param("stretch") == "first") {
+				this->stretch = 0;
+
+			} else if (meta->get_string_param("stretch") == "last") {
+				this->stretch = 0xff;
+			}
+		} else if (meta->get_int_param("stretch") != _NAN) {
+			this->stretch = meta->get_int_param("stretch");
 		}
+
 		if (meta->get_int_param("bw") != _NAN) {
 			this->bw = meta->get_int_param("bw");
 		}
