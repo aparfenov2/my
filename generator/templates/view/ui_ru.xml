@@ -1,0 +1,3 @@
+<#import "inc/view_common.ftl" as common>
+<#global language = "ru">
+<@common.process_node schema.schema 0 />

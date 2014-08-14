@@ -5,9 +5,9 @@
 <!-- Единицы измерения -->
 	<units>
 		<unit id="mhz_ut">
-			<unit multiplier="1000000" name="MHz"/>
-			<unit multiplier="1000" name="KHz"/>
-			<unit multiplier="1" name="Hz"/>
+			<unit multiplier="1000000" name="МГц" name_en="MHz"/>
+			<unit multiplier="1000" name="КГц" name_en="KHz"/>
+			<unit multiplier="1" name="Гц" name_en="Hz"/>
 		</unit>
 	</units>
 
@@ -23,67 +23,67 @@
 		<type id="u32" type="base" />
 		<type id="s32" type="base" />
 		
-		<type id="dme_sfx_t" name="Суффикс DME" type="enum">
+		<type id="dme_sfx_t" name="Суффикс DME" name_en="DME suffix" type="enum">
 			<enum id="X" name="X" value="0" />
 			<enum id="Y" name="Y" value="1" />
 		</type>
 		
 		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
 		<!-- поэтому здесь для полей вид не указан -->
-		<type id="dme_t" name="Параметры DME" type="complex">
-			<parameter id="ch" name="Канал DME" type="u8" validator="range" initial="127" lo="-127" hi="128" increment="1" view="tbox" />
-			<parameter id="sfx" name="Суффикс DME" type="dme_sfx_t" initial="0" view="cbox" />
+		<type id="dme_t" name="Параметры DME" name_en="DME parameters" type="complex">
+			<parameter id="ch" name="Канал DME" name_en="DME channel" type="u8" validator="range" initial="127" lo="-127" hi="128" increment="1" view="tbox" />
+			<parameter id="sfx" name="Суффикс DME" name_en="DME suffix" type="dme_sfx_t" initial="0" view="cbox" />
 		</type>
-		<type id="measure_ctl_t" name="Измерение" type="enum">
-			<enum id="START" name="Старт" value="0" glyph="A" />
-			<enum id="STOP" name="Стоп" value="1" glyph="B" />
+		<type id="measure_ctl_t" name="Измерение" name_en="Measurement" type="enum">
+			<enum id="START" name="Старт" name_en="Start" value="0" />
+			<enum id="STOP" name="Стоп" name_en="Stop" value="1" />
 		</type>
 		<type id="on_off_t" name="xxx" type="enum">
-			<enum id="ON" name="ON" value="0"  />
-			<enum id="OFF" name="OFF" value="1"  />
+			<enum id="ON" name="Вкл." name_en="ON" value="0"  />
+			<enum id="OFF" name="Выкл." name_en="OFF" value="1"  />
 		</type>
-		<type id="output_mode_t" name="Выход" type="enum">
-			<enum id="ANT" name="Антенна" value="0"  />
-			<enum id="ATTEN" name="Аттен." value="1"  />
-			<enum id="CALIB" name="Калибр." value="2"  />
+		<type id="output_mode_t" name="Выход" name_en="Output mode" type="enum">
+			<enum id="ANT" name="Антенна" name_en="Antenna" value="0"  />
+			<enum id="ATTEN" name="Аттен." name_en="Attenuator" value="1"  />
+			<enum id="CALIB" name="Калибр." name_en="Calibration" value="2"  />
 		</type>
-		<type id="start_ctl_t" name="Запуск" type="enum">
-			<enum id="HIP" name="ХИП" value="0" />
-			<enum id="CALIB" name="Пачка" value="1"  />
-			<enum id="EXT" name="Внеш" value="2" />
+		<type id="start_ctl_t" name="Запуск" name_en="Start control" type="enum">
+			<enum id="HIP" name="ХИП" name_en="HIP" value="0" />
+			<enum id="CALIB" name="Пачка" name_en="Packet" value="1"  />
+			<enum id="EXT" name="Внеш" name_en="Ext." value="2" />
 		</type>
-		<type id="mode_ctl_t" name="Режим" type="enum">
-			<enum id="REQESTER" name="Запросчик" value="0"  />
-			<enum id="RESPONDER" name="Ответчик" value="1"  />
+		<type id="mode_ctl_t" name="Режим" name_en="Mode" type="enum">
+			<enum id="REQESTER" name="Запросчик" name_en="Requester" value="0"  />
+			<enum id="RESPONDER" name="Ответчик" name_en="Responder" value="1"  />
 		</type>
-		<type id="dsp_onoff_t" name="Отключение дисплея" type="enum">
-			<enum id="NO" name="НЕТ" value="0" />
-			<enum id="a1_MIN" name="1 МИНУТА" value="0"  />
-			<enum id="a5_MIN" name="5 МИНУТ" value="1"  />
-			<enum id="a10_MIN" name="10 МИНУТ" value="2"  />
+		<type id="dsp_onoff_t" name="Откл. дисплея" name_en="Power save" type="enum">
+			<enum id="NO" name="НЕТ" name_en="NO" value="0" />
+			<enum id="a1_MIN" name="1 МИНУТА" name_en="1 Minute" value="0"  />
+			<enum id="a5_MIN" name="5 МИНУТ" name_en="5 Minutes" value="1"  />
+			<enum id="a10_MIN" name="10 МИНУТ" name_en="10 Minutes" value="2"  />
 		</type>
 	</types>
 	
 	<parameters>
 <!-- Главное -->
-		<parameter id="dme" type="dme_t"  name="Параметры DME" />
-		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" initial="0" view="cbox" />
-		<parameter id="output_mode" type="output_mode_t"  name="Выход" initial="0" view="cbox" />
-		<parameter id="out_level" type="float" increment="0.1" validator="range" lo="-70.0" hi="70.0" initial="69.3"  name="Уровень" label="dBm" view="tbox_label" />
-		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" initial="0" view="cbox" />
+		<parameter id="dme" type="dme_t"  name="Параметры DME" name_en="DME Parameters" />
+		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" name_en="Measurement" initial="0" view="cbox" />
+		<parameter id="output_mode" type="output_mode_t"  name="Выход" name_en="Output mode" initial="0" view="cbox" />
+		<parameter id="out_level" type="float" increment="0.1" validator="range" lo="-70.0" hi="70.0" initial="69.3"  name="Уровень" name_en="Level" label="dBm" view="tbox_label" />
+		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" name_en="Start control" initial="0" view="cbox" />
 		
 <!-- Параметры -->	
-		<parameter id="req_period" type="u32" name="Период запросов" initial="1300" increment="1" label="Имп. пар\\с" view="tbox_label" />
-		<parameter id="req_freq" type="float" name="Частота запроса" initial="1050.20" increment="0.1" label="Мгц" view="tbox_label" />
-		<parameter id="req_span" type="float" name="Кодовый интервал запроса" initial="12.0" increment="0.1" label="мкс" view="tbox_label" />
-		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" initial="12.0" increment="0.1" label="мкс" view="tbox_label" />
-		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" initial="0"  view="cbox" />
+		<parameter id="req_period" type="u32" name="Период запросов" name_en="Request period" initial="1300" increment="1" label="пар\с" label_en="pairs\sec" view="tbox_label" />
+		<parameter id="req_freq" type="float" name="Частота запроса" name_en="Request freq." initial="1050.20" increment="0.1" label="Мгц" label_en="MHz" view="tbox_label" />
+		<parameter id="req_span" type="float" name="Кодовый интервал запроса" name_en="Request span" initial="12.0" increment="0.1" label="мкс" label_en="mcs" view="tbox_label" />
+		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" name_en="Response span" initial="12.0" increment="0.1" label="мкс" label_en="mcs" view="tbox_label" />
+		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" name_en="Mode" initial="0"  view="cbox" />
 		
 <!-- Экран -->	
-		<parameter id="brightness" type="u8" name="Яркость" initial="100" increment="10" label="%" view="tbox_label" />
-		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" initial="0" view="cbox" />
+		<parameter id="brightness" type="u8" name="Яркость" name_en="Brightness" initial="100" increment="10" label="%" view="tbox_label" />
+		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" name_en="Power save" initial="0" view="cbox" />
 <!-- Test -->	
-		<parameter id="header_freq" type="float" initial="1.001" increment="0.001" label="GHz" view="tbox_label" />
+		<parameter id="header_freq" type="float" initial="1.001" increment="0.001" label="ГГц" label_en="GHz" view="tbox_label" />
 		<parameter id="header_level" type="float" initial="13.00" increment="0.1" label="dBm" view="tbox_label" />
 		
 		<parameter id="rf_on" type="on_off_t" initial="1" name="RF"  />
@@ -181,22 +181,22 @@
 					<view predefined="scroll_window" >
 	<!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
 						<view layout="stretch" padding="10" controller="window_selector" listen="menu_select" name_event="menu_name" >
-							<view id="main" name="Главное" layout="center" >
+							<view id="main" name="Главное" name_en="Main" layout="center" >
 								<view layout="stack" vertical="false" preferred_item_size="false" bw="140" height="80" >
 									<view layout="center" decorator="background" default_color="BK_BLUE" >
-										<view inherited="btn" static_text="Управление" propagate="static_text" event="menu_select" arg0="control" />
+										<view inherited="btn" static_text="Управление" static_text_en="Control" propagate="static_text" event="menu_select" arg0="control" />
 									</view>
 									<view layout="center" decorator="background" default_color="BK_BLUE">
-										<view inherited="btn" static_text="Калибровка" propagate="static_text" event="menu_select" arg0="parameters" />
+										<view inherited="btn" static_text="Калибровка" static_text_en="Calibration" propagate="static_text" event="menu_select" arg0="parameters" />
 									</view>
 									<view layout="center" decorator="background" default_color="BK_BLUE">
-										<view inherited="btn" static_text="Настройки" propagate="static_text" event="menu_select" arg0="settings" />
+										<view inherited="btn" static_text="Настройки" static_text_en="Settings" propagate="static_text" event="menu_select" arg0="settings" />
 									</view>
 								</view>
 							</view>
-							<view id="control" inherited="menu_page_template" name="Управление" menu_ref="main" />
-							<view id="parameters" inherited="menu_page_template" name="Калибровка" menu_ref="parameters" />
-							<view id="settings" inherited="menu_page_template" name="Настройки" menu_ref="screen"  />
+							<view id="control" inherited="menu_page_template" name="Управление" name_en="Control" menu_ref="main" />
+							<view id="parameters" inherited="menu_page_template" name="Калибровка" name_en="Calibration" menu_ref="parameters" />
+							<view id="settings" inherited="menu_page_template" name="Настройки" name_en="Settings" menu_ref="screen"  />
 						</view>
 					</view>
 				</view>
@@ -228,7 +228,7 @@
 						</view>
 					</view>
 					<view layout="center">
-						<view inherited="btn" static_text="Закрыть" propagate="static_text" close="true" />
+						<view inherited="btn" static_text="Закрыть" static_text_en="Close" propagate="static_text" close="true" />
 					</view>
 				</view>
 			</view>

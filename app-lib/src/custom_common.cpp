@@ -435,7 +435,7 @@ myvi::string_t splitted_string_t::iterator_t::next() {
 }
 
 
-static u32 parse_hex(myvi::string_t color) {
+u32 parse_hex(myvi::string_t color) {
 	_MY_ASSERT(color.length() > 2, return 0);
 	if (color.sub(0,2) == "0x") {
 		color = color.sub(2);

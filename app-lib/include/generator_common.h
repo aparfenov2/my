@@ -489,7 +489,7 @@ public:
 	}
 
 	// обязательно вызвать после инициализации кучи
-	void init();
+	void init(char *xml);
 
 	menu_meta_t * find_menu_meta(myvi::string_t id) {
 		return find_meta<menu_meta_t>(id, menus);
