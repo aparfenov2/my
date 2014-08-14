@@ -24,6 +24,9 @@
 #include "link_facade.h"
 #include "link_model_updater.h"
 
+#include "rapidxml_utils.hpp"
+
+
 using namespace std;
 using namespace myvi;
 
@@ -281,8 +284,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		link_model_repeater->init(host_serializer, 0);
 	}
 
-
-	gen::meta_registry_t::instance().init();
+	rapidxml::file<> xml("gen\\ui_ru.xml");
+	gen::meta_registry_t::instance().init(xml.data());
 	
 	test_screen_t test_screen;
 	test_screen.init(); // init whole tree
