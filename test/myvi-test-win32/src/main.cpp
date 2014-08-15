@@ -21,7 +21,7 @@
 
 #include "menu_common.h"
 #include "custom_common.h"
-#include "link_facade.h"
+#include "link_sys_impl.h"
 #include "link_model_updater.h"
 
 #include "rapidxml_utils.hpp"
@@ -40,7 +40,7 @@ extern resources_t res;
 
 
 void save_ttcache() {
-	u32 sz = 1024 * 200; 
+	u32 sz = 1024 * 300; 
 	u8 *buf = new u8[sz];
 	u32 dsz = globals::ttcache.save(buf,sz);
 
@@ -192,22 +192,26 @@ public:
 };
 
 
-font_size_t::font_size_t sizes[] = 
-		{font_size_t::FS_8, font_size_t::FS_15, font_size_t::FS_20, font_size_t::FS_30 ,(font_size_t::font_size_t)0};
 
 void print_chars(ttype_font_t &fnt, surface_t &s1, const char * chars) {
-	for (s32 s=0; s<100 && sizes[s]; s++ ) {
-		fnt.set_char_size_px(0,sizes[s]);
+
+	for (gen::meta_registry_t::font_sizes_map_t::const_iterator it = gen::meta_registry_t::instance().font_sizes.begin(); 
+		it != gen::meta_registry_t::instance().font_sizes.end(); it++) {
+
+		fnt.set_char_size_px(0,(*it).second);
 		fnt.print_to(0,0,s1,string_t(chars));
 	}
 }
 
-void print_chars_gly(ttype_font_t &fnt, surface_t &s1, u32 *str) {
-	for (s32 s=0; s<100 && sizes[s]; s++ ) {
-		fnt.set_char_size_px(0,sizes[s]);
-		fnt.print_to(0,0,s1,string32_t(str));
-	}
+void print_chars(ttype_font_t &fnt, surface_t &s1) {
+	print_chars(fnt,s1,"abcdefghijklmnopqrstuvwxyz");
+	print_chars(fnt,s1,"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	print_chars(fnt,s1,"àáâãäå¸æçèéêëìíîïğñòóôõö÷ùøüûúışÿ");
+	print_chars(fnt,s1,"ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖ×ÙØÜÛÚİŞß");
+	print_chars(fnt,s1,"`1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
 }
+
+
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -230,33 +234,26 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	if (!no_ttf) {
 		ttcache_t::init_lib();
 	} else {
-		cout << "skipped ttcache_t::init_lib() " << endl;
-	}
+		cout << "skipped ttcache_t::init_lib() - load font cache from file " << endl;
 
-	ifstream infile ("bmp\\ttcache.dat",ofstream::binary);
-	if (!infile) {
-		_LOG1("cant open font cache file");
-	} else {
-		infile.seekg( 0, std::ios::end );
-		u32 sz = (u32)infile.tellg();
-		infile.seekg( 0, std::ios::beg );
-		u8 *buf = new u8[sz];
-		infile.read((char *)buf, sz);
-		infile.close();
+		ifstream infile ("bmp\\ttcache.dat",ofstream::binary);
+		if (!infile) {
+			_LOG1("cant open font cache file");
+		} else {
+			infile.seekg( 0, std::ios::end );
+			u32 sz = (u32)infile.tellg();
+			infile.seekg( 0, std::ios::beg );
+			u8 *buf = new u8[sz];
+			infile.read((char *)buf, sz);
+			infile.close();
 
-		globals::ttcache.init(buf,sz);
-		_LOG2("font cache loaded, size: ",sz);
+			globals::ttcache.init(buf,sz);
+			_LOG2("font cache loaded, size: ",sz);
+		}
+
 	}
 
 	res.init();
-// standard values
-	static u32 gly_str[] = {0x0026,0x0027,0x0028,0x0029,0x002a,0x002b,0x002c,0x002d,0x002e,0x002f,0x0030,0x0031,0x0032,0x0033,0x0034,0x0035,0x0036,0x00};
-	print_chars_gly(res.gly,s1,gly_str);
-	print_chars(res.ttf,s1,"abcdefghijklmnopqrstuvwxyz");
-	print_chars(res.ttf,s1,"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-	print_chars(res.ttf,s1,"àáâãäå¸æçèéêëìíîïğñòóôõö÷ùøüûúışÿ");
-	print_chars(res.ttf,s1,"ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖ×ÙØÜÛÚİŞß");
-	print_chars(res.ttf,s1,"`1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
 
 	_MY_ASSERT(com_port_name, return -1);
 	test::serial_port_t port(com_port_name);
@@ -269,9 +266,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		wnd_title = "myvi: slave";
 		// ëîêàëüíàÿ ğîëü
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
-		link::local_facade_t *local_facade = new link::local_facade_t();
+		link::serializer_t *local_facade = new link::serializer_t();
 		local_facade->init(link_model_updater, &sintf);
-		link_model_updater->init(local_facade->get_sys_interface(), 0);
+		link_model_updater->init(local_facade, 0);
 
 	} else {
 		_LOG1("link_mode: host");
@@ -286,6 +283,11 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	rapidxml::file<> xml("gen\\ui_ru.xml");
 	gen::meta_registry_t::instance().init(xml.data());
+
+
+// çàïîëíèì êåø øğèôòîâ âñåìè âîçìîæíûìè çíà÷åíèÿìè
+	print_chars(res.ttf , s1);
+	print_chars(res.ttf_bold , s1);
 	
 	test_screen_t test_screen;
 	test_screen.init(); // init whole tree

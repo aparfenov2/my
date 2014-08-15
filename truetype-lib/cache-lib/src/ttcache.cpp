@@ -335,7 +335,9 @@ u32 ttcache_t::save(u8 *buf, u32 buf_sz) {
 	hdr.write(stream);
 	font_handle_t *hdl = handles;
 	while (hdl) {
-		hdl->write(stream);
+		if (hdl->root) {
+			hdl->write(stream);
+		}
 		hdl = hdl->next;
 	}
 	u32 ret = stream.ptr - stream.buf;

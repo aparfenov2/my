@@ -436,7 +436,7 @@ public:
 
 // -------------- регистр меты ------------------------------
 class meta_registry_t {
-private:
+public:
 	std::vector<menu_meta_t *> menus;
 	std::vector<parameter_meta_t *> parameters;
 	std::vector<type_meta_t *> types;
