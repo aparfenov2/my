@@ -2,7 +2,8 @@
 #define _GENERATOR_COMMON_H
 
 #include "widgets.h"
-#include <unordered_map>
+#include <vector>
+#include <hash_map>
 
 namespace gen {
 
@@ -21,14 +22,17 @@ public:
 #define _NAN 0x8fffffff
 #define _NANF (double)_NAN
 
+/*
 // C++ requirements:
 // must be a function object type that is default_constructible, copy_assignable and swappable
 // must have the nested types 'argument_type' and 'result_type' (std::size_t)
 class string_t_hash_t : std::unary_function< const myvi::string_t&, std::size_t > {
 public:
 	// should not throw any exceptions
-	std::size_t operator() ( const myvi::string_t& key ) const /* can add noexcept or throw() here */
+	std::size_t operator() ( const myvi::string_t& key ) const 
 	{
+		_MY_ASSERT(!key.is_empty(), return 0);
+
 		std::size_t hash = 0U ;
 		const std::size_t mask = 0xF0000000 ;
 		for( std::string::size_type i = 0 ; i < (std::string::size_type)key.length() ; ++i ) {
@@ -41,8 +45,7 @@ public:
 	}
 
 };
-
-
+*/
 
 // базовый класс меты
 class meta_t {
@@ -73,9 +76,9 @@ public:
 
 template<typename TSelf, typename TBase>
 class dynamic_meta_t : public TBase {
-	typedef std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> smap_t;
-	typedef std::unordered_map<myvi::string_t, s32, string_t_hash_t> imap_t;
-	typedef std::unordered_map<myvi::string_t, double, string_t_hash_t> fmap_t;
+	typedef std::hash_map<myvi::string_t, myvi::string_t> smap_t;
+	typedef std::hash_map<myvi::string_t, s32> imap_t;
+	typedef std::hash_map<myvi::string_t, double> fmap_t;
 public:
 	smap_t string_param_map;
 	imap_t int_param_map;
@@ -342,9 +345,9 @@ public:
 
 class dynamic_view_meta_t : public dynamic_composite_meta_t<dynamic_view_meta_t, view_meta_t *, view_meta_t> {
 private:
-	typedef std::unordered_map<myvi::string_t, myvi::string_t> _str_map;
-	typedef std::unordered_map<myvi::string_t, s32> _int_map;
-	typedef std::unordered_map<myvi::string_t, double> _float_map;
+	typedef std::hash_map<myvi::string_t, myvi::string_t> _str_map;
+	typedef std::hash_map<myvi::string_t, s32> _int_map;
+	typedef std::hash_map<myvi::string_t, double> _float_map;
 public:
 
 	virtual view_meta_t * get_view_child(s32 i) OVERRIDE {
@@ -435,18 +438,20 @@ public:
 
 
 // -------------- регистр меты ------------------------------
+
+
 class meta_registry_t {
 public:
 	std::vector<menu_meta_t *> menus;
 	std::vector<parameter_meta_t *> parameters;
 	std::vector<type_meta_t *> types;
 	std::vector<view_meta_t *> views;
-	typedef std::unordered_map<myvi::string_t, u32, string_t_hash_t> colors_map_t;
+	typedef std::hash_map<myvi::string_t, u32> colors_map_t;
 	colors_map_t colors;
-	typedef std::unordered_map<myvi::string_t, myvi::string_t, string_t_hash_t> fonts_map_t;
+	typedef std::hash_map<myvi::string_t, myvi::string_t> fonts_map_t;
 	fonts_map_t fonts;
 	myvi::string_t default_font_id;
-	typedef std::unordered_map<myvi::string_t, s32, string_t_hash_t> font_sizes_map_t;
+	typedef std::hash_map<myvi::string_t, s32> font_sizes_map_t;
 	font_sizes_map_t font_sizes;
 	myvi::string_t default_font_size_id;
 
@@ -454,32 +459,73 @@ private:
 	meta_registry_t() {
 	}
 
-	template<typename T>
-	T * find_meta(myvi::string_t id, std::vector<T*> &metas) {
-		T *ret = try_find_meta(id, metas);
-		_MY_ASSERT(ret, return 0);
-		return ret;
-	}
+// Херась ! Шаблоны не сработали в CCS !
 
-	template<typename T>
-	T * try_find_meta(myvi::string_t id, std::vector<T*> &metas) {
+	menu_meta_t * find_meta(myvi::string_t id, std::vector<menu_meta_t*> &metas) {
 
-		for (std::vector<T *>::const_iterator it = metas.begin(); it != metas.end(); it++) {
+		for (std::vector<menu_meta_t*>::iterator it = metas.begin(); it != metas.end(); it++) {
 			if ((*it)->match_id(id)) {
 				return *it;
 			}
 		}
+		_MY_ASSERT(0, return 0);
 		return 0;
 	}
 
-	template<typename TMap, typename Tret>
-	Tret map_get(TMap &map, myvi::string_t id) {
-		TMap::iterator iter = map.find(id);
+	parameter_meta_t * find_meta(myvi::string_t id, std::vector<parameter_meta_t*> &metas) {
+
+		for (std::vector<parameter_meta_t*>::iterator it = metas.begin(); it != metas.end(); it++) {
+			if ((*it)->match_id(id)) {
+				return *it;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+	type_meta_t * find_meta(myvi::string_t id, std::vector<type_meta_t*> &metas) {
+
+		for (std::vector<type_meta_t*>::iterator it = metas.begin(); it != metas.end(); it++) {
+			if ((*it)->match_id(id)) {
+				return *it;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+	view_meta_t * find_meta(myvi::string_t id, std::vector<view_meta_t*> &metas) {
+
+		for (std::vector<view_meta_t*>::iterator it = metas.begin(); it != metas.end(); it++) {
+			if ((*it)->match_id(id)) {
+				return *it;
+			}
+		}
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+
+	u32 map_get(colors_map_t &map, myvi::string_t id) {
+		colors_map_t::iterator iter = map.find(id);
 		if(iter != map.end()) return iter->second;
 		_MY_ASSERT(0, return 0);
 		return 0;
 	}
 
+	u32 map_get(font_sizes_map_t &map, myvi::string_t id) {
+		font_sizes_map_t::iterator iter = map.find(id);
+		if(iter != map.end()) return iter->second;
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
+
+	myvi::string_t map_get(fonts_map_t &map, myvi::string_t id) {
+		fonts_map_t::iterator iter = map.find(id);
+		if(iter != map.end()) return iter->second;
+		_MY_ASSERT(0, return 0);
+		return 0;
+	}
 
 public:
 
@@ -492,28 +538,28 @@ public:
 	void init(char *xml);
 
 	menu_meta_t * find_menu_meta(myvi::string_t id) {
-		return find_meta<menu_meta_t>(id, menus);
+		return find_meta(id, menus);
 	}
 	parameter_meta_t * find_parameter_meta(myvi::string_t id) {
-		return find_meta<parameter_meta_t>(id, parameters);
+		return find_meta(id, parameters);
 	}
 	type_meta_t * find_type_meta(myvi::string_t id) {
-		return find_meta<type_meta_t>(id, types);
+		return find_meta(id, types);
 	}
 	view_meta_t * find_view_meta(myvi::string_t id) {
-		return find_meta<view_meta_t>(id, views);
+		return find_meta(id, views);
 	}
 
 	u32 resolve_color(myvi::string_t id) {
-		return map_get<colors_map_t, u32>(colors, id);
+		return map_get(colors, id);
 	}
 
 	u32 resolve_font_size(myvi::string_t id) {
-		return map_get<font_sizes_map_t, u32>(font_sizes, id);
+		return map_get(font_sizes, id);
 	}
 
 	myvi::string_t resolve_font_name(myvi::string_t id) {
-		return map_get<fonts_map_t, myvi::string_t>(fonts, id);
+		return map_get(fonts, id);
 	}
 
 	myvi::string_t get_default_font_id() {

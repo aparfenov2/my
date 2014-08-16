@@ -14,9 +14,9 @@ namespace link {
 
 // технологические расширения интрефейса связи
 
-class host_system_interface_t {
-public:
 
+class host_model_interface_t {
+public:
 	// ответ на запрос на чтение данных из модели
 	virtual void read_model_data_response(char * path, char * string_value, u32 code) = 0;
 	virtual void read_model_data_response(char * path, s32 int_value, u32 code ) = 0;
@@ -24,7 +24,10 @@ public:
 
 	// ответ на запись данных в модель
 	virtual void write_model_data_ack(u32 code) = 0;
+};
 
+class host_file_interface_t {
+public:
 	// принимаемые данные файла (ответ запроса на скачивание)
 	// file_id - дескриптор
 	// offset - смещение от начала файла, байт
@@ -43,10 +46,25 @@ public:
 	virtual void error(u32 code) = 0;
 };
 
-
-class exported_system_interface_t {
+class host_emulation_interface_t {
 public:
+	virtual void log_event(char * msg) = 0;
 
+};
+
+
+// интерфес хоста со стороны локальной системы
+// для получения реальных интерфейсов использовать dynamic_cast
+
+class host_system_interface_t {
+public:
+	virtual void use_dynamic_cast_on_it() {
+	};
+
+};
+
+class exported_model_interface_t {
+public:
 	// запрос на чтение данных из модели
 	virtual void read_model_data(char * path) = 0;
 
@@ -54,9 +72,16 @@ public:
 	virtual void write_model_data(char * path, char * string_value) = 0;
 	virtual void write_model_data(char * path, s32 int_value) = 0;
 	virtual void write_model_data(char * path,  double float_value) = 0;
+};
 
+class exported_emulation_interface_t {
+public:
 	// событие клавиатуры
 	virtual void key_event(myvi::key_t::key_t key) = 0;
+};
+
+class exported_file_interface_t {
+public:
 	// записать данные файла
 	// file_id - дескриптор
 	// offset - смещение от начала файла, байт
@@ -79,6 +104,17 @@ public:
 	// запросить информацию о файле
 	// file_id - дескриптор
 	virtual void read_file_info(u32 file_id) = 0;
+};
+
+
+// интерфейс локальной системы со стороны хоста
+// для получения реальных интерфейсов использовать dynamic_cast
+class exported_system_interface_t {
+public:
+
+	virtual void use_dynamic_cast_on_it() {
+	};
+
 };
 
 } // ns

@@ -10,6 +10,7 @@
 
 #include "link.h"
 #include "exported_sys.h"
+#include <vector>
 
 namespace link {
 
@@ -18,18 +19,29 @@ public:
 	virtual void receive_frame(u8 *data, u32 len) = 0;
 };
 
-// 
-class serializer_t : public host_system_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
 
-private:
-	exported_system_interface_t *exported2;
+
+class serializer_t :
+	public host_system_interface_t,
+	public host_model_interface_t,
+	public host_file_interface_t,
+
+	public serial_data_receiver_t,
+	public _internal_frame_receiver_t {
+
+public:
+	std::vector<exported_system_interface_t *> exported_intrfaces;
 	serial_interface_t *sintf;
 public:
 	serializer_t() {
 		sintf = 0;
 	}
 
-	void init(exported_system_interface_t *aexported2, serial_interface_t *asintf );
+	void add_implementation(exported_system_interface_t *impl) {
+		exported_intrfaces.push_back(impl);
+	}
+
+	void init(serial_interface_t *asintf );
 
 // ----------------------- public host_system_interface_t (туда)------------------------------------
 
@@ -55,19 +67,30 @@ public:
 
 
 //сериализер на стороне хоста
-class host_serializer_t : public exported_system_interface_t, public serial_data_receiver_t, public _internal_frame_receiver_t {
+class host_serializer_t :
+	public exported_system_interface_t,
+	public exported_model_interface_t,
+	public exported_emulation_interface_t,
+	public exported_file_interface_t,
 
-private:
-	host_system_interface_t *host2;
+	public serial_data_receiver_t,
+	public _internal_frame_receiver_t {
+
+public:
+	std::vector<host_system_interface_t *> host_interfaces;
 	serial_interface_t *sintf;
 public:
 	host_serializer_t() {
 		sintf = 0;
 	}
 
+	void add_implementation(host_system_interface_t *impl) {
+		host_interfaces.push_back(impl);
+	}
+
 	// ahost2 - реализация ответной части системного интерфейса на стороне хоста
 	// aintf - реализация интерфейса последовательной передачи данных 
-	void init(host_system_interface_t *ahost2, serial_interface_t *asintf );
+	void init(serial_interface_t *asintf );
 // ------------------------ public exported_system_interface_t ----------------------------
 
 	// запрос на чтение данных из модели

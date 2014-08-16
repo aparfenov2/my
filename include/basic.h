@@ -140,6 +140,38 @@ public:
         count = strlen(data);  
     }
 
+	bool operator < (const string_tt<T>& other) const {
+/*
+		for (s32 i=0; i < this->count && i < other.count ; i++) {
+				if (data[i] < other.data[i]) return true;
+				if (other.data[i] < data[i]) return false;
+			}
+		return this->count < other.count;
+*/
+		return this->hash() < other.hash();
+	}
+
+
+    operator u32() const {
+		return this->hash();
+    }
+
+	u32 hash() const 
+	{
+		_MY_ASSERT(!this->is_empty(), return 0);
+
+		u32 _hash = 0U ;
+		const u32 mask = 0xF0000000 ;
+		for( s32 i = 0 ; i < this->count ; ++i ) {
+			_hash = ( _hash << 4U ) + this->data[i] ;
+			u32 x = _hash & mask ;
+			if( x != 0 ) _hash ^= ( x >> 24 ) ;
+			_hash &= ~x ;
+		}
+		return _hash;
+	}
+
+
     T operator[](s32 inx) const {
 		_MY_ASSERT(data && inx < count, return T());
         return data[inx];
@@ -204,6 +236,21 @@ protected:
 typedef string_tt<char> string_t;
 typedef string_tt<u32> string32_t;
 
+/*
+namespace std
+{
+    template<>
+    struct hash<string_t>
+    {
+        std::size_t operator()(string_t const& s) const {
+			return s.hash();
+        }
+    };
+}
+*/
+
+//typedef string_tt<u32> string32_t;
+
 
 // изменяемая строка - требует буфер в памяти
 
@@ -229,15 +276,15 @@ public:
 
 	// обновляет счетчик
 	void update_length() {
-		_MY_ASSERT(data, return);
-		count = strlen(data);
+		_MY_ASSERT(this->data, return);
+		this->count = this->strlen(this->data);
 	}
 
 	// used in itoa
 	void set_length(s32 len) {
 		_MY_ASSERT(len <= max_str_len, return);
 		this->count = len;
-		data[count] = 0;
+		this->data[this->count] = 0;
 	}
 
     volatile_string_tt<T>& operator = (const string_tt<T> &cstr) {
@@ -324,7 +371,7 @@ private:
 	T _data[_max_str_len+1];
 public:
 	string_impl_tt() : volatile_string_tt<T>(_data, 0,_max_str_len) {
-		reset();
+		this->reset();
 	}
 
 	string_impl_tt & operator =(const volatile_string_tt<T> &other) {

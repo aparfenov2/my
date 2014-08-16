@@ -385,7 +385,7 @@ static bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_lengt
 	if (lasti < spath_length && spath[lasti] == splitter) {was_dot = true; lasti++;}
 	while (allow_spaces && lasti < spath_length && spath[lasti] == ' ') lasti++;
 
-	_MY_ASSERT(!was_dot || was_dot && lasti < spath_length, return false); // путь не может заканчиваться точкой
+	_MY_ASSERT(!was_dot || lasti < spath_length, return false); // путь не может заканчиваться точкой
 	_MY_ASSERT(spath[lasti] != splitter, return false); // путь не может содержать несколько точек подряд
 
 	return true; 
@@ -393,7 +393,7 @@ static bool adjust_lasti(s32 &lasti, const myvi::string_t spath, s32 spath_lengt
 
 myvi::string_t splitted_string_t::iterator_t::next() {
 
-	_MY_ASSERT(that, 0);
+	_MY_ASSERT(that, return 0);
 
 	myvi::string_t spath = that->string;
 	s32 spath_length = spath.length();

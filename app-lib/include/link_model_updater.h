@@ -18,21 +18,21 @@ namespace custom {
 // 1. обновляет модель по приходу сообщений по линии связи
 // 2. подпиcывается на обновления модели и отправляет их в линию связи
 	
-class link_model_updater_t : public link::exported_system_interface_t, public myvi::subscriber_t<custom::model_message_t>  {
+class link_model_updater_t : 
+	public link::exported_system_interface_t, 
+	public link::exported_model_interface_t, 
+	public myvi::subscriber_t<custom::model_message_t>  {
 public:
-	link::host_system_interface_t *host2;
-	link::exported_system_interface_t *chained; // optional
+	link::host_model_interface_t *host2;
 	bool allowed_respond;
 public:
 	link_model_updater_t() {
 		host2 = 0;
-		chained = 0;
 		allowed_respond = true;
 	}
 
-	void init(link::host_system_interface_t *_host2, link::exported_system_interface_t *_chained) {
+	void init(link::host_model_interface_t *_host2) {
 		host2 = _host2;
-		chained = _chained;
 		model_t::instance()->subscribe(this);
 	}
 
@@ -87,48 +87,25 @@ public:
 	}
 
 
-	// остальные методы интерфейса связи передадим по цепочке
-	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
-		if (chained) chained->key_event(key);
-	}
-
-	virtual void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
-		if (chained) chained->upload_file(file_id,offset,crc,first,data,len );
-	}
-
-	virtual void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE {
-		if (chained) chained->download_file(file_id,offset,length);
-	}
-
-	virtual void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
-		if (chained) chained->update_file_info(file_id,cur_len,max_len, crc);
-	}
-
-	virtual void read_file_info(u32 file_id) OVERRIDE {
-		if (chained) chained->read_file_info(file_id);
-	}
-
-
-
 };
 
 
 // оповещает по сети об изменениях модели
-class link_model_repeater_t : public link::host_system_interface_t, public myvi::subscriber_t<custom::model_message_t> {
+class link_model_repeater_t : 
+	public link::host_system_interface_t,
+	public link::host_model_interface_t, 
+	public myvi::subscriber_t<custom::model_message_t> {
 public:
-	link::exported_system_interface_t *exported_sys;
-	link::host_system_interface_t *chained; // optional
+	link::exported_model_interface_t *exported_sys;
 	bool allowed_respond;
 public:
 	link_model_repeater_t() {
 		exported_sys = 0;
-		chained = 0;
 		allowed_respond = true;
 	}
 
-	void init(link::exported_system_interface_t *_exported_sys, link::host_system_interface_t *_chained) {
+	void init(link::exported_model_interface_t *_exported_sys) {
 		exported_sys = _exported_sys;
-		chained = _chained;
 		model_t::instance()->subscribe(this);
 	}
 
@@ -179,23 +156,6 @@ public:
 
 	// ответ на запись данных в удаленную модель
 	virtual void write_model_data_ack(u32 code) OVERRIDE {
-	}
-
-
-
-
-
-
-	virtual void download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
-		if (chained) chained->download_response(file_id, offset, crc, first, data, len);
-	}
-
-	virtual void file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
-		if (chained) chained->file_info_response(file_id, cur_len, max_len, crc);
-	}
-
-	virtual void error(u32 code) OVERRIDE {
-		if (chained) chained->error(code);
 	}
 
 

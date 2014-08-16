@@ -356,7 +356,7 @@ public:
 
 class dynamic_view_mixin_t  {
 public:
-	std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> id_map;
+	std::hash_map<myvi::string_t, myvi::gobject_t *> id_map;
 public:
 	// добавляет дочерний вид с привязкой идентификатора
 	virtual void add_child(myvi::gobject_t *child, myvi::string_t id) {
