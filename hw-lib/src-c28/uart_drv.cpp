@@ -99,9 +99,9 @@ void uart_drv_t::init(volatile SCI_REGS *asci) {
 }
 
 void uart_drv_t::write(u8 byte) {
-	while (sci->SCIFFTX.bit.TXFFST >= 15) {
+	while (sci->SCIFFTX.bit.TXFFST >= 15) { // ждем пока появится свободное место в FIFO
 	}
-	sci->SCITXBUF = byte;
+	sci->SCITXBUF = byte; // посылаем 1 байт (а не слово !)
 }
 
 

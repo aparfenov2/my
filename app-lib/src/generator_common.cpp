@@ -1,8 +1,17 @@
 #include "generator_common.h"
+
+#define RAPIDXML_NO_EXCEPTIONS
 #include "rapidxml.hpp"
 
 using namespace gen;
 using namespace rapidxml;
+
+namespace rapidxml {
+	void parse_error_handler(char const *msg,void *) {
+		_LOG1(msg);
+		_HALT();
+	}
+}
 
 parameter_meta_t * parameter_meta_t::find_child_meta(myvi::string_t child_id) {
 
@@ -22,7 +31,7 @@ type_meta_t * parameter_meta_t::get_type_meta() {
 extern u32 parse_hex(myvi::string_t color);
 
 template<typename T>
-void emit_set_params(xml_node<> * node, T *dynamic_meta) {
+static void emit_set_params(xml_node<> * node, T *dynamic_meta) {
 
 	for (xml_attribute<> * attr = node->first_attribute(0); attr; attr = attr->next_attribute()) {
 
@@ -43,21 +52,21 @@ void emit_set_params(xml_node<> * node, T *dynamic_meta) {
 	}
 }
 
-parameter_meta_t *emit_parameter_meta(xml_node<> * node) {
+static parameter_meta_t *emit_parameter_meta(xml_node<> * node) {
 
 	dynamic_parameter_meta_t *meta = new dynamic_parameter_meta_t();
 	emit_set_params<dynamic_parameter_meta_t>(node, meta);
 	return meta;
 }
 
-enum_meta_t *emit_enum_meta(xml_node<> * node) {
+static enum_meta_t *emit_enum_meta(xml_node<> * node) {
 
 	dynamic_enum_meta_t *meta = new dynamic_enum_meta_t();
 	emit_set_params<dynamic_enum_meta_t>(node, meta);
 	return meta;
 }
 
-type_meta_t * emit_type_meta(xml_node<> * node) {
+static type_meta_t * emit_type_meta(xml_node<> * node) {
 
 	dynamic_type_meta_t *meta = new dynamic_type_meta_t();
 	emit_set_params<dynamic_type_meta_t>(node, meta);
@@ -73,7 +82,7 @@ type_meta_t * emit_type_meta(xml_node<> * node) {
 	return meta;
 }
 
-view_meta_t *emit_view_meta(xml_node<> * node) {
+static view_meta_t *emit_view_meta(xml_node<> * node) {
 
 	dynamic_view_meta_t *meta = new dynamic_view_meta_t();
 	emit_set_params<dynamic_view_meta_t>(node, meta);
@@ -84,7 +93,7 @@ view_meta_t *emit_view_meta(xml_node<> * node) {
 	return meta;
 }
 
-menu_meta_t *emit_menu_meta(xml_node<> * node) {
+static menu_meta_t *emit_menu_meta(xml_node<> * node) {
 
 	dynamic_menu_meta_t *meta = new dynamic_menu_meta_t();
 	emit_set_params<dynamic_menu_meta_t>(node, meta);
@@ -97,7 +106,8 @@ menu_meta_t *emit_menu_meta(xml_node<> * node) {
 
 void meta_registry_t::init(char *xml) {
 
-	rapidxml::xml_document<> doc;
+	// c28 не может разместить на стеке !
+	static rapidxml::xml_document<> doc;
 	doc.parse<0>(xml);
 	xml_node<> * root_node = doc.first_node("schema");
 	_MY_ASSERT(root_node, return);

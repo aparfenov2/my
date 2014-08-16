@@ -20,16 +20,14 @@ public:
 	//ahost - сюда приходят ответы от дисплея (уровень приложения)
 	//aexported2 - сюда будут отправляться запросы от хоста (системный уровень)
 	// _chained - сюда приходят ответы от дисплея (ситемный уровень)
+
 	void init(host_interface_t *ahost, serial_interface_t *asintf) {
-		init(ahost, asintf, 0);
-	}
 
-	void init(host_interface_t *ahost, serial_interface_t *asintf, host_system_interface_t * chained) {
-
-		dec.init(ahost, chained);
+		dec.init(ahost);
 		enc.init(&hs);
 
-		hs.init(&dec, asintf);
+		hs.init(asintf);
+		hs.add_implementation(&dec);
 	}
 
 	// сюда хост посылает запросы
@@ -43,6 +41,7 @@ public:
 
 };
 
+/*
 class local_facade_t {
 public:
 	serializer_t hs;
@@ -59,6 +58,7 @@ public:
 	}
 
 };
+*/
 
 } // end ns link
 #endif

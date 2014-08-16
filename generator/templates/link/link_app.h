@@ -27,19 +27,18 @@ namespace link {
 
 // принимает сообщения об обновлении модели по интерфейсу связи системного уровня и обратно
 // работает в связке с внешним обработчиком интерфейса связи системного уровня на стороне хост-системы
-class app_link_decoder_t : public link::host_system_interface_t {
+class app_link_decoder_t : 
+	public link::host_system_interface_t, 
+	public link::host_model_interface_t {
 public:
 	link::host_interface_t *host; // прикладной интерфейс, куда декодируются входящие сообщения
-	link::host_system_interface_t *chained; // NULLABLE обработчик приема-передачи файлов по системному интерфейсу
 public:
 	app_link_decoder_t() {
 		host = 0;
-		chained = 0;
 	}
 
-	void init(link::host_interface_t *ahost, OPTIONAL link::host_system_interface_t *_chained) {
+	void init(link::host_interface_t *ahost) {
 		host = ahost;
-		chained = _chained;
 	}
 
 	// ответ на запрос на чтение данных из модели
@@ -60,19 +59,6 @@ public:
 	virtual void write_model_data_ack(u32 code) OVERRIDE {
 	}
 
-
-
-	virtual void download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
-		if (chained) chained->download_response(file_id, offset, crc, first, data, len);
-	}
-
-	virtual void file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
-		if (chained) chained->file_info_response(file_id, cur_len, max_len, crc);
-	}
-
-	virtual void error(u32 code) OVERRIDE {
-		if (chained) chained->error(code);
-	}
 private:
 
     bool strcmp(const char* s1, const char* s2) {
@@ -85,12 +71,12 @@ private:
 // формирует сообщение для  SLAVE системы на обновление данных модели
 class app_link_encoder_t : public link::exported_interface_t {
 public:
-	link::exported_system_interface_t *exported2; // системный интерфейс slave-системы для ответа
+	link::exported_model_interface_t *exported2; // системный интерфейс slave-системы для ответа
 public:
 	app_link_encoder_t() {
 		exported2 = 0;
 	}
-	void init(link::exported_system_interface_t *aexported2) {
+	void init(link::exported_model_interface_t *aexported2) {
 		exported2 = aexported2;
 	}
 

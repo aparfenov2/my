@@ -7,6 +7,8 @@
 #include "assert_impl.h"
 
 #include "test_tools.h"
+#include "file_system_impl.h"
+
 #include "resources.h"
 #include "widgets.h"
 
@@ -23,8 +25,10 @@
 #include "custom_common.h"
 #include "link_sys_impl.h"
 #include "link_model_updater.h"
+#include "file_server.h"
 
 #include "rapidxml_utils.hpp"
+
 
 
 using namespace std;
@@ -265,20 +269,30 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		_LOG1("link_mode: slave");
 		wnd_title = "myvi: slave";
 		// локальная роль
+		link::serializer_t *serializer = new link::serializer_t();
+		serializer->init(&sintf);
+
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
-		link::serializer_t *local_facade = new link::serializer_t();
-		local_facade->init(link_model_updater, &sintf);
-		link_model_updater->init(local_facade, 0);
+		link_model_updater->init(serializer);
+		serializer->add_implementation(link_model_updater);
+
+		app::file_server_t *file_server = new app::file_server_t();
+		test::file_system_impl_t *file_system = new test::file_system_impl_t();
+		file_system->init("files");
+		file_server->init(serializer, file_system);
+		serializer->add_implementation(file_server);
 
 	} else {
 		_LOG1("link_mode: host");
 		wnd_title = "myvi: host";
 		// роль хоста
-		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
 		link::host_serializer_t *host_serializer = new link::host_serializer_t();
-		host_serializer->init(link_model_repeater, &sintf);
+		host_serializer->init(&sintf);
 
-		link_model_repeater->init(host_serializer, 0);
+		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
+		link_model_repeater->init(host_serializer);
+		host_serializer->add_implementation(link_model_repeater);
+
 	}
 
 	rapidxml::file<> xml("gen\\ui_ru.xml");

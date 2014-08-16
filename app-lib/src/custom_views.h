@@ -147,12 +147,12 @@ private:
 class dynamic_model_t : public model_t { 
 
 public:
-	typedef std::unordered_map<u32, variant_holder_t *> children_map_t;
+	typedef std::hash_map<u32, variant_holder_t *> children_map_t;
 	children_map_t children;
 public:
 
 	variant_holder_t *get_holder(myvi::string_t key) {
-		u32 ikey = gen::string_t_hash_t()(key);
+		u32 ikey = (std::size_t)key;
 		children_map_t::iterator iter = children.find(ikey);
 		if(iter != children.end()) return iter->second;
 		return 0;
@@ -162,7 +162,8 @@ public:
 		variant_holder_t *holder = get_holder(parameter_path);
 		_MY_ASSERT(holder, return);
 		holder->assign(value);
-		notify(model_message_t(parameter_path, value));
+		model_message_t msg(parameter_path, value);
+		notify(msg);
 	}
 
 
@@ -191,7 +192,7 @@ private:
 		variant_holder_t *holder = get_holder(parameter_path);
 		if (!holder) {
 			holder = new variant_holder_t(expected_type);
-			children[gen::string_t_hash_t()(parameter_path)] = holder;
+			children[(std::size_t)parameter_path] = holder;
 		}
 		return holder;
 	}
@@ -1090,7 +1091,7 @@ public:
 
 
 class view_cache_t {
-	typedef std::unordered_map<myvi::string_t, myvi::gobject_t *, gen::string_t_hash_t> vmap_t;
+	typedef std::hash_map<myvi::string_t, myvi::gobject_t *> vmap_t;
 public:
 	vmap_t view_map;
 public:
@@ -1161,13 +1162,15 @@ class button_t :
 public:
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
 		if (key == myvi::key_t::K_ENTER) {
-			notify(button_clicked_msg_t());
+			button_clicked_msg_t msg;
+			notify(msg);
 		}
 	}
 	virtual void mouse_event(myvi::mkey_t::mkey_t mkey) OVERRIDE {
 		super::mouse_event(mkey);
 		if (mkey == myvi::mkey_t::MK_1) {
-			notify(button_clicked_msg_t());
+			button_clicked_msg_t msg;
+			notify(msg);
 		}
 	}
 };
@@ -1238,7 +1241,8 @@ public:
 		if (!this->event_id.is_empty()) {
 			variant_t arg0 = meta_ex_t(meta).get_variant_param("arg0");
 			if (!arg0.is_empty()) {
-				event_bus_t::instance().notify(event_bus_msg_t(event_id, arg0));
+				event_bus_msg_t msg(event_id, arg0);
+				event_bus_t::instance().notify(msg);
 			}
 
 		} 
@@ -1371,7 +1375,8 @@ public:
 				this->release_focus();
 				set_captured(false);
 				this->cursor_visible = false;
-				notify(textbox_msg_t(key, textbox_msg_t::COMPLETE, _value));
+				textbox_msg_t msg(key, textbox_msg_t::COMPLETE, _value);
+				notify(msg);
 			}
 
 			if (decorator) {
@@ -1427,7 +1432,8 @@ public:
 		return;
 lab_update_input:
 		update();
-		notify(textbox_msg_t(key, textbox_msg_t::EDIT, _value));
+		textbox_msg_t msg(key, textbox_msg_t::EDIT, _value);
+		notify(msg);
 	}
 
 	void update() {
@@ -1979,7 +1985,8 @@ public:
 		this->menu_meta = gen::meta_registry_t::instance().find_menu_meta(menu_id);
 
 
-		helper.build_menu(ctx, menu_iterator_t(this) );
+		menu_iterator_t iter(this);
+		helper.build_menu(ctx, iter );
 
 	}
 
@@ -2023,10 +2030,12 @@ public:
 		this->name_event_name = ctx.get_view_meta()->get_string_param("name_event");
 
 		if (!name_event_name.is_empty()) {
-			event_bus_t::instance().notify(event_bus_msg_t(name_event_name, variant_t(type_meta->get_name())));
+			event_bus_msg_t msg(name_event_name, variant_t(type_meta->get_name()));
+			event_bus_t::instance().notify(msg);
 		}
 
-		helper.build_menu(ctx, menu_iterator_t(this) );
+		menu_iterator_t iter(this);
+		helper.build_menu(ctx, iter );
 	}
 
 };
@@ -2206,7 +2215,8 @@ private:
 
 	void update_name(myvi::string_t name) {
 		if (!name_event_name.is_empty()) {
-			event_bus_t::instance().notify(event_bus_msg_t(name_event_name, name));
+			event_bus_msg_t msg(name_event_name, name);
+			event_bus_t::instance().notify(msg);
 		}
 	}
 

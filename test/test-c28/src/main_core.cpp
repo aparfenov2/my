@@ -5,7 +5,6 @@
 #include "assert_impl.h"
 #include "bmp_math.h"
 #include "app_events.h"
-#include "screen_1.h"
 #include "resources.h"
 #include "widgets.h"
 
@@ -13,7 +12,6 @@
 
 #include "file_map.h"
 #include "link.h"
-#include "exported2_impl.h"
 
 #include "uart_drv.h"
 #include "devices.h"
@@ -68,7 +66,7 @@ FRAM fram;
 FlashDev flash;
 
 
-void drawScene(surface_t &s1) {
+void draw_scene(surface_t &s1) {
 	static key_t::key_t last_key = (key_t::key_t)0;
 	key_t::key_t key = kbd_get_key();
 	if (key != last_key) {
@@ -218,7 +216,7 @@ void my_main() {
 
 	while (1) {
 		if (ttcache_dat && ttcache_sz) {
-			drawScene(s1);
+			draw_scene(s1);
 		}
 		sintf.cycle();
 	}

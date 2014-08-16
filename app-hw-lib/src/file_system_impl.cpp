@@ -1,30 +1,50 @@
 
-#include "exported2_impl.h"
-#include "widgets.h"
+#include "file_system_impl.h"
+#include "assert_impl.h"
 #include "devices.h"
 #include "file_map.h"
-#include "uart_drv.h"
 extern "C" {
 #include "crc16_ccitt.h"
 }
 
+using namespace hw;
+
 extern FRAM fram;
 extern FlashDev flash;
-extern uart_drv_t uart;
 
 extern "C" u16_t crc16_ccitt_calc_data(u16_t crc, u8_t* data, u16_t data_length);
 
 static u32 last_sector = 0xffff;
 #define CRC_SEED 0xabba
 
-using namespace myvi;
 
-void exported_interface2_impl_t::key_event(key_t::key_t key) {
-//	globals::modal_overlay.key_event(key);
+
+
+bool file_system_impl_t::read_file(u32 file_id, u32 offset, u32 length, u8 *buf, u32 &read ) {
+
+	file_rec_t * fr = find_file(file_id);
+	read = 0;
+	if (fr) {
+		if (offset + length <= fr->max_len && length <= 255) {
+			u8 buf[255];
+			flash.ReadData2(fr->offset + offset,(u16*)buf, length);
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+	read = length;
+	return true;
 }
 
-void exported_interface2_impl_t::upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {
+
+bool file_system_impl_t::write_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &written ) {
+
 	file_rec_t * fr = find_file(file_id);
+	bool first = offset == 0;
+	written = 0;
+
 	if (fr) {
 		if (first) {
 			last_sector = 0xffff;
@@ -32,7 +52,7 @@ void exported_interface2_impl_t::upload_file(u32 file_id, u32 offset, u32 crc, b
 		u32 ofs = 0;
 		for (u32 addr = offset; ofs < len;) {
 			if (addr >= fr->max_len) {
-				break;
+				return false;
 			}
 			u32 sector = (fr->offset + addr) >> 16;
 			if (last_sector != sector) {
@@ -43,47 +63,42 @@ void exported_interface2_impl_t::upload_file(u32 file_id, u32 offset, u32 crc, b
 			addr++;
 			ofs++;
 		}
+	} else {
+		return false;
 	}
-	uart.write(0x55); // send ACK
+	written = len;
+	return true;
 }
 
-void exported_interface2_impl_t::download_file(u32 file_id, u32 offset, u32 length) {
+bool file_system_impl_t::get_info(u32 file_id, u32 &len, u32 &max_len) {
 	file_rec_t * fr = find_file(file_id);
+	len = 0, max_len = 0;
 	if (fr) {
-		if (offset + length <= fr->max_len && length <= 255) {
-			u8 buf[255];
-			flash.ReadData2(fr->offset + offset,(u16*)buf, length);
-			u16 crc = crc16_ccitt_calc_data(CRC_SEED,buf, length);
-			host->download_response(file_id,offset,crc,false,buf,length);
-		} else {
-			host->error(0x01);
-		}
+		len = fr->cur_len, max_len = fr->max_len;
+	} else {
+		return false;
 	}
+	return true;
 }
 
-void exported_interface2_impl_t::update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) {
+bool file_system_impl_t::set_info(u32 file_id, u32 len) {
+
 	file_rec_t * fr = find_file(file_id);
 	if (fr) {
-		fr->cur_len = cur_len;
+		fr->cur_len = len;
 
 		flash.SectorErase(FILE_TABLE_ADDR);
 
 		for (u32 ofs = 0; ofs < sizeof(file_table); ofs++) {
 			flash.PageProgram(FILE_TABLE_ADDR + (ofs * 2), ((u16*)file_table)[ofs]);
 		}
+	} else {
+		return false;
 	}
-
-	uart.write(0x55); // send ACK
+	return true;
 }
 
-void exported_interface2_impl_t::read_file_info(u32 file_id) {
-	file_rec_t * fr = find_file(file_id);
-	if (fr) {
-		host->file_info_response(file_id, fr->cur_len, fr->max_len, fr->crc);
-	}
-}
-
-bool read_file_table() {
+bool file_system_impl_t::read_file_table() {
     u32 ft_magic = 0;
 
     for (u32 ofs = 0; ofs < sizeof(ft_magic); ofs++) {
@@ -112,11 +127,10 @@ bool read_file_table() {
 
 #define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
 
-bool allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttcache_sz) {
+bool file_system_impl_t::allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttcache_sz) {
 
-	file_rec_t *fr = find_file(TTCACHE_FILE_ID);
-	_MY_ASSERT(fr, return false);
-	ttcache_sz = fr->cur_len;
+	u32 lmax;
+	_MY_ASSERT(this->get_info(TTCACHE_FILE_ID, ttcache_sz, lmax), return false);
 	_WEAK_ASSERT(ttcache_sz, return false);
 
 	ttcache_dat = new u8[ttcache_sz + 0x0f];
@@ -124,6 +138,7 @@ bool allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttcache_sz) {
 	while (!ALIGNED(ttcache_dat)) {
 		ttcache_dat++;
 	}
-	flash.ReadData2(fr->offset,(u16 *)ttcache_dat, ttcache_sz);
+	u32 read;
+	_WEAK_ASSERT(this->read_file(TTCACHE_FILE_ID,0,ttcache_sz,ttcache_dat,read), return false);
 	return true;
 }

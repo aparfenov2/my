@@ -30,5 +30,7 @@ typedef unsigned long int u32;
     typedef char assert_failed_ ## name [ (condition) ? 1 : -1 ];
 #define _MY_MIN(a,b) (((a)<(b))?(a):(b))
 
+#define _HALT() exit(1)
+
 
 #endif /* TYPES_H_ */

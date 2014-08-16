@@ -375,9 +375,6 @@ void stack_layout_t::layout(gobject_t *parent) {
 
 	if (!vertical && px) px -= spx;
 	if (vertical && py) py -= spy;
-	if (!((py <= parent->h) && (px <= parent->w))) {
-		int i = 0;
-	}
 	_WEAK_ASSERT((py <= parent->h) && (px <= parent->w),return);
 }
 
