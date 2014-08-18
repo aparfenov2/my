@@ -21,7 +21,6 @@
 #include "link.h"
 #include "disp_def.h"
 
-#include "menu_common.h"
 #include "custom_common.h"
 #include "link_sys_impl.h"
 #include "link_model_updater.h"
@@ -66,10 +65,6 @@ typedef custom::dynamic_view_mixin_aware_impl_t<gobject_t> _test_screen_super_t;
 
 class test_screen_t : public _test_screen_super_t, public focus_aware_t {
 	typedef _test_screen_super_t super;
-public:
-//	custom::tedit_t hdr_box;
-//	custom::scrollable_menu_t scrollable;
-
 
 public:
 
@@ -98,24 +93,6 @@ public:
 		dirty = true;
 
 	}
-
-	virtual void render(surface_t &dst) OVERRIDE {
-		dst.ctx.alfa = 0xff;
-		dst.ctx.pen_color = 0xf9f9f9;//0x203E95;
-		s32 ax,ay;
-		translate(ax,ay);
-		dst.fill(ax,ay,w,h);
-
-	}
-
-
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
-		if (dirty) {
-			int i = 0;
-		}
-	}
-
 
 };
 

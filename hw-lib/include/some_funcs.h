@@ -10,6 +10,9 @@
 
 #include "app_events.h"
 #include "types.h"
+
+namespace hw {
+
 //#ifdef __cplusplus
 //extern "C" {
 //#endif
@@ -33,4 +36,5 @@ myvi::key_t::key_t kbd_get_key();
 //#ifdef __cplusplus
 //}
 //#endif
+} // ns
 #endif /* FUNCS_H_ */

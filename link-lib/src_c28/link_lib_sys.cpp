@@ -152,7 +152,7 @@ void serializer_t::receive(u8 *data, u32 len) {
 }
 
 template<typename T>
-T * find_implementation(serializer_t *ser) {
+static T * find_implementation(serializer_t *ser) {
 	for (std::vector<exported_system_interface_t *>::iterator it = ser->exported_intrfaces.begin();
 			it != ser->exported_intrfaces.end(); it++) {
 		T *casted = dynamic_cast<T*>(*it);
@@ -160,8 +160,9 @@ T * find_implementation(serializer_t *ser) {
 			return casted;
 		}
 	}
-	return null;
+	return 0;
 }
+
 
 void serializer_t::receive_frame(u8 *data, u32 len) {
 
@@ -357,7 +358,7 @@ void host_serializer_t::receive(u8 *data, u32 len) {
 
 
 template<typename T>
-T * find_implementation(host_serializer_t *ser) {
+static T * find_implementation(host_serializer_t *ser) {
 	for (std::vector<host_system_interface_t *>::iterator it = ser->host_interfaces.begin();
 			it != ser->host_interfaces.end(); it++) {
 		T *casted = dynamic_cast<T*>(*it);
@@ -367,6 +368,8 @@ T * find_implementation(host_serializer_t *ser) {
 	}
 	return null;
 }
+
+
 
 void host_serializer_t::receive_frame(u8 *data, u32 len) {
 

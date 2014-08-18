@@ -28,7 +28,7 @@ using namespace myvi;
 
 s16 enc_counter = 0;
 
-void enc_init() {
+void hw::enc_init() {
 	enc_counter = 0;
 
     EALLOW;
@@ -57,7 +57,7 @@ void enc_init() {
 
 }
 
-s16  enc_reset_counter() {
+s16  hw::enc_reset_counter() {
 	DINT;
 	s16 v = enc_counter;
 	enc_counter = 0;
@@ -90,7 +90,7 @@ interrupt void enc_a_interrupt (void) {
 extern interrupt void Scib_Rx_Int (void);
 extern interrupt void Scic_Rx_Int (void);
 
-void init_pie_table() {
+void hw::init_pie_table() {
     EALLOW;
     PieVectTable.SCIRXINTB = (PINT) &Scib_Rx_Int;
 //    PieVectTable.SCITXINTB = (PINT) &Scib_Tx_Int;
@@ -133,7 +133,7 @@ static void kbd_set_rows(u8 msk) {
 
 }
 
-void kbd_init() {
+void hw::kbd_init() {
 	kbd_set_rows(0);
     EALLOW;
 
@@ -167,7 +167,7 @@ const key_t::key_t kbd_map[4][5] = {
 		{key_t::K_F3,	(key_t::key_t)0,key_t::K_F4,key_t::K_F5,key_t::K_ESC},		// 4
 };
 
-key_t::key_t kbd_get_key() {
+key_t::key_t hw::kbd_get_key() {
 	for (int row=0; row<4; row++) {
 		kbd_set_rows(1 << row);
 		s8 col = kbd_get_cols();
@@ -181,7 +181,7 @@ key_t::key_t kbd_get_key() {
 //=============================================================================
 /// Инициализация интерфейса для работы с внешним ОЗУ
 //=============================================================================
-void init_zone7(void)
+void hw::init_zone7(void)
 {
 
     // Configure the GPIO for XINTF with a 16-bit data bus

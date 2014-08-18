@@ -17,6 +17,8 @@ extern "C" {
 #include "ring_buffer.h"
 }
 
+using namespace hw;
+
 static ring_buffer_t ring_buf;
 
 //uart_drv_t *uart_drv_t::instance = 0;

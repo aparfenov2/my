@@ -12,6 +12,7 @@
 #include "bmp_math.h"
 
 using namespace myvi;
+using namespace hw;
 
 extern "C" {
 	void SSD1963_Reset();
