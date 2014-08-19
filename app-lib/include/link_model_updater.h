@@ -41,13 +41,13 @@ public:
 
 		switch (value.type) {
 		case variant_type_t::STRING:
-			host2->read_model_data_response((char *)path.c_str(), (char *)value.get_string_value().c_str(), 0);
+			host2->read_model_data_response(path.c_str(),0, value.get_string_value().c_str());
 			break;
 		case variant_type_t::INT:
-			host2->read_model_data_response((char *)path.c_str(), value.get_int_value(), 0);
+			host2->read_model_data_response(path.c_str(),0, value.get_int_value());
 			break;
 		case variant_type_t::FLOAT:
-			host2->read_model_data_response((char *)path.c_str(), value.get_float_value(), 0);
+			host2->read_model_data_response(path.c_str(),0, value.get_float_value());
 			break;
 		}
 	}
@@ -58,28 +58,28 @@ public:
 	}
 
 	// запрос на чтение данных из модели
-	virtual void read_model_data(char * path) OVERRIDE {
+	virtual void read_model_data(const char * path) OVERRIDE {
 		variant_t value;
 		model_t::instance()->read(path, value);
-		respond(path, value);
+		respond(myvi::string_t(path), value);
 	}
 
 	// запрос на запись данных в модель
-	virtual void write_model_data(char * path, char * string_value) OVERRIDE {
+	virtual void write_model_data(const char * path, const char * string_value) OVERRIDE {
 		variant_t value(string_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
 		allowed_respond = true;
 	}
 
-	virtual void write_model_data(char * path, s32 int_value) OVERRIDE {
+	virtual void write_model_data(const char * path, s32 int_value) OVERRIDE {
 		variant_t value(int_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
 		allowed_respond = true;
 	}
 
-	virtual void write_model_data(char * path,  double float_value) OVERRIDE {
+	virtual void write_model_data(const char * path,  double float_value) OVERRIDE {
 		variant_t value(float_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
@@ -115,13 +115,13 @@ public:
 
 		switch (value.type) {
 		case variant_type_t::STRING:
-			exported_sys->write_model_data((char *)path.c_str(), (char *)value.get_string_value().c_str());
+			exported_sys->write_model_data(path.c_str(), value.get_string_value().c_str());
 			break;
 		case variant_type_t::INT:
-			exported_sys->write_model_data((char *)path.c_str(), value.get_int_value());
+			exported_sys->write_model_data(path.c_str(), value.get_int_value());
 			break;
 		case variant_type_t::FLOAT:
-			exported_sys->write_model_data((char *)path.c_str(), value.get_float_value());
+			exported_sys->write_model_data(path.c_str(), value.get_float_value());
 			break;
 		}
 	}
@@ -132,21 +132,21 @@ public:
 	}
 
 	// ответ на запрос на чтение данных из удалённой модели
-	virtual void read_model_data_response(char * path, char * string_value, u32 code) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, const char * string_value) OVERRIDE {
 		variant_t value(string_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
 		allowed_respond = true;
 	}
 
-	virtual void read_model_data_response(char * path, s32 int_value, u32 code ) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, s32 int_value ) OVERRIDE {
 		variant_t value(int_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
 		allowed_respond = true;
 	}
 
-	virtual void read_model_data_response(char * path, double float_value, u32 code ) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, double float_value ) OVERRIDE {
 		variant_t value(float_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);

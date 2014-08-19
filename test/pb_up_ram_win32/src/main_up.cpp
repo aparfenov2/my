@@ -55,7 +55,7 @@ void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
 	_WEAK_ASSERT(host_interface.ParseFromArray(buffer,bytes_received), return);
 
 	response_frame_received = true;
-	_WEAK_ASSERT(host_interface.has_file_info_response(), return);
+	if (! host_interface.has_file_info_response()) return;
 
 	max_len = host_interface.file_info_response().max_len();
 
@@ -218,11 +218,11 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 		frame_count++;
 // wait ACK
-		u32 read = 0;
-		while (!read) {
-			char byte;
-			lLastError = serial.Read(&byte,1,&read);
-		}
+
+		u32 read;
+		do {
+			serial.Read(hdlc_buf,HDLC_BUF_LEN,&read);
+		} while(read);
 
 	} while (remain);
 

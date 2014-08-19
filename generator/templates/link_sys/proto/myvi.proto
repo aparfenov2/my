@@ -1,0 +1,21 @@
+package link.proto;
+
+option java_package = "my.app.myvi.protobuf.gen";
+option java_outer_classname = "MyviProtos";
+option optimize_for = LITE_RUNTIME;
+
+<#list proto.proto.messages.message as msg>
+message ${msg.@name} {
+	<#assign key = 1>
+	<#list msg.field as fld>
+		<#if fld.@required?has_content && fld.@required == "true">
+			<#lt>	required<#rt>
+		<#else>
+			<#lt>	optional<#rt>
+		</#if>
+		<#lt>	${fld.@type}	${fld.@name}	 = ${key};
+		<#assign key = key + 1>
+	</#list>
+}
+
+</#list>

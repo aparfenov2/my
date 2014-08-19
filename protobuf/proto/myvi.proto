@@ -90,34 +90,58 @@ message file_info_t {
 	optional uint32 crc = 4;
 }
 
+message test_message_t {
+	required uint32 arg8 = 1;
+	required uint32 arg16 = 2;
+	required uint32 arg32 = 3;
+	required double argd = 4;
+}
+
+message log_event_t {
+	required string msg = 1;
+}
+
 // ----------------------------------------------
 // ---------- Основное определение --------------
 // ----------------------------------------------
 
 // интерфейс ответов этой системы на стороне удалённой
 message host_interface_t {
+// message interface
 	optional read_model_data_response_t read_model_data_response = 1;
 	optional write_model_data_ack_t write_model_data_ack = 2;
 	
-// технологический интерфейс
+// file interface	
 	optional file_data_t download_response = 14;
 	optional file_info_t file_info_response = 15;
 	optional uint32 error = 16;
+	
+// debug interface	
+	optional test_message_t test_response = 17;
+	optional log_event_t log_event = 18;
 }
+// last 18
 
 
 // интерфейс запросов к этой системе на строне удалённой
 message exported_interface_t {
 
+// message interface
 	optional read_model_data_request_t read_model_data_request = 1;
 	optional write_model_data_request_t write_model_data_request = 2;
 	
-// технологический интерфейс
-	optional key_t key_event = 30;
 
+// file interface	
 	optional file_data_t upload_file = 31;
 	optional download_request_t download_file = 32;
 	
 	optional file_info_t update_file_info = 33;
 	optional uint32 read_file_info = 34;
+	
+// debug interface	
+	optional key_t key_event = 30;
+	optional test_message_t test_request = 35;
+	
 }
+
+// last 35

@@ -1,6 +1,9 @@
 #include "generator_common.h"
 
 #define RAPIDXML_NO_EXCEPTIONS
+#define RAPIDXML_STATIC_POOL_SIZE 1
+#define RAPIDXML_DYNAMIC_POOL_SIZE 0
+
 #include "rapidxml.hpp"
 
 using namespace gen;
@@ -108,9 +111,9 @@ static menu_meta_t *emit_menu_meta(xml_node<> * node) {
 
 void meta_registry_t::init(char *xml) {
 
-	rapidxml::xml_document<> *doc = new rapidxml::xml_document<>();
-	doc->parse<0>(xml);
-	xml_node<> * root_node = doc->first_node("schema");
+	rapidxml::xml_document<> doc;
+	doc.parse<0>(xml);
+	xml_node<> * root_node = doc.first_node("schema");
 	_MY_ASSERT(root_node, return);
 
 	xml_node<> * collection = root_node->first_node("colors");
@@ -161,5 +164,4 @@ void meta_registry_t::init(char *xml) {
 			this->menus.push_back(emit_menu_meta(item));
 		}
 	}
-	delete doc;
 }

@@ -34,8 +34,6 @@ using namespace myvi;
 using namespace hw;
 
 
-uart_drv_t	uart;
-ssd1963drv_t drv1;
 
 
 extern "C" char* my_itoa(int i, char b[]);
@@ -101,7 +99,7 @@ public:
 };
 
 
-void draw_scene(surface_t &s1) {
+void draw_scene(surface_t &s1, surface_t &drv1) {
 
 	gobject_t *gobj = & modal_overlay_t::instance();
 	focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
@@ -136,14 +134,20 @@ void draw_scene(surface_t &s1) {
 class serial_interface_impl_t : public link::serial_interface_t {
 public:
 	link::serial_data_receiver_t *receiver;
+	uart_drv_t *uart;
 public:
 	serial_interface_impl_t() {
 		receiver = 0;
+		uart = 0;
+	}
+
+	void init(uart_drv_t *_uart) {
+		uart = _uart;
 	}
 
 	virtual void send(u8 *data, u32 len) OVERRIDE {
 		while(len--) {
-			uart.write(*data++);
+			uart->write(*data++);
 		}
 	}
 
@@ -152,31 +156,31 @@ public:
 	}
 
 	void cycle() {
-		if (!uart.is_empty()) {
+		if (!uart->is_empty()) {
 
-			u8 byte = uart.read();
+			u8 byte = uart->read();
 			receiver->receive(&byte, 1);
 		}
 	}
 };
 
-void draw_pallete(surface_t *drv1) {
+void draw_pallete(surface_t &drv1) {
 	// draw pallete
 #define W 20
 #define H 20
 
 
-	drv1->ctx.pen_color = 0;
-	drv1->fill(0,0,TFT_WIDTH,TFT_HEIGHT);
+	drv1.ctx.pen_color = 0;
+	drv1.fill(0,0,TFT_WIDTH,TFT_HEIGHT);
 
 	s32 x = 0, y = 0, s = 0;
 	for (s32 i=0; i<256; i++) {
-		drv1->ctx.pen_color = i << (s * 8);
+		drv1.ctx.pen_color = i << (s * 8);
 		s++;
 		if (s >= 3) {
 			s = 0;
 		}
-		drv1->fill(x,y,W,H);
+		drv1.fill(x,y,W,H);
 
 		x += W+1;
 		if (x+W > TFT_WIDTH) {
@@ -199,6 +203,8 @@ link::serializer_t serializer;
 custom::link_model_updater_t link_model_updater;
 app::file_server_t file_server;
 file_system_impl_t file_system;
+uart_drv_t	uart;
+ssd1963drv_t drv1;
 Spi spi;
 FRAM fram;
 FlashDev flash;
@@ -239,10 +245,10 @@ void my_main() {
 			spic.copy_to(0,0,-1,-1,0,0,drv1);
 			delete picbuf;
 		} else {
-			draw_pallete(&drv1);
+			draw_pallete(drv1);
 		}
 	} else {
-		draw_pallete(&drv1);
+		draw_pallete(drv1);
 	}
 
 	s32 buf_sz = BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT);
@@ -251,6 +257,7 @@ void my_main() {
 
 
     uart.init(&ScibRegs);
+    sintf.init(&uart);
     serializer.init(&sintf);
 
 
@@ -284,7 +291,7 @@ void my_main() {
     	res.init();
 
 
-    	link_model_updater.init(&serializer);
+    	link_model_updater.init(serializer.get_host_model_interface());
     	serializer.add_implementation(&link_model_updater);
 
 		screen1.init();
@@ -297,14 +304,14 @@ void my_main() {
 
     }
 
-    file_server.init(&serializer, &file_system);
+    file_server.init(serializer.get_host_file_interface(), &file_system);
     serializer.add_implementation(&file_server);
 
 	init_pie_table();
 
 	while (1) {
 		if (ttcache_dat && ttcache_sz && schema_loaded) {
-			draw_scene(s1);
+			draw_scene(s1, drv1);
 		}
 		sintf.cycle();
 	}

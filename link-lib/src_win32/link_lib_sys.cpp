@@ -13,7 +13,7 @@ extern "C" {
 extern "C" u16_t crc16_ccitt_calc_data(u16_t crc, u8_t* data, u16_t data_length);
 
 using namespace link;
-using namespace myvi;
+
 
 
 #define HDLC_RING_BUF_LEN	512
@@ -35,356 +35,101 @@ void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
 	current_frame_receiver->receive_frame((u8*)buffer, bytes_received);
 }
 
-template<typename T> 
-void send_message(T &message, serial_interface_t *sintf) {
+template<typename TBase, typename T> 
+static void send_message(TBase *serializer, T *message) {
 
-	u32 bytes_to_send = message.ByteSize();
+	u32 bytes_to_send = message->ByteSize();
+	_MY_ASSERT(message->SerializeToArray(hdlc_buf, bytes_to_send), return);
 
-	_MY_ASSERT(message.SerializeToArray(hdlc_buf, bytes_to_send), return);
+	serializer->framer.send_frame(hdlc_buf, bytes_to_send);
 
+
+}
+
+template void send_message<>(serializer_t *, proto::host_interface_t * );
+template void send_message<>(host_serializer_t *, proto::exported_interface_t *);
+
+
+
+void framer_t::sys_init() {
+
+	static bool hdlc_initialized = false;
+
+	if (!hdlc_initialized) {
+		ring_buffer_init(&hdlc_ring_buf,(u8_t*)_hdlc_ring_buf, HDLC_RING_BUF_LEN);
+		hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
+		hdlc_initialized = true;
+	}
+}
+
+void framer_t::send_frame(u8 *data, u32 bytes_to_send) {
 
 	hdlc_ring_buf.tail = hdlc_ring_buf.head;
-	hdlc_tx_frame((const u8_t*)hdlc_buf, bytes_to_send);
+	hdlc_tx_frame((const u8_t*)data, bytes_to_send);
 
 	bytes_to_send = ring_buffer_read_data(&hdlc_ring_buf,(u8_t*)hdlc_buf, HDLC_RING_BUF_LEN);
 	sintf->send(hdlc_buf,bytes_to_send);
-
-}
-
-template void send_message<>(proto::host_interface_t &, serial_interface_t * );
-template void send_message<>(proto::exported_interface_t &, serial_interface_t * );
-
-
-void serializer_t::init(serial_interface_t *asintf ) {
-	sintf = asintf;
-	sintf->subscribe(this);
-
-	ring_buffer_init(&hdlc_ring_buf,(u8_t*)_hdlc_ring_buf, HDLC_RING_BUF_LEN);
-	hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
 }
 
 
-// ответ на запрос на чтение данных из модели
-void serializer_t::read_model_data_response(char * path, char * string_value, u32 code) {
-	proto::host_interface_t host_interface;
-	proto::read_model_data_response_t *rsp = host_interface.mutable_read_model_data_response();
-	rsp->set_path(path);
-	rsp->set_string_value(string_value);
-	rsp->set_code(code);
-	send_message(host_interface, sintf);
-}
-
-void serializer_t::read_model_data_response(char * path, s32 int_value, u32 code ) {
-	proto::host_interface_t host_interface;
-	proto::read_model_data_response_t *rsp = host_interface.mutable_read_model_data_response();
-	rsp->set_path(path);
-	rsp->set_int_value(int_value);
-	rsp->set_code(code);
-	send_message(host_interface, sintf);
-}
-
-void serializer_t::read_model_data_response(char * path, double float_value, u32 code ) {
-	proto::host_interface_t host_interface;
-	proto::read_model_data_response_t *rsp = host_interface.mutable_read_model_data_response();
-	rsp->set_path(path);
-	rsp->set_float_value(float_value);
-	rsp->set_code(code);
-	send_message(host_interface, sintf);
-}
-
-
-// ответ на запись данных в модель
-void serializer_t::write_model_data_ack(u32 code) {
-	proto::host_interface_t host_interface;
-	proto::write_model_data_ack_t *ack = host_interface.mutable_write_model_data_ack();
-	ack->set_code(code);
-	send_message(host_interface, sintf);
-}
-
-void serializer_t::download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {
-	proto::host_interface_t host_interface;
-	proto::file_data_t *fd  = host_interface.mutable_download_response();
-	fd->set_file_id(file_id);
-	fd->set_offset(offset);
-	fd->set_crc(crc);
-	fd->set_first(first);
-	fd->set_data(data,len);
-	send_message(host_interface, sintf);
-}
-void serializer_t::file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc)  {
-	proto::host_interface_t host_interface;
-	proto::file_info_t *fi = host_interface.mutable_file_info_response();
-	fi->set_file_id(file_id);
-	fi->set_cur_len(cur_len);
-	fi->set_max_len(max_len);
-	fi->set_crc(crc);
-	send_message(host_interface, sintf);
-}
-void serializer_t::error(u32 code) {
-	proto::host_interface_t host_interface;
-	host_interface.set_error(code);
-	send_message(host_interface, sintf);
-}
-
-// ------------------- public msg::exported_interface_t --------------------
-
-void serializer_t::receive(u8 *data, u32 len) {
+void framer_t::receive(u8 *data, u32 len) {
 	u32 ofs = 0;
-	current_frame_receiver = this;
+	current_frame_receiver = this->frame_receiver;
 	while (len--) {
 		hdlc_on_rx_byte(data[ofs++]);
 	}
 }
 
-template<typename T>
-T * find_implementation(serializer_t *ser) {
-	for (std::vector<exported_system_interface_t *>::iterator it = ser->exported_intrfaces.begin();
-			it != ser->exported_intrfaces.end(); it++) {
-		T *casted = dynamic_cast<T*>(*it);
-		if (casted) {
-			return casted;
-		}
-	}
-	return null;
+
+
+
+
+
+
+void serializer_t::send_packet(void *packet, u32 sizeof_packet) {
+
+	_MY_ASSERT(sizeof_packet == sizeof(proto::host_interface_t), return);
+
+	proto::host_interface_t *host_interface = (proto::host_interface_t *)packet;
+	send_message(this, host_interface);
 }
+
+
 
 
 void serializer_t::receive_frame(u8 *data, u32 len) {
 
-	myvi::proto::exported_interface_t ei;
+	proto::exported_interface_t ei;
 	_WEAK_ASSERT(ei.ParseFromArray(data,len), return);
 
-    exported_model_interface_t *exported_model = find_implementation<exported_model_interface_t>(this);
-	if (exported_model) {
-
-		if (ei.has_read_model_data_request()) {
-			exported_model->read_model_data((char *)ei.read_model_data_request().path().c_str());
-		}
-		if (ei.has_write_model_data_request()) {
-			if (ei.write_model_data_request().has_string_value()) {
-				exported_model->write_model_data(
-					(char *)ei.write_model_data_request().path().c_str(),
-					(char *)ei.write_model_data_request().string_value().c_str()
-					);
-			}
-			if (ei.write_model_data_request().has_int_value()) {
-				exported_model->write_model_data(
-					(char *)ei.write_model_data_request().path().c_str(),
-					(s32)ei.write_model_data_request().int_value()
-					);
-			}
-			if (ei.write_model_data_request().has_float_value()) {
-				exported_model->write_model_data(
-					(char *)ei.write_model_data_request().path().c_str(),
-					ei.write_model_data_request().float_value()
-					);
-			}
-		}
-	}
-
-	exported_emulation_interface_t *exported_emulation	 = find_implementation<exported_emulation_interface_t>(this);
-	if (exported_emulation) {
-		if (ei.has_key_event()) {
-			exported_emulation->key_event((myvi::key_t::key_t)ei.key_event());
-		}
-	}
-
-	exported_file_interface_t *exported_file = find_implementation<exported_file_interface_t>(this);
-	if (exported_file) {
-		if (ei.has_upload_file()) {
-			exported_file->upload_file(
-				ei.upload_file().file_id(),
-				ei.upload_file().offset(),
-				ei.upload_file().crc(),
-				ei.upload_file().first(),
-				(u8*)ei.upload_file().data().data(),
-				ei.upload_file().data().size()
-				);
-		}
-		if (ei.has_download_file()) {
-			exported_file->download_file(
-				ei.download_file().file_id(),
-				ei.download_file().offset(),
-				ei.download_file().length()
-				);
-		}
-		if (ei.has_update_file_info()) {
-			exported_file->update_file_info(
-				ei.update_file_info().file_id(),
-				ei.update_file_info().cur_len(),
-				ei.update_file_info().max_len(),
-				ei.update_file_info().crc()
-				);
-		}
-		if (ei.has_read_file_info()) {
-			exported_file->read_file_info(ei.read_file_info());
-		}
-	}
+	//host_model_interface_t_serializer.receive_packet(&ei, sizeof(ei));
+	_receive_frame(&ei, sizeof(ei));
+	
 }
 
 // ---------------------------------------
 //сериализер на стороне хоста
 // ---------------------------------------
 
-void host_serializer_t::init(serial_interface_t *asintf ) {
-	sintf = asintf;
-	sintf->subscribe(this);
 
-	ring_buffer_init(&hdlc_ring_buf,(u8_t*)_hdlc_ring_buf, HDLC_RING_BUF_LEN);
-	hdlc_init(&rs485_put_char, &hdlc_on_rx_frame);
-}
-
-// запрос на чтение данных из модели
-void host_serializer_t::read_model_data(char * path) {
-	proto::exported_interface_t ei;
-	proto::read_model_data_request_t *req = ei.mutable_read_model_data_request();
-	req->set_path(path);
-	send_message(ei, sintf);
-}
-
-// с на запись данных в модель
-void host_serializer_t::write_model_data(char * path, char * string_value) {
-	proto::exported_interface_t ei;
-	proto::write_model_data_request_t *req = ei.mutable_write_model_data_request();
-	req->set_path(path);
-	req->set_string_value(string_value);
-	send_message(ei, sintf);
-}
-
-void host_serializer_t::write_model_data(char * path, s32 int_value) {
-	proto::exported_interface_t ei;
-	proto::write_model_data_request_t *req = ei.mutable_write_model_data_request();
-	req->set_path(path);
-	req->set_int_value(int_value);
-	send_message(ei, sintf);
-}
-
-void host_serializer_t::write_model_data(char * path,  double float_value) {
-	proto::exported_interface_t ei;
-	proto::write_model_data_request_t *req = ei.mutable_write_model_data_request();
-	req->set_path(path);
-	req->set_float_value(float_value);
-	send_message(ei, sintf);
-}
-
-
-void host_serializer_t::key_event(key_t::key_t key) {
-	proto::exported_interface_t ei;
-	ei.set_key_event((proto::key_t)key);
-	send_message(ei, sintf);
-}
-void host_serializer_t::upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) {
-	proto::exported_interface_t ei;
-	proto::file_data_t *fd = ei.mutable_upload_file();
-	fd->set_file_id(file_id);
-	fd->set_offset(offset);
-	fd->set_crc(crc);
-	fd->set_first(first);
-	fd->set_data(data,len);
-	send_message(ei, sintf);
-}
-void host_serializer_t::download_file(u32 file_id, u32 offset, u32 length) {
-	proto::exported_interface_t ei;
-	proto::download_request_t *dr = ei.mutable_download_file();
-	dr->set_file_id(file_id);
-	dr->set_offset(offset);
-	dr->set_length(length);
-	send_message(ei, sintf);
-}
-void host_serializer_t::update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) {
-	proto::exported_interface_t ei;
-	proto::file_info_t *fi = ei.mutable_update_file_info();
-	fi->set_file_id(file_id);
-	fi->set_cur_len(cur_len);
-	fi->set_max_len(max_len);
-	fi->set_crc(crc);
-	send_message(ei, sintf);
-}
-void host_serializer_t::read_file_info(u32 file_id) {
-	proto::exported_interface_t ei;
-	ei.set_read_file_info(file_id);
-	send_message(ei, sintf);
-}
 
 
 // ------------------------ public pkt_serdes_t::serdes_receiver_t ----------------------
-void host_serializer_t::receive(u8 *data, u32 len) {
-	u32 ofs = 0;
-	current_frame_receiver = this;
-	while (len--) {
-		hdlc_on_rx_byte(data[ofs++]);
-	}
-}
 
-template<typename T>
-T * find_implementation(host_serializer_t *ser) {
-	for (std::vector<host_system_interface_t *>::iterator it = ser->host_interfaces.begin();
-			it != ser->host_interfaces.end(); it++) {
-		T *casted = dynamic_cast<T*>(*it);
-		if (casted) {
-			return casted;
-		}
-	}
-	return null;
-}
 
+void host_serializer_t::send_packet(void *packet, u32 sizeof_packet) {
+
+	_MY_ASSERT(sizeof_packet == sizeof(proto::exported_interface_t), return);
+
+	proto::exported_interface_t *exported_interface = (proto::exported_interface_t *)packet;
+	send_message(this, exported_interface);
+}
 
 void host_serializer_t::receive_frame(u8 *data, u32 len) {
 
-	myvi::proto::host_interface_t h;
+	proto::host_interface_t h;
 	_WEAK_ASSERT(h.ParseFromArray(data,len), return);
 
-    host_model_interface_t *host_model = find_implementation<host_model_interface_t>(this);
+	_receive_frame(&h, sizeof(h));
 
-    if (host_model) {
-		if (h.has_read_model_data_response()) {
-			if (h.read_model_data_response().has_string_value()) {
-				host_model->read_model_data_response(
-						(char *)h.read_model_data_response().path().c_str(),
-						(char *)h.read_model_data_response().string_value().c_str(),
-						h.read_model_data_response().code()
-					);
-			}
-			if (h.read_model_data_response().has_int_value()) {
-				host_model->read_model_data_response(
-						(char *)h.read_model_data_response().path().c_str(),
-						(s32)h.read_model_data_response().int_value(),
-						h.read_model_data_response().code()
-					);
-			}
-			if (h.read_model_data_response().has_float_value()) {
-				host_model->read_model_data_response(
-						(char *)h.read_model_data_response().path().c_str(),
-						h.read_model_data_response().float_value(),
-						h.read_model_data_response().code()
-					);
-			}
-		}
-	}
-    host_file_interface_t *host_file = find_implementation<host_file_interface_t>(this);
-    if (host_file) {
-		if (h.has_download_response()) {
-			host_file->download_response(
-				h.download_response().file_id(),
-				h.download_response().offset(),
-
-				h.download_response().crc(),
-				h.download_response().first(),
-
-				(u8*)h.download_response().data().data(),
-				h.download_response().data().size()
-				);
-		}
-		if (h.has_file_info_response()) {
-			host_file->file_info_response(
-				h.file_info_response().file_id(),
-				h.file_info_response().cur_len(),
-				h.file_info_response().max_len(),
-				h.file_info_response().crc()
-				);
-		}
-		if (h.has_error()) {
-			host_file->error(h.error());
-		}
-	}
 }

@@ -250,13 +250,13 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		serializer->init(&sintf);
 
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
-		link_model_updater->init(serializer);
+		link_model_updater->init(serializer->get_host_model_interface());
 		serializer->add_implementation(link_model_updater);
 
 		app::file_server_t *file_server = new app::file_server_t();
 		test::file_system_impl_t *file_system = new test::file_system_impl_t();
 		file_system->init("files");
-		file_server->init(serializer, file_system);
+		file_server->init(serializer->get_host_file_interface(), file_system);
 		serializer->add_implementation(file_server);
 
 	} else {
@@ -267,7 +267,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		host_serializer->init(&sintf);
 
 		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
-		link_model_repeater->init(host_serializer);
+		link_model_repeater->init(host_serializer->get_exported_model_interface());
 		host_serializer->add_implementation(link_model_repeater);
 
 	}

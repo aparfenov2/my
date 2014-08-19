@@ -10,7 +10,8 @@
 
 #include "link.h"
 #include "exported_sys.h"
-#include <vector>
+#include "link_sys_impl_common.h"
+#include "link_sys_impl_gen.h"
 
 namespace link {
 
@@ -20,100 +21,129 @@ public:
 };
 
 
+class framer_t : public serial_data_receiver_t {
+public:
+	serial_interface_t *sintf;
+	_internal_frame_receiver_t *frame_receiver;
+public:
+	framer_t() {
+		sintf = 0;
+		frame_receiver = 0;
+	}
+
+	void init(serial_interface_t *_sintf, _internal_frame_receiver_t *_frame_receiver) {
+		sintf = _sintf;
+		frame_receiver = _frame_receiver;
+		sintf->subscribe(this);
+		sys_init();
+	}
+
+	void send_frame(u8 *data, u32 len);
+
+	// прием блока данных из интерфеса UART
+	void receive(u8 *data, u32 len) OVERRIDE;
+
+private:
+	void sys_init(); 
+};
+
+
 
 class serializer_t :
-	public host_system_interface_t,
-	public host_model_interface_t,
-	public host_file_interface_t,
-
-	public serial_data_receiver_t,
+	public packet_sender_t,
 	public _internal_frame_receiver_t {
 
 public:
-	std::vector<exported_system_interface_t *> exported_intrfaces;
-	serial_interface_t *sintf;
+	host_model_interface_t_serializer_t host_model_interface_t_serializer;
+	host_file_interface_t_serializer_t host_file_interface_t_serializer;
+	host_debug_interface_t_serializer_t host_debug_interface_t_serializer;
+	framer_t framer;
 public:
-	serializer_t() {
-		sintf = 0;
-	}
 
 	void add_implementation(exported_system_interface_t *impl) {
-		exported_intrfaces.push_back(impl);
+		host_model_interface_t_serializer.set_implementation(dynamic_cast<exported_model_interface_t*>(impl));
+		host_file_interface_t_serializer.set_implementation(dynamic_cast<exported_file_interface_t*>(impl));
+		host_debug_interface_t_serializer.set_implementation(dynamic_cast<exported_debug_interface_t*>(impl));
 	}
 
-	void init(serial_interface_t *asintf );
+	void init(serial_interface_t *asintf ) {
+		framer.init(asintf, this);
+		host_model_interface_t_serializer.init(this);
+		host_file_interface_t_serializer.init(this);
+		host_debug_interface_t_serializer.init(this);
+	}
+	
 
-// ----------------------- public host_system_interface_t (туда)------------------------------------
+	void send_packet(void *packet, u32 sizeof_packet) OVERRIDE;
 
-	// ответ на запрос на чтение данных из модели
-	virtual void read_model_data_response(char * path, char * string_value, u32 code) OVERRIDE;
-	virtual void read_model_data_response(char * path, s32 int_value, u32 code ) OVERRIDE;
-	virtual void read_model_data_response(char * path, double float_value, u32 code ) OVERRIDE;
-
-	// ответ на запись данных в модель
-	virtual void write_model_data_ack(u32 code) OVERRIDE;
-
-	void download_response(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE;
-	void file_info_response(u32 file_id, u32 cur_len, u32 max_len, u32 crc)  OVERRIDE;
-	void error(u32 code) OVERRIDE;
+	host_model_interface_t * get_host_model_interface()  {
+		return & host_model_interface_t_serializer;
+	}
+	host_file_interface_t * get_host_file_interface()  {
+		return & host_file_interface_t_serializer;
+	}
+	host_debug_interface_t * get_host_debug_interface()  {
+		return & host_debug_interface_t_serializer;
+	}
 
 // ------------------- public serial_data_receiver_t --------------------
-	// прием блока данных из интерфеса UART
-	void receive(u8 *data, u32 len) OVERRIDE;
 	// прием фрейма данных
 	void receive_frame(u8 *data, u32 len) OVERRIDE;
+	// called from receive_frame
+	void _receive_frame(void *pkt, u32 sizeof_pkt) {
+		host_model_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+		host_file_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+		host_debug_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+	}
 
 }; // class
 
 
 //сериализер на стороне хоста
 class host_serializer_t :
-	public exported_system_interface_t,
-	public exported_model_interface_t,
-	public exported_emulation_interface_t,
-	public exported_file_interface_t,
-
-	public serial_data_receiver_t,
+	public packet_sender_t,
 	public _internal_frame_receiver_t {
 
 public:
-	std::vector<host_system_interface_t *> host_interfaces;
-	serial_interface_t *sintf;
+	exported_model_interface_t_serializer_t exported_model_interface_t_serializer;
+	exported_file_interface_t_serializer_t exported_file_interface_t_serializer;
+	exported_debug_interface_t_serializer_t exported_debug_interface_t_serializer;
+	framer_t framer;
 public:
-	host_serializer_t() {
-		sintf = 0;
-	}
 
 	void add_implementation(host_system_interface_t *impl) {
-		host_interfaces.push_back(impl);
+		exported_model_interface_t_serializer.set_implementation(dynamic_cast<host_model_interface_t*>(impl));
+		exported_file_interface_t_serializer.set_implementation(dynamic_cast<host_file_interface_t*>(impl));
+		exported_debug_interface_t_serializer.set_implementation(dynamic_cast<host_debug_interface_t*>(impl));
 	}
 
-	// ahost2 - реализация ответной части системного интерфейса на стороне хоста
-	// aintf - реализация интерфейса последовательной передачи данных 
-	void init(serial_interface_t *asintf );
-// ------------------------ public exported_system_interface_t ----------------------------
+	exported_model_interface_t * get_exported_model_interface()  {
+		return & exported_model_interface_t_serializer;
+	}
+	exported_file_interface_t * get_exported_file_interface()  {
+		return & exported_file_interface_t_serializer;
+	}
+	exported_debug_interface_t * get_exported_debug_interface()  {
+		return & exported_debug_interface_t_serializer;
+	}
 
-	// запрос на чтение данных из модели
-	virtual void read_model_data(char * path) OVERRIDE;
-
-	// запрос на запись данных в модель
-	virtual void write_model_data(char * path, char * string_value) OVERRIDE;
-	virtual void write_model_data(char * path, s32 int_value) OVERRIDE;
-	virtual void write_model_data(char * path,  double float_value) OVERRIDE;
-
-	void key_event(myvi::key_t::key_t key) OVERRIDE;
-
-	void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE;
-	void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE;
-	void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE;
-	void read_file_info(u32 file_id) OVERRIDE;
+	void init(serial_interface_t *asintf ) {
+		framer.init(asintf, this);
+		exported_model_interface_t_serializer.init(this);
+		exported_file_interface_t_serializer.init(this);
+		exported_debug_interface_t_serializer.init(this);
+	}
 
 
-// ------------------------ public serial_data_receiver_t ----------------------
-	// прием блока данных из интерфеса UART
-	void receive(u8 *data, u32 len) OVERRIDE;
 	// прием фрейма данных
+	void send_packet(void *packet, u32 sizeof_packet) OVERRIDE;
 	void receive_frame(u8 *data, u32 len) OVERRIDE;
+
+	void _receive_frame(void *pkt, u32 sizeof_pkt) {
+		exported_model_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+		exported_file_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+		exported_debug_interface_t_serializer.receive_packet(pkt, sizeof_pkt);
+	}
 }; // host_serializer_t
 
 } // ns myvi

@@ -1,0 +1,7 @@
+<#list proto.proto.messages.message as message>
+	<#list message.field as fld>
+		<#if fld.@type == "string" || fld.@type == "bytes">
+			<#lt>link.proto.${message.@name}.${fld.@name}		max_size:128
+		</#if>
+	</#list>
+</#list>
