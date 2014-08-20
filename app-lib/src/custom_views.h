@@ -904,9 +904,9 @@ class event_bus_t : public myvi::publisher_t<event_bus_msg_t, _EVENT_BUS_MAX_SUB
 private:
 	event_bus_t() {
 	}
+	static event_bus_t _instance;
 public:
 	static event_bus_t & instance() {
-		static event_bus_t _instance;
 		return _instance;
 	}
 
@@ -1114,11 +1114,11 @@ class popup_manager_t  {
 private:
 	popup_manager_t() {
 	}
+	static popup_manager_t _instance;
 public:
 	view_cache_t view_cache;
 public:
 	static popup_manager_t & instance() {
-		static popup_manager_t _instance;
 		return _instance;
 	}
 
@@ -1506,10 +1506,10 @@ class validator_factory_t {
 private:
 	validator_factory_t() {
 	}
+	static validator_factory_t _instance;
 public:
 
 	static validator_factory_t & instance() {
-		static validator_factory_t _instance;
 		return _instance;
 	}
 

@@ -1,16 +1,21 @@
 #include "generator_common.h"
 
 #define RAPIDXML_NO_EXCEPTIONS
+#define RAPIDXML_STATIC_POOL_SIZE 1
+#define RAPIDXML_DYNAMIC_POOL_SIZE 0
+
 #include "rapidxml.hpp"
 
 using namespace gen;
 using namespace rapidxml;
 
-namespace rapidxml {
-	void parse_error_handler(char const *msg,void *) {
-		_LOG1(msg);
-		_HALT();
-	}
+meta_registry_t meta_registry_t::_instance;
+
+template struct internal::lookup_tables<0>;
+
+void rapidxml::parse_error_handler(const char *what, void *where) {
+	_LOG1(what);
+	_HALT();
 }
 
 parameter_meta_t * parameter_meta_t::find_child_meta(myvi::string_t child_id) {
@@ -106,8 +111,7 @@ static menu_meta_t *emit_menu_meta(xml_node<> * node) {
 
 void meta_registry_t::init(char *xml) {
 
-	// c28 не может разместить на стеке !
-	static rapidxml::xml_document<> doc;
+	rapidxml::xml_document<> doc;
 	doc.parse<0>(xml);
 	xml_node<> * root_node = doc.first_node("schema");
 	_MY_ASSERT(root_node, return);

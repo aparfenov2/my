@@ -2,6 +2,7 @@
 #define __MONITOR_DEVICES__
 
 #include "types.h"
+#include "spi.h"
 
 //#include "mcbsp_spi.h"
 
@@ -10,10 +11,18 @@
 //#define CPU_RATE    6.667L   // for a 150MHz CPU clock speed (SYSCLKOUT)
 //#define Delay_us(A)  DSP28x_usDelay(((((long double) A * 1000.0L) / (long double)CPU_RATE) - 9.0L) / 5.0L)
 
+namespace hw {
 
-
-class FRAM
-{
+class FRAM {
+public:
+	Spi *spi;
+public:
+	FRAM() {
+		spi = 0;
+	}
+	void init(Spi *_spi) {
+		spi = _spi;
+	}
 public:
 	bool Write ( u16 address, s16 data );
 	bool Write ( u16 address, s32 data );
@@ -55,6 +64,14 @@ public:
 		u16		SRWD:1;	// Status Register Write Protect 
 	};
 public:
+	Spi *spi;
+public:
+	FlashDev() {
+		spi = 0;
+	}
+	void init(Spi *_spi) {
+		spi = _spi;
+	}
 	void WriteEnable (void);
 	void WriteDisable (void);
 	void ReadID (DataID &data);
@@ -72,11 +89,5 @@ public:
 };
 
 
-
-//extern DAC 			dac;
-//extern DDS			dds;
-//extern FRAM			fram;
-//extern Heterodin	heterodin;
-//extern FlashDev		flash;
-
+} // ns
 #endif

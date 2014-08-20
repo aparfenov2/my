@@ -527,11 +527,12 @@ private:
 		return 0;
 	}
 
+	static meta_registry_t _instance;
+
 public:
 
 	static meta_registry_t & instance() {
-		static meta_registry_t instance;
-		return instance;
+		return _instance;
 	}
 
 	// обязательно вызвать после инициализации кучи

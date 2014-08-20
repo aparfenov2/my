@@ -422,9 +422,28 @@ bool checkreturn pb_encode_svarint(pb_ostream_t *stream, int64_t value)
     return pb_encode_varint(stream, zigzagged);
 }
 
+#ifdef PLATFORM_C28
+	// структура в массив, sz - длина структуры, sizeof()
+	s32 unpack(const void *data, s32 sz, u8 *dst) {
+		s32 dw=0;
+		s32 sw=0;
+		for (; sw < sz; sw++) {
+			dst[dw] = __byte((int *)data,dw);
+			dw++;
+			dst[dw] = __byte((int *)data,dw);
+			dw++;
+		}
+		return dw;
+	}
+#endif
+
+
 bool checkreturn pb_encode_fixed32(pb_ostream_t *stream, const void *value)
 {
     #ifdef __BIG_ENDIAN__
+#ifdef PLATFORM_C28
+#error C28 is not big endian
+#endif
     const uint8_t *bytes = value;
     uint8_t lebytes[4];
     lebytes[0] = bytes[3];
@@ -433,13 +452,22 @@ bool checkreturn pb_encode_fixed32(pb_ostream_t *stream, const void *value)
     lebytes[3] = bytes[0];
     return pb_write(stream, lebytes, 4);
     #else
+#ifdef PLATFORM_C28
+    uint8_t lebytes[4];
+    unpack(value,2,lebytes);
+    return pb_write(stream, (const uint8_t*)lebytes, 4);
+#else
     return pb_write(stream, (const uint8_t*)value, 4);
+#endif
     #endif
 }
 
 bool checkreturn pb_encode_fixed64(pb_ostream_t *stream, const void *value)
 {
     #ifdef __BIG_ENDIAN__
+#ifdef PLATFORM_C28
+#error C28 is not big endian
+#endif
     const uint8_t *bytes = value;
     uint8_t lebytes[8];
     lebytes[0] = bytes[7];
@@ -452,7 +480,13 @@ bool checkreturn pb_encode_fixed64(pb_ostream_t *stream, const void *value)
     lebytes[7] = bytes[0];
     return pb_write(stream, lebytes, 8);
     #else
+#ifdef PLATFORM_C28
+    uint8_t lebytes[8];
+    unpack(value,4,lebytes);
+    return pb_write(stream, (const uint8_t*)lebytes, 8);
+#else
     return pb_write(stream, (const uint8_t*)value, 8);
+#endif
     #endif
 }
 
@@ -562,10 +596,17 @@ static bool checkreturn pb_enc_varint(pb_ostream_t *stream, const pb_field_t *fi
      * or enums. */
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+//        case 1: value = *(const int8_t*)src; break;
+        case 1: value = *(const int16_t*)src; break;
+        case 2: value = *(const int32_t*)src; break;
+        case 4: value = *(const int64_t*)src; break;
+#else
         case 1: value = *(const int8_t*)src; break;
         case 2: value = *(const int16_t*)src; break;
         case 4: value = *(const int32_t*)src; break;
         case 8: value = *(const int64_t*)src; break;
+#endif
         default: PB_RETURN_ERROR(stream, "invalid data_size");
     }
     
@@ -578,8 +619,13 @@ static bool checkreturn pb_enc_uvarint(pb_ostream_t *stream, const pb_field_t *f
     
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+    case 2: value = *(const uint32_t*)src; break;
+    case 4: value = *(const uint64_t*)src; break;
+#else
         case 4: value = *(const uint32_t*)src; break;
         case 8: value = *(const uint64_t*)src; break;
+#endif
         default: PB_RETURN_ERROR(stream, "invalid data_size");
     }
     
@@ -592,8 +638,13 @@ static bool checkreturn pb_enc_svarint(pb_ostream_t *stream, const pb_field_t *f
     
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+    case 2: value = *(const int32_t*)src; break;
+    case 4: value = *(const int64_t*)src; break;
+#else
         case 4: value = *(const int32_t*)src; break;
         case 8: value = *(const int64_t*)src; break;
+#endif
         default: PB_RETURN_ERROR(stream, "invalid data_size");
     }
     

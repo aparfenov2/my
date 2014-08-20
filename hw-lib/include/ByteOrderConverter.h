@@ -9,6 +9,7 @@
 #define BYTEORDERCONVERTER_H_
 #include "types.h"
 
+namespace hw {
 /// Класс сериализатора для SPI
 class ByteOrderConverter
 {
@@ -36,5 +37,7 @@ public:
     void setConfig(void* data_ptr, u16 data_cnt, eByteOrder bo);
 
 };
+
+}
 
 #endif /* BYTEORDERCONVERTER_H_ */

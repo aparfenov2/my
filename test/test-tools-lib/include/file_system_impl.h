@@ -25,7 +25,9 @@ public:
 
 	virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &read ) OVERRIDE {
 		read = 0;
-		std::ifstream infile(get_file_name(file_id), std::ofstream::binary);
+		std::ifstream infile(get_file_name(file_id), std::ifstream::binary);
+
+		infile.seekg( offset, std::ios::end );
 		u32 sz = (u32)infile.tellg();
 		if (offset >= sz) {
 			return false;

@@ -1005,9 +1005,24 @@ bool pb_decode_svarint(pb_istream_t *stream, int64_t *dest)
     return true;
 }
 
+#ifdef PLATFORM_C28
+	// массив в структуру, sz - длина массива, шт
+	s32 pack(const u8 *data, s32 sz, void *dst) {
+		s32 sw=0;
+		for (; sw < sz; sw++) {
+			__byte((int *)dst,sw) = data[sw];
+		}
+		return sz/2;
+	}
+#endif
+
+
 bool pb_decode_fixed32(pb_istream_t *stream, void *dest)
 {
     #ifdef __BIG_ENDIAN__
+#ifdef PLATFORM_C28
+#error C28 is not big endian
+#endif
     uint8_t *bytes = (uint8_t*)dest;
     uint8_t lebytes[4];
     
@@ -1020,13 +1035,24 @@ bool pb_decode_fixed32(pb_istream_t *stream, void *dest)
     bytes[3] = lebytes[0];
     return true;
     #else
+#ifdef PLATFORM_C28
+    uint8_t lebytes[4];
+    if (!pb_read(stream, (uint8_t*)lebytes, 4))
+    	return false;
+    pack(lebytes,4,dest);
+    return true;
+#else
     return pb_read(stream, (uint8_t*)dest, 4);
+#endif
     #endif   
 }
 
 bool pb_decode_fixed64(pb_istream_t *stream, void *dest)
 {
     #ifdef __BIG_ENDIAN__
+#ifdef PLATFORM_C28
+#error C28 is not big endian
+#endif
     uint8_t *bytes = (uint8_t*)dest;
     uint8_t lebytes[8];
     
@@ -1043,7 +1069,15 @@ bool pb_decode_fixed64(pb_istream_t *stream, void *dest)
     bytes[7] = lebytes[0];
     return true;
     #else
+#ifdef PLATFORM_C28
+    uint8_t lebytes[8];
+    if (!pb_read(stream, (uint8_t*)lebytes, 8))
+    	return false;
+    pack(lebytes,8,dest);
+    return true;
+#else
     return pb_read(stream, (uint8_t*)dest, 8);
+#endif
     #endif   
 }
 
@@ -1055,11 +1089,17 @@ static bool checkreturn pb_dec_varint(pb_istream_t *stream, const pb_field_t *fi
     
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+    case 1: *(int16_t*)dest = (int16_t)value; break;
+    case 2: *(int32_t*)dest = (int32_t)value; break;
+    case 4: *(int64_t*)dest = (int64_t)value; break;
+#else
         case 1: *(int8_t*)dest = (int8_t)value; break;
         case 2: *(int16_t*)dest = (int16_t)value; break;
         case 4: *(int32_t*)dest = (int32_t)value; break;
         case 8: *(int64_t*)dest = (int64_t)value; break;
         default: PB_RETURN_ERROR(stream, "invalid data_size");
+#endif
     }
     
     return true;
@@ -1073,8 +1113,13 @@ static bool checkreturn pb_dec_uvarint(pb_istream_t *stream, const pb_field_t *f
     
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+    case 2: *(uint32_t*)dest = (uint32_t)value; break;
+    case 4: *(uint64_t*)dest = value; break;
+#else
         case 4: *(uint32_t*)dest = (uint32_t)value; break;
         case 8: *(uint64_t*)dest = value; break;
+#endif
         default: PB_RETURN_ERROR(stream, "invalid data_size");
     }
     
@@ -1089,8 +1134,13 @@ static bool checkreturn pb_dec_svarint(pb_istream_t *stream, const pb_field_t *f
     
     switch (field->data_size)
     {
+#ifdef PLATFORM_C28
+    case 2: *(int32_t*)dest = (int32_t)value; break;
+    case 4: *(int64_t*)dest = value; break;
+#else
         case 4: *(int32_t*)dest = (int32_t)value; break;
         case 8: *(int64_t*)dest = value; break;
+#endif
         default: PB_RETURN_ERROR(stream, "invalid data_size");
     }
     

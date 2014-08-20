@@ -5,6 +5,7 @@
 #include "DSP2833x_Examples.h"
 #include "assert_impl.h"
 
+using namespace hw;
 
 //ВАЖНО!!!! Исторически сложилось, что при записи команды по SPI первым идет старший байт
 #pragma CODE_SECTION ("ramfuncs") 

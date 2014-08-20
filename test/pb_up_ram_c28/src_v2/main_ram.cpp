@@ -14,44 +14,42 @@
 #include "types.h"
 #include "assert_impl.h"
 
-#include "ssd1963drv.h"
-#include "surface.h"
-#include "bmp_math.h"
-
 #include "app_events.h"
 
 #include "devices.h"
 #include "Spi.h"
 #include "uart_drv.h"
+
+
 #include "link.h"
-#include "exported2_impl.h"
-
-
-
-extern "C" void SSD1963_InitHW();
-
-using namespace myvi;
-
-ssd1963drv_t drv1;
-
-Spi spi;
-FRAM fram;
-FlashDev flash;
-uart_drv_t	uart;
+#include "link_sys_impl.h"
+#include "file_server.h"
+#include "file_map.h"
+#include "file_system_impl.h"
 
 using namespace myvi;
+using namespace link;
+using namespace hw;
+
+
 
 class serial_interface_impl_t : public serial_interface_t {
 public:
 	serial_data_receiver_t *receiver;
+	uart_drv_t *uart;
 public:
 	serial_interface_impl_t() {
 		receiver = 0;
+		uart = 0;
+	}
+
+	void init(uart_drv_t *_uart) {
+		uart = _uart;
 	}
 
 	virtual void send(u8 *data, u32 len) OVERRIDE {
 		while(len--) {
-			uart.write(*data++);
+			uart->write(*data++);
 		}
 	}
 
@@ -60,14 +58,49 @@ public:
 	}
 
 	void cycle() {
-		if (!uart.is_empty()) {
+		if (!uart->is_empty()) {
 
-			u8 byte = uart.read();
+			u8 byte = uart->read();
 			receiver->receive(&byte, 1);
 		}
 	}
 };
 
+
+class debug_intf_impl_t :
+	public link::exported_system_interface_t,
+	public link::exported_debug_interface_t {
+public:
+	link::host_debug_interface_t *host;
+public:
+	debug_intf_impl_t() {
+		host = 0;
+	}
+
+	void init(link::host_debug_interface_t *_host) {
+		host = _host;
+	}
+
+	virtual void key_event (u32 key_event) OVERRIDE {
+	}
+
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, float argd) OVERRIDE {
+		_MY_ASSERT(host, return);
+		host->test_response(arg8,arg16,arg32,argd);
+	}
+};
+
+
+Spi spi;
+FRAM fram;
+FlashDev flash;
+uart_drv_t	uart;
+
+serial_interface_impl_t sintf;
+link::serializer_t serializer;
+app::file_server_t file_server;
+file_system_impl_t file_system;
+debug_intf_impl_t debug_intf_impl;
 
 
 int main(void)
@@ -77,17 +110,24 @@ int main(void)
     init_zone7();
 
     spi.Init();
+	fram.init(&spi);
+	flash.init(&spi);
 
-    _MY_ASSERT(read_file_table(),);
+	_WEAK_ASSERT(
+			file_system.init(&fram, &flash)
+			, 0);
 
     uart.init(&ScibRegs);
+	sintf.init(&uart);
+    serializer.init(&sintf);
+
+    file_server.init(serializer.get_host_file_interface(), &file_system);
+    serializer.add_implementation(&file_server);
+
+    debug_intf_impl.init(serializer.get_host_debug_interface());
+    serializer.add_implementation(&debug_intf_impl);
+
 	init_pie_table();
-
-	serial_interface_impl_t sintf;
-	serializer_t ser;
-	exported_interface2_impl_t ex2(&ser);
-	ser.init(0,&ex2,&sintf);
-
 	while(1) {
 		sintf.cycle();
 	}

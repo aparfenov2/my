@@ -1,8 +1,7 @@
 <#import "../../inc/common.ftl" as common>
 
 <#function match_native_type id>
-	<#if id=='float'><#return 'double'>
-	<#elseif id=='string'><#return 'char *'>
+	<#if id=='string'><#return 'char *'>
 	</#if>
 	<#return id>
 </#function>

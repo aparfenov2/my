@@ -9,15 +9,23 @@
 
 #include "file_system.h"
 
+#include "devices.h"
+
 namespace hw {
 	class file_system_impl_t : public app::file_system_t  {
 	public:
+		FRAM *fram;
+		FlashDev *flash;
 	public:
 		file_system_impl_t() {
+			fram = 0;
+			flash = 0;
 		}
 
-		void init() {
-			read_file_table();
+		bool init(FRAM *_fram, FlashDev *_flash) {
+			fram = _fram;
+			flash = _flash;
+			return read_file_table();
 		}
 
 		bool allocate_and_read_font_cache(u8 *&buf, u32 &sz);

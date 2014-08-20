@@ -42,7 +42,7 @@ public:
 	// first - признак первой записи из серии
 	// data - указатель на массив передаваемых данных
 	// len - длина массива
-	virtual void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
+	virtual void upload_file(u32 file_id, u32 offset, bool first, u8* data, u32 len) OVERRIDE {
 		u32 written;
 		if (fs->write_file(file_id, offset, len, data, written )) {
 			host->error(0);
@@ -59,7 +59,7 @@ public:
 
 		if (length < _FILE_SERVER_DATABUF_LENGTH) {
 			if (fs->read_file(file_id,offset,length,data_buf, read)) {
-				host->download_response(file_id,offset,0,false,data_buf,read);
+				host->download_response(file_id,offset,false,data_buf,read);
 			} else {
 				host->error(1);
 			}
@@ -72,7 +72,7 @@ public:
 	// cur_len - текущая длина файла, байт
 	// max_len - максимально допустимая длина файла, байт
 	// crc - если != 0
-	virtual void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
+	virtual void update_file_info(u32 file_id, u32 cur_len) OVERRIDE {
 		if (fs->set_info(file_id,cur_len)) {
 			host->error(0);
 		} else {
@@ -84,7 +84,7 @@ public:
 	virtual void read_file_info(u32 file_id) OVERRIDE {
 		u32 len,lmax;
 		if (fs->get_info(file_id,len,lmax)) {
-			host->file_info_response(file_id,len,lmax,0);
+			host->file_info_response(file_id,len,lmax);
 		} else {
 			host->error(1);
 		}

@@ -12,22 +12,23 @@
 #include "disp_def.h"
 
 
-namespace myvi {
-class ssd1963drv_t : public surface_t {
+namespace hw {
+
+class ssd1963drv_t : public myvi::surface_t {
 private:
 	s32 bpsx;
 	s32 bpsy;
 	s32 bpsw;
 	s32 bpsh;
 public:
-	ssd1963drv_t():surface_t(TFT_WIDTH,TFT_HEIGHT,-1,(u8*)(-1),img_type_t::bppGeneric),bpsx(-1) {
+	ssd1963drv_t():myvi::surface_t(TFT_WIDTH,TFT_HEIGHT,-1,(u8*)(-1),myvi::img_type_t::bppGeneric),bpsx(-1) {
 	}
 
 	void init();
 // pixel interface
 	virtual void putpx(s32 x1,s32 y1, u32 c);
 	virtual u32  getpx(s32 x1,s32 y1);
-	virtual bp_return_t::bp_return_t begin_paint(surface_t &src, s32 sx,s32 sy,s32 sw,s32 sh,s32 dx,s32 dy);
+	virtual myvi::bp_return_t::bp_return_t begin_paint(myvi::surface_t &src, s32 sx,s32 sy,s32 sw,s32 sh,s32 dx,s32 dy);
 	virtual void end_paint();
 // can be further optimized
 //	virtual void copyTo(s32 sx,s32 sy,s32 sw,s32 sh, s32 dx, s32 dy, surface_t &dst);

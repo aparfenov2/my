@@ -12,13 +12,15 @@ void SpiTx (void);
 #define SPI_TXFIFO_SIZE     16
 #define SPI_RXFIFO_SIZE     16
 
+namespace hw {
+
 class Spi
 {
 public:
 	enum eChannel
 	{							 //     210
 		FRAM 	       = 0x00400000, // 001
-		Flash		   = 0x00000000, // 000
+		Flash		   = 0x00000000 // 000
 	};
 
 private:
@@ -41,8 +43,9 @@ public:
 	void Set_spi_channel( eChannel channel );
 };
 
-extern Spi spi;
+//extern Spi spi;
 
+} // ns
 
 #endif
 

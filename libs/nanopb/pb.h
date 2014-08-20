@@ -30,10 +30,10 @@
 /* #define PB_FIELD_32BIT 1 */
 
 /* Disable support for error messages in order to save some code space. */
-#define PB_NO_ERRMSG 1
+//#define PB_NO_ERRMSG 1
 
 /* Disable support for custom streams (support only memory buffers). */
-#define PB_BUFFER_ONLY 1
+//#define PB_BUFFER_ONLY 1
 
 /* Switch back to the old-style callback function signature.
  * This was the default until nanopb-0.2.1. */
@@ -232,10 +232,10 @@ PB_PACKED_STRUCT_END
  */
 STATIC_ASSERT(sizeof(int8_t) == 1, INT8_T_WRONG_SIZE)
 STATIC_ASSERT(sizeof(uint8_t) == 1, UINT8_T_WRONG_SIZE)
-STATIC_ASSERT(sizeof(int16_t) == 2, INT16_T_WRONG_SIZE)
-STATIC_ASSERT(sizeof(uint16_t) == 2, UINT16_T_WRONG_SIZE)
-STATIC_ASSERT(sizeof(int32_t) == 4, INT32_T_WRONG_SIZE)
-STATIC_ASSERT(sizeof(uint32_t) == 4, UINT32_T_WRONG_SIZE)
+//STATIC_ASSERT(sizeof(int16_t) == 2, INT16_T_WRONG_SIZE)
+//STATIC_ASSERT(sizeof(uint16_t) == 2, UINT16_T_WRONG_SIZE)
+//STATIC_ASSERT(sizeof(int32_t) == 4, INT32_T_WRONG_SIZE)
+//STATIC_ASSERT(sizeof(uint32_t) == 4, UINT32_T_WRONG_SIZE)
 //STATIC_ASSERT(sizeof(int64_t) == 8, INT64_T_WRONG_SIZE)
 //STATIC_ASSERT(sizeof(uint64_t) == 8, UINT64_T_WRONG_SIZE)
 

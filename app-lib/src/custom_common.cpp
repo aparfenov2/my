@@ -14,7 +14,9 @@ model_t * model_t::_instance = &dynamic_model;
 
 converter_factory_t converter_factory_t::_instance;
 keyboard_filter_chain_t keyboard_filter_chain_t::_instance;
-
+popup_manager_t popup_manager_t::_instance;
+event_bus_t event_bus_t::_instance;
+validator_factory_t validator_factory_t::_instance;
 
 
 static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * meta) {

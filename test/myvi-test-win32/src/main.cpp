@@ -21,7 +21,6 @@
 #include "link.h"
 #include "disp_def.h"
 
-#include "menu_common.h"
 #include "custom_common.h"
 #include "link_sys_impl.h"
 #include "link_model_updater.h"
@@ -66,10 +65,6 @@ typedef custom::dynamic_view_mixin_aware_impl_t<gobject_t> _test_screen_super_t;
 
 class test_screen_t : public _test_screen_super_t, public focus_aware_t {
 	typedef _test_screen_super_t super;
-public:
-//	custom::tedit_t hdr_box;
-//	custom::scrollable_menu_t scrollable;
-
 
 public:
 
@@ -98,24 +93,6 @@ public:
 		dirty = true;
 
 	}
-
-	virtual void render(surface_t &dst) OVERRIDE {
-		dst.ctx.alfa = 0xff;
-		dst.ctx.pen_color = 0xf9f9f9;//0x203E95;
-		s32 ax,ay;
-		translate(ax,ay);
-		dst.fill(ax,ay,w,h);
-
-	}
-
-
-	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
-		if (dirty) {
-			int i = 0;
-		}
-	}
-
 
 };
 
@@ -196,6 +173,51 @@ public:
 };
 
 
+class host_debug_intf_impl_t : 
+	public link::host_system_interface_t,
+	public link::host_debug_interface_t {
+public:
+	virtual void test_response (u32 _arg8, u32 _arg16, u32 _arg32, double _argd) OVERRIDE {
+	}
+
+	virtual void log_event (const char * msg) OVERRIDE {
+		_LOG2("slave: ", msg);
+	}
+};
+
+
+class debug_intf_impl_t :
+	public link::exported_system_interface_t,
+	public link::exported_debug_interface_t {
+public:
+	link::host_debug_interface_t *host;
+public:
+	debug_intf_impl_t() {
+		host = 0;
+	}
+
+	void init(link::host_debug_interface_t *_host) {
+		host = _host;
+	}
+
+	virtual void key_event (u32 key_event) OVERRIDE {
+		myvi::key_t::key_t key = (myvi::key_t::key_t)key_event;
+		gobject_t *gobj = & modal_overlay_t::instance();
+		focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+		_MY_ASSERT(focus_aware, return);
+
+		if (!custom::keyboard_filter_chain_t::instance().process_key(key)) {
+			focus_aware->key_event((key_t::key_t)key);
+		}
+	}
+
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, double argd) OVERRIDE {
+		_MY_ASSERT(host, return);
+		host->test_response(arg8,arg16,arg32,argd);
+	}
+};
+
+
 
 void print_chars(ttype_font_t &fnt, surface_t &s1, const char * chars) {
 
@@ -272,14 +294,21 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		link::serializer_t *serializer = new link::serializer_t();
 		serializer->init(&sintf);
 
+		// прием удаленной клавиатуры и тестовое замыкание
+		debug_intf_impl_t *debug_intf_impl = new debug_intf_impl_t();
+		debug_intf_impl->init(serializer->get_host_debug_interface());
+		serializer->add_implementation(debug_intf_impl);
+
+		// оповещаем хоста об обновлении модели
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
-		link_model_updater->init(serializer);
+		link_model_updater->init(serializer->get_host_model_interface());
 		serializer->add_implementation(link_model_updater);
 
+		// обрабатываем запросы к вфайловой системе
 		app::file_server_t *file_server = new app::file_server_t();
 		test::file_system_impl_t *file_system = new test::file_system_impl_t();
 		file_system->init("files");
-		file_server->init(serializer, file_system);
+		file_server->init(serializer->get_host_file_interface(), file_system);
 		serializer->add_implementation(file_server);
 
 	} else {
@@ -289,8 +318,13 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		link::host_serializer_t *host_serializer = new link::host_serializer_t();
 		host_serializer->init(&sintf);
 
+		// принимаем сообщения лога от slave
+		host_debug_intf_impl_t *host_debug_intf_impl = new host_debug_intf_impl_t();
+		host_serializer->add_implementation(host_debug_intf_impl);
+
+		// обновляем свою модель от slave
 		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
-		link_model_repeater->init(host_serializer);
+		link_model_repeater->init(host_serializer->get_exported_model_interface());
 		host_serializer->add_implementation(link_model_repeater);
 
 	}

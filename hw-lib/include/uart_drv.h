@@ -15,6 +15,8 @@
 
 #define UART_BUFF_SIZE 512
 
+namespace hw {
+
 class uart_drv_t {
 private:
 	u8 _buf[UART_BUFF_SIZE];
@@ -31,5 +33,6 @@ public:
 	bool is_empty();
 };
 
+}
 
 #endif /* UART_DRV_H_ */

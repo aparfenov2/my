@@ -1,0 +1,133 @@
+<proto>
+	<messages>
+		<message name="read_model_data_request_t">
+			<field name="path" type="string" required="true"  />
+		</message>
+		<message name="read_model_data_response_t">
+			<field name="path" type="string" required="true"  />
+			<field name="string_value" type="string"  />
+			<field name="int_value" type="int32" />
+			<field name="float_value" type="float"/>
+			<field name="code" type="uint32" required="true"/>
+		</message>
+		<message name="write_model_data_request_t">
+			<field name="path" type="string" required="true" />
+			<field name="string_value" type="string" />
+			<field name="int_value" type="int32" />
+			<field name="float_value" type="float"/>
+		</message>
+		<message name="write_model_data_ack_t">
+			<field name="code" type="uint32" required="true"/>
+		</message>
+		
+		<message name="file_data_t">
+			<field name="file_id" type="uint32" required="true"/>
+			<field name="offset" type="uint32" required="true"/>
+			<field name="crc" type="uint32" />
+			<field name="first" type="bool" required="true"/>
+			<field name="data" type="bytes" required="true" />
+			<field name="len" type="uint32" required="true" />
+		</message>
+		<message name="download_request_t">
+			<field name="file_id" type="uint32" required="true"/>
+			<field name="offset" type="uint32" required="true"/>
+			<field name="length" type="uint32" required="true"/>
+		</message>
+		<message name="file_info_t">
+			<field name="file_id" type="uint32" required="true"/>
+			<field name="cur_len" type="uint32" required="true"/>
+			<field name="max_len" type="uint32" />
+			<field name="crc" type="uint32" />
+		</message>
+		
+		<message name="test_message_t">
+			<field name="arg8" type="uint32" required="true"/>
+			<field name="arg16" type="uint32" required="true"/>
+			<field name="arg32" type="uint32" required="true"/>
+			<field name="argd" type="float" required="true"/>
+		</message>
+		<message name="log_event_t">
+			<field name="msg" type="string" required="true" />
+		</message>
+		
+
+		<message name="host_interface_t">
+			<field name="read_model_data_response" type="read_model_data_response_t" />
+			<field name="write_model_data_ack" type="write_model_data_ack_t" />
+			
+			<field name="download_response" type="file_data_t" />
+			<field name="file_info_response" type="file_info_t" />
+			<field name="error" type="uint32" />
+
+			<field name="test_response" type="test_message_t" />
+			<field name="log_event" type="log_event_t" />
+		</message>
+
+		<message name="exported_interface_t">
+			<field name="read_model_data" type="read_model_data_request_t" />
+			<field name="write_model_data" type="write_model_data_request_t" />
+
+			<field name="upload_file" type="file_data_t" />
+			<field name="download_file" type="download_request_t" />
+			<field name="update_file_info" type="file_info_t" />
+			<field name="read_file_info" type="uint32" />
+			
+			<field name="key_event" type="uint32" />
+			<field name="test_request" type="test_message_t" />
+		</message>
+	</messages>
+	
+	<interfaces>
+<!-- имя метода интерфейса должно совпадать с именем поля в сообщении интерфейса ! -->	
+		<interface name="host_model_interface_t" message="host_interface_t" opposite_interface="exported_model_interface_t">
+			<method name="read_model_data_response"  > 
+				<opt_arg name="string_value" />
+			</method>
+			<method name="read_model_data_response" > 
+				<opt_arg name="int_value" />
+			</method>
+			<method name="read_model_data_response" > 
+				<opt_arg name="float_value"/>
+			</method>
+			<method name="write_model_data_ack" /> 
+		</interface>
+		<interface name="host_file_interface_t" message="host_interface_t" opposite_interface="exported_file_interface_t" >
+			<method name="download_response" /> 
+			<method name="file_info_response" > 
+				<opt_arg name="max_len"/>
+			</method>
+			<method name="error" /> 
+		</interface>
+		<interface name="host_debug_interface_t" message="host_interface_t" opposite_interface="exported_debug_interface_t" >
+			<method name="test_response" /> 
+			<method name="log_event" /> 
+		</interface>
+
+
+		
+		<interface name="exported_model_interface_t" message="exported_interface_t" opposite_interface="host_model_interface_t"  >
+			<method name="read_model_data"  /> 
+			
+			<method name="write_model_data"  > 
+				<opt_arg name="string_value" />
+			</method>
+			<method name="write_model_data" > 
+				<opt_arg name="int_value" />
+			</method>
+			<method name="write_model_data" > 
+				<opt_arg name="float_value"/>
+			</method>
+		</interface>
+		<interface name="exported_file_interface_t" message="exported_interface_t" opposite_interface="host_file_interface_t"   >
+			<method name="upload_file" /> 
+			<method name="download_file" /> 
+			<method name="update_file_info" /> 
+			<method name="read_file_info" /> 
+		</interface>
+		<interface name="exported_debug_interface_t"  message="exported_interface_t" opposite_interface="host_debug_interface_t"  >
+			<method name="key_event" /> 
+			<method name="test_request" /> 
+		</interface>
+		
+	</interfaces>
+</proto>

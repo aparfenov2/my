@@ -30,7 +30,7 @@ int main(void)
     // ВАЖНО!!! функцию по инициализации флеши вызывать после c_int00 и после std::copy_in(&bootTimeTable)
     InitFlash();
 
-    init_zone7();
+    hw::init_zone7();
 
     SSD1963_InitHW();
 

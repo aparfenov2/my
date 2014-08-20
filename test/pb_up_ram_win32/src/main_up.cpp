@@ -50,12 +50,12 @@ u32 max_len = 0;
 
 void hdlc_on_rx_frame(const u8_t* buffer, u16_t bytes_received) {
 
-	myvi::proto::host_interface_t host_interface;
+	link::proto::host_interface_t host_interface;
 
 	_WEAK_ASSERT(host_interface.ParseFromArray(buffer,bytes_received), return);
 
 	response_frame_received = true;
-	_WEAK_ASSERT(host_interface.has_file_info_response(), return);
+	if (! host_interface.has_file_info_response()) return;
 
 	max_len = host_interface.file_info_response().max_len();
 
@@ -102,7 +102,7 @@ extern "C" u16_t crc16_ccitt_calc_data(u16_t crc, u8_t* data, u16_t data_length)
 
 u8 *hdlc_buf = 0;
 
-void send_message(myvi::proto::exported_interface_t &exported_interface);
+void send_message(link::proto::exported_interface_t &exported_interface);
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -170,7 +170,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	s32 frame_count = 0;
 
-	myvi::proto::exported_interface_t exported_interface;
+	link::proto::exported_interface_t exported_interface;
 
 // get file info
 	exported_interface.set_read_file_info(file_id);
@@ -202,7 +202,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		s32 pkt_len = _MY_MIN(remain,_SER_MAX_CHART_LEN);
 		remain -= pkt_len;
 
-		myvi::proto::file_data_t *updata = exported_interface.mutable_upload_file();
+		link::proto::file_data_t *updata = exported_interface.mutable_upload_file();
 
 		updata->set_file_id(file_id);
 		updata->set_first(frame_count == 0);
@@ -218,11 +218,11 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 		frame_count++;
 // wait ACK
-		u32 read = 0;
-		while (!read) {
-			char byte;
-			lLastError = serial.Read(&byte,1,&read);
-		}
+
+		u32 read;
+		do {
+			serial.Read(hdlc_buf,HDLC_BUF_LEN,&read);
+		} while(read);
 
 	} while (remain);
 
@@ -231,7 +231,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	exported_interface.Clear();
 
-	myvi::proto::file_info_t * file_info = exported_interface.mutable_update_file_info();
+	link::proto::file_info_t * file_info = exported_interface.mutable_update_file_info();
 
 	file_info->set_file_id(file_id);
 	file_info->set_cur_len(font_sz);
@@ -240,7 +240,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	return 0;
 }
 
-void send_message(myvi::proto::exported_interface_t &exported_interface) {
+void send_message(link::proto::exported_interface_t &exported_interface) {
 
 	LONG    lLastError = ERROR_SUCCESS;
 
