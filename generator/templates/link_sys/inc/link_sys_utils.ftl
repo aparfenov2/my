@@ -28,6 +28,7 @@
 		<#case "uint32"><#return true>
 		<#case "string"><#return true>
 		<#case "double"><#return true>
+		<#case "float"><#return true>
 		<#case "bytes"><#return true>
 		<#case "bool"><#return true>
 	</#switch>
@@ -40,6 +41,7 @@
 		<#case "uint32"><#return "u32">
 		<#case "string"><#return "const char *">
 		<#case "double"><#return "double">
+		<#case "float"><#return "float">
 		<#case "bytes"><#return "u8 *">
 		<#case "bool"><#return "bool">
 	</#switch>
@@ -57,14 +59,14 @@
 <#macro enum_field_args fld mtd>
 	<#if is_base_type(fld.@type)>
 		<@enum_base_field_arg fld; name,ctype>
-			<#nested name,fld.@type,ctype>
+			<#nested name,fld.@type,ctype,fld>
 		</@enum_base_field_arg>
 	<#else>
 		<#local fld_msg = find_msgdef(fld.@type)>
 		<#list fld_msg.field as fld0>
 			<#if fld0.@required?has_content && fld0.@required == "true">
 				<@enum_base_field_arg fld0; name,ctype>
-					<#nested name,fld0.@type,ctype>
+					<#nested name,fld0.@type,ctype,fld0>
 				</@enum_base_field_arg>
 			</#if>
 		</#list>
@@ -72,7 +74,7 @@
 		<#list mtd.opt_arg as arg>
 			<#local flda = match_field(fld_msg arg.@name)>
 			<@enum_base_field_arg flda; name,ctype>
-				<#nested name,flda.@type,ctype>
+				<#nested name,flda.@type,ctype,flda>
 			</@enum_base_field_arg>
 		</#list>
 	</#if>	

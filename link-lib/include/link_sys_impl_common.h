@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+// щрн юбрнйнохъ !!!
+
 namespace link {
 
 class packet_sender_t {

@@ -7,14 +7,14 @@
 			<field name="path" type="string" required="true"  />
 			<field name="string_value" type="string"  />
 			<field name="int_value" type="int32" />
-			<field name="float_value" type="double"/>
+			<field name="float_value" type="float"/>
 			<field name="code" type="uint32" required="true"/>
 		</message>
 		<message name="write_model_data_request_t">
 			<field name="path" type="string" required="true" />
 			<field name="string_value" type="string" />
 			<field name="int_value" type="int32" />
-			<field name="float_value" type="double"/>
+			<field name="float_value" type="float"/>
 		</message>
 		<message name="write_model_data_ack_t">
 			<field name="code" type="uint32" required="true"/>
@@ -44,7 +44,7 @@
 			<field name="arg8" type="uint32" required="true"/>
 			<field name="arg16" type="uint32" required="true"/>
 			<field name="arg32" type="uint32" required="true"/>
-			<field name="argd" type="double" required="true"/>
+			<field name="argd" type="float" required="true"/>
 		</message>
 		<message name="log_event_t">
 			<field name="msg" type="string" required="true" />

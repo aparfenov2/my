@@ -1,5 +1,6 @@
 /*
  * Описание реализации интерфейса связи системного уровня
+ * ЭТО АВТОКОПИЯ !!! *
  *
  *  Created on: 12.03.2013
  *      Author: gordeev
@@ -61,9 +62,18 @@ public:
 public:
 
 	void add_implementation(exported_system_interface_t *impl) {
-		host_model_interface_t_serializer.set_implementation(dynamic_cast<exported_model_interface_t*>(impl));
-		host_file_interface_t_serializer.set_implementation(dynamic_cast<exported_file_interface_t*>(impl));
-		host_debug_interface_t_serializer.set_implementation(dynamic_cast<exported_debug_interface_t*>(impl));
+		exported_model_interface_t *exported_model_interface = dynamic_cast<exported_model_interface_t*>(impl);
+		if (exported_model_interface) {
+			host_model_interface_t_serializer.set_implementation(exported_model_interface);
+		}
+		exported_file_interface_t *exported_file_interface = dynamic_cast<exported_file_interface_t*>(impl);
+		if (exported_file_interface) {
+			host_file_interface_t_serializer.set_implementation(exported_file_interface);
+		}
+		exported_debug_interface_t *exported_debug_interface = dynamic_cast<exported_debug_interface_t*>(impl);
+		if (exported_debug_interface) {
+			host_debug_interface_t_serializer.set_implementation(exported_debug_interface);
+		}
 	}
 
 	void init(serial_interface_t *asintf ) {
@@ -112,9 +122,18 @@ public:
 public:
 
 	void add_implementation(host_system_interface_t *impl) {
-		exported_model_interface_t_serializer.set_implementation(dynamic_cast<host_model_interface_t*>(impl));
-		exported_file_interface_t_serializer.set_implementation(dynamic_cast<host_file_interface_t*>(impl));
-		exported_debug_interface_t_serializer.set_implementation(dynamic_cast<host_debug_interface_t*>(impl));
+		host_model_interface_t *host_model_interface = dynamic_cast<host_model_interface_t*>(impl);
+		if (host_model_interface) {
+			exported_model_interface_t_serializer.set_implementation(host_model_interface);
+		}
+		host_file_interface_t *host_file_interface = dynamic_cast<host_file_interface_t*>(impl);
+		if (host_file_interface) {
+			exported_file_interface_t_serializer.set_implementation(host_file_interface);
+		}
+		host_debug_interface_t *host_debug_interface = dynamic_cast<host_debug_interface_t*>(impl);
+		if (host_debug_interface) {
+			exported_debug_interface_t_serializer.set_implementation(host_debug_interface);
+		}
 	}
 
 	exported_model_interface_t * get_exported_model_interface()  {

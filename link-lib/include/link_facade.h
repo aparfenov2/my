@@ -1,5 +1,6 @@
 /*
 * ‘асад дл€ библиотеки св€зи
+* Ё“ќ ј¬“ќ ќѕ»я !!!
 */
 
 #ifndef _LINK_FACADE_H
@@ -23,11 +24,13 @@ public:
 
 	void init(host_interface_t *ahost, serial_interface_t *asintf) {
 
-		dec.init(ahost);
-		enc.init(&hs);
-
 		hs.init(asintf);
+
+		dec.init(ahost);
 		hs.add_implementation(&dec);
+
+		enc.init(hs.get_exported_model_interface());
+
 	}
 
 	// сюда хост посылает запросы
@@ -35,8 +38,8 @@ public:
 		return &enc;
 	}
 
-	exported_system_interface_t * get_sys_interface() {
-		return &hs;
+	host_serializer_t & get_serializer() {
+		return hs;
 	}
 
 };

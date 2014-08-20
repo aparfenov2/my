@@ -14,7 +14,7 @@
 #include "types.h"
 #include "assert_impl.h"
 
-
+using namespace hw;
 
 void my_main();
 extern "C" void SSD1963_InitHW();

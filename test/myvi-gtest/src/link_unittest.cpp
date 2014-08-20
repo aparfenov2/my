@@ -42,7 +42,9 @@ public:
 	}
 };
 
-class exported_sys_impl_t : public link::exported_system_interface_t {
+class exported_sys_impl_t : 
+	public link::exported_system_interface_t,
+	public link::exported_model_interface_t {
 public:
 	bool received;
 public:
@@ -50,47 +52,24 @@ public:
 		received = false;
 	}
 	// запрос на чтение данных из модели
-	virtual void read_model_data(char * path) OVERRIDE {
+	virtual void read_model_data(const char * path) OVERRIDE {
 		FAIL();
 	}
 
 	// запрос на запись данных в модель
-	virtual void write_model_data(char * path, char * string_value) OVERRIDE {
+	virtual void write_model_data(const char * path, const char * string_value) OVERRIDE {
 		FAIL();
 	}
 
-	virtual void write_model_data(char * path, s32 int_value) OVERRIDE {
+	virtual void write_model_data(const char * path, s32 int_value) OVERRIDE {
 		EXPECT_EQ(myvi::string_t("dme.ch"), myvi::string_t(path));
 		EXPECT_EQ(127, int_value);
 		received = true;
 	}
 
-	virtual void write_model_data(char * path,  double float_value) OVERRIDE {
+	virtual void write_model_data(const char * path,  float float_value) OVERRIDE {
 		FAIL();
 	}
-
-
-	// событие клавиатуры
-	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
-		FAIL();
-	}
-
-	virtual void upload_file(u32 file_id, u32 offset, u32 crc, bool first, u8* data, u32 len) OVERRIDE {
-		FAIL();
-	}
-
-	virtual void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE {
-		FAIL();
-	}
-
-	virtual void update_file_info(u32 file_id, u32 cur_len, u32 max_len, u32 crc) OVERRIDE {
-		FAIL();
-	}
-
-	virtual void read_file_info(u32 file_id) OVERRIDE {
-		FAIL();
-	}
-
 
 };
 
@@ -108,14 +87,15 @@ TEST(LinkTest, Loopback) {
 	host_facade.init(&ahost, &loopback_host);
 
 // client side
-	link::local_facade_t local_facade;
+	link::serializer_t local_facade;
 	exported_sys_impl_t exported_sys_impl;
-	local_facade.init(&exported_sys_impl, &loopback_local);
+	local_facade.init(&loopback_local);
+	local_facade.add_implementation(&exported_sys_impl);
 
 // host->local
 	host_facade.get_app_interface()->set_dme_ch(127);
 // local->host
-	local_facade.get_sys_interface()->read_model_data_response("dme.ch",(s32)128, 0);
+	local_facade.get_host_model_interface()->read_model_data_response("dme.ch",0,(s32)128);
 
 	EXPECT_TRUE(ahost.received);
 	EXPECT_TRUE(exported_sys_impl.received);

@@ -39,12 +39,19 @@
 		<#local fld = common.match_field(intf_msg, mtd.@name)>
 void ${intf.@name}_serializer_t::${mtd.@name} (${common.make_arg_str(intf, mtd)}) {
 	link_proto_${intf.@message} intf;
-	memset(&intf, sizeof(intf), 0);
+	memset(&intf, 0, sizeof(intf));
+	<#if !(fld.@required?has_content && fld.@required == "true")>
+		<#lt>	intf.has_${fld.@name} = true;
+	</#if>
 	<#if common.is_base_type(fld.@type)>
 		<@emit_assignment fld.@type "intf." + fld.@name fld.@name/>
 	<#else>
-		<@common.enum_field_args fld mtd;arg_name,type,ctype >
-			<@emit_assignment type "intf." + fld.@name + "." + arg_name arg_name/>
+		<@common.enum_field_args fld mtd;arg_name,type,ctype,cfld >
+			<#local lpfx = "intf." + fld.@name>
+			<#if !(cfld.@required?has_content && cfld.@required == "true")>
+				<#lt>	${lpfx}.has_${arg_name} = true;
+			</#if>
+			<@emit_assignment type lpfx + "." + arg_name arg_name/>
 		</@common.enum_field_args>
 	</#if>
 	sender->send_packet(&intf, sizeof(intf));

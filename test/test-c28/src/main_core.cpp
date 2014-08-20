@@ -40,21 +40,37 @@ extern "C" char* my_itoa(int i, char b[]);
 
 class logger_impl_t : public logger_t {
 public:
+	link::host_debug_interface_t *host;
 public:
-
+	logger_impl_t() {
+		host = 0;
+	}
+	void init(link::host_debug_interface_t *_host) {
+		host = _host;
+	}
 
     virtual logger_t& operator << (s32 v) OVERRIDE {
     	char ls[32];
     	my_itoa(v,ls);
     	printf(ls);
+    	if (host) {
+    		host->log_event(ls);
+    	}
         return *this;
     }
 
     virtual logger_t& operator << (const char *v) OVERRIDE {
-		if (v == _endl)
+		if (v == _endl) {
 			printf("\n");
-		else
+	    	if (host) {
+	    		host->log_event("\n");
+	    	}
+		} else {
 			printf(v);
+	    	if (host) {
+	    		host->log_event(v);
+	    	}
+		}
         return *this;
     }
 
@@ -193,6 +209,38 @@ void draw_pallete(surface_t &drv1) {
 }
 
 
+class debug_intf_impl_t :
+	public link::exported_system_interface_t,
+	public link::exported_debug_interface_t {
+public:
+	link::host_debug_interface_t *host;
+public:
+	debug_intf_impl_t() {
+		host = 0;
+	}
+
+	void init(link::host_debug_interface_t *_host) {
+		host = _host;
+	}
+
+	virtual void key_event (u32 key_event) OVERRIDE {
+		myvi::key_t::key_t key = (myvi::key_t::key_t)key_event;
+		gobject_t *gobj = & modal_overlay_t::instance();
+		focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+		_MY_ASSERT(focus_aware, return);
+
+		if (!custom::keyboard_filter_chain_t::instance().process_key(key)) {
+			focus_aware->key_event((key_t::key_t)key);
+		}
+	}
+
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, double argd) OVERRIDE {
+		_MY_ASSERT(host, return);
+		host->test_response(arg8,arg16,arg32,argd);
+	}
+};
+
+
 
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
@@ -203,6 +251,7 @@ link::serializer_t serializer;
 custom::link_model_updater_t link_model_updater;
 app::file_server_t file_server;
 file_system_impl_t file_system;
+debug_intf_impl_t debug_intf_impl;
 uart_drv_t	uart;
 ssd1963drv_t drv1;
 Spi spi;
@@ -260,6 +309,9 @@ void my_main() {
     sintf.init(&uart);
     serializer.init(&sintf);
 
+    logger_impl.init(serializer.get_host_debug_interface());
+    debug_intf_impl.init(serializer.get_host_debug_interface());
+    serializer.add_implementation(&debug_intf_impl);
 
     u8 *ttcache_dat;
     u32 ttcache_sz;

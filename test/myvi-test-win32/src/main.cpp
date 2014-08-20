@@ -173,6 +173,51 @@ public:
 };
 
 
+class host_debug_intf_impl_t : 
+	public link::host_system_interface_t,
+	public link::host_debug_interface_t {
+public:
+	virtual void test_response (u32 _arg8, u32 _arg16, u32 _arg32, double _argd) OVERRIDE {
+	}
+
+	virtual void log_event (const char * msg) OVERRIDE {
+		_LOG2("slave: ", msg);
+	}
+};
+
+
+class debug_intf_impl_t :
+	public link::exported_system_interface_t,
+	public link::exported_debug_interface_t {
+public:
+	link::host_debug_interface_t *host;
+public:
+	debug_intf_impl_t() {
+		host = 0;
+	}
+
+	void init(link::host_debug_interface_t *_host) {
+		host = _host;
+	}
+
+	virtual void key_event (u32 key_event) OVERRIDE {
+		myvi::key_t::key_t key = (myvi::key_t::key_t)key_event;
+		gobject_t *gobj = & modal_overlay_t::instance();
+		focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
+		_MY_ASSERT(focus_aware, return);
+
+		if (!custom::keyboard_filter_chain_t::instance().process_key(key)) {
+			focus_aware->key_event((key_t::key_t)key);
+		}
+	}
+
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, double argd) OVERRIDE {
+		_MY_ASSERT(host, return);
+		host->test_response(arg8,arg16,arg32,argd);
+	}
+};
+
+
 
 void print_chars(ttype_font_t &fnt, surface_t &s1, const char * chars) {
 
@@ -249,10 +294,17 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		link::serializer_t *serializer = new link::serializer_t();
 		serializer->init(&sintf);
 
+		// прием удаленной клавиатуры и тестовое замыкание
+		debug_intf_impl_t *debug_intf_impl = new debug_intf_impl_t();
+		debug_intf_impl->init(serializer->get_host_debug_interface());
+		serializer->add_implementation(debug_intf_impl);
+
+		// оповещаем хоста об обновлении модели
 		custom::link_model_updater_t *link_model_updater = new custom::link_model_updater_t();
 		link_model_updater->init(serializer->get_host_model_interface());
 		serializer->add_implementation(link_model_updater);
 
+		// обрабатываем запросы к вфайловой системе
 		app::file_server_t *file_server = new app::file_server_t();
 		test::file_system_impl_t *file_system = new test::file_system_impl_t();
 		file_system->init("files");
@@ -266,6 +318,11 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		link::host_serializer_t *host_serializer = new link::host_serializer_t();
 		host_serializer->init(&sintf);
 
+		// принимаем сообщения лога от slave
+		host_debug_intf_impl_t *host_debug_intf_impl = new host_debug_intf_impl_t();
+		host_serializer->add_implementation(host_debug_intf_impl);
+
+		// обновляем свою модель от slave
 		custom::link_model_repeater_t *link_model_repeater = new custom::link_model_repeater_t();
 		link_model_repeater->init(host_serializer->get_exported_model_interface());
 		host_serializer->add_implementation(link_model_repeater);

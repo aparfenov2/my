@@ -42,15 +42,15 @@ public:
 	}
 
 	// ответ на запрос на чтение данных из модели
-	virtual void read_model_data_response(char * path, char * value, u32 code) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, const char * value) OVERRIDE {
 		<@emit_host_changed ['string'] />
 	}
 
-	virtual void read_model_data_response(char * path, s32 value, u32 code ) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, s32 value ) OVERRIDE {
 		<@emit_host_changed ['u8','s8','u16', 's16', 'u32', 's32', 'enum'] />
 	}
 
-	virtual void read_model_data_response(char * path, double value, u32 code ) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, float value ) OVERRIDE {
 		<@emit_host_changed ['float'] />
 	}
 
