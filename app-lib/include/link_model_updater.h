@@ -47,7 +47,7 @@ public:
 			host2->read_model_data_response(path.c_str(),0, value.get_int_value());
 			break;
 		case variant_type_t::FLOAT:
-			host2->read_model_data_response(path.c_str(),0, value.get_float_value());
+			host2->read_model_data_response(path.c_str(),0, (float)value.get_float_value());
 			break;
 		}
 	}
@@ -79,7 +79,7 @@ public:
 		allowed_respond = true;
 	}
 
-	virtual void write_model_data(const char * path,  double float_value) OVERRIDE {
+	virtual void write_model_data(const char * path,  float float_value) OVERRIDE {
 		variant_t value(float_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);
@@ -121,7 +121,7 @@ public:
 			exported_sys->write_model_data(path.c_str(), value.get_int_value());
 			break;
 		case variant_type_t::FLOAT:
-			exported_sys->write_model_data(path.c_str(), value.get_float_value());
+			exported_sys->write_model_data(path.c_str(), (float) value.get_float_value());
 			break;
 		}
 	}
@@ -146,7 +146,7 @@ public:
 		allowed_respond = true;
 	}
 
-	virtual void read_model_data_response(const char * path, u32 code, double float_value ) OVERRIDE {
+	virtual void read_model_data_response(const char * path, u32 code, float float_value ) OVERRIDE {
 		variant_t value(float_value);
 		allowed_respond = false;
 		model_t::instance()->update(path, value);

@@ -23,8 +23,7 @@ public:
 		return oss.str();
 	}
 
-	virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &read ) OVERRIDE {
-		read = 0;
+	virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data ) OVERRIDE {
 		std::ifstream infile(get_file_name(file_id), std::ifstream::binary);
 
 		infile.seekg( offset, std::ios::end );
@@ -39,13 +38,10 @@ public:
 		infile.read((char *)data, len);
 		infile.close();
 
-		read = len;
 		return true;
 	}
 
-	virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &written ) OVERRIDE {
-
-		written = 0;
+	virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data) OVERRIDE {
 
 		std::ofstream outfile (get_file_name(file_id),std::ofstream::binary | std::ofstream::app);
 		outfile.seekp( 0, std::ios::end );
@@ -60,7 +56,6 @@ public:
 		outfile.write((char *)data, len);
 		outfile.close();
 
-		written = len;
 		return true;
 	}
 

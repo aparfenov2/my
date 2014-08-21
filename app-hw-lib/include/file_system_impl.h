@@ -30,8 +30,8 @@ namespace hw {
 
 		bool allocate_and_read_font_cache(u8 *&buf, u32 &sz);
 
-		virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &read ) OVERRIDE;
-		virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &written ) OVERRIDE;
+		virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data ) OVERRIDE;
+		virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data ) OVERRIDE;
 		virtual bool get_info(u32 file_id, u32 &len, u32 &max_len) OVERRIDE;
 		virtual bool set_info(u32 file_id, u32 len) OVERRIDE;
 

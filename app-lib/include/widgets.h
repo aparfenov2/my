@@ -550,10 +550,16 @@ class modal_overlay_t : public gobject_t, public focus_aware_t {
 private:
 	modal_overlay_t() {
 	}
-	static modal_overlay_t _instance;
+	static modal_overlay_t *_instance;
 public:
+
+	static void allocate_new() {
+		_instance = new modal_overlay_t();
+	}
+
 	static modal_overlay_t & instance() {
-		return _instance;
+		_MY_ASSERT(_instance, 0);
+		return *_instance;
 	}
 
 	void push_modal(gobject_t *modal) {

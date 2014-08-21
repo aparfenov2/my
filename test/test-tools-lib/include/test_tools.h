@@ -45,7 +45,7 @@ public:
 		serial = 0;
 	}
 
-	void init(serial_port_t port);
+	bool init(serial_port_t port);
 
 	virtual void send(u8 *data, u32 len) OVERRIDE;
 

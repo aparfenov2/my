@@ -234,7 +234,7 @@ public:
 		}
 	}
 
-	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, double argd) OVERRIDE {
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, float argd) OVERRIDE {
 		_MY_ASSERT(host, return);
 		host->test_response(arg8,arg16,arg32,argd);
 	}
@@ -245,7 +245,7 @@ public:
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
 extern resources_t res;
-test_screen_t screen1;
+
 serial_interface_impl_t sintf;
 link::serializer_t serializer;
 custom::link_model_updater_t link_model_updater;
@@ -258,6 +258,8 @@ Spi spi;
 FRAM fram;
 FlashDev flash;
 
+
+extern void init_singletones();
 
 void my_main() {
 
@@ -272,31 +274,43 @@ void my_main() {
 	fram.init(&spi);
 	flash.init(&spi);
 
+
+	init_singletones();
+
+
 	_WEAK_ASSERT(file_system.init(&fram, &flash), 0);
 
 // show logo
-	u32 logo_len, logo_max_len;
-	if (file_system.get_info(LOGO_FILE_ID, logo_len, logo_max_len)) {
+	bool can_show_logo = false;
+	do {
+		u32 logo_len, logo_max_len;
+		_WEAK_ASSERT(file_system.get_info(LOGO_FILE_ID, logo_len, logo_max_len), break);
 
 	    u32 picbuf_sz = BMP_GET_SIZE(TFT_WIDTH,TFT_HEIGHT,24);
 
-		if (logo_len && logo_len <= picbuf_sz) {
+		_WEAK_ASSERT(logo_len && logo_len <= picbuf_sz, break);
 
-		    u8 *picbuf = new u8[picbuf_sz];
-		    surface_24bpp_t spic(TFT_WIDTH,TFT_HEIGHT,picbuf_sz, picbuf);
+		u8 *picbuf = new u8[picbuf_sz];
+		_WEAK_ASSERT(picbuf, break);
 
-		    u32 read;
-		    file_system.read_file(LOGO_FILE_ID,0,logo_len, picbuf, read);
+		surface_24bpp_t spic(TFT_WIDTH,TFT_HEIGHT,picbuf_sz, picbuf);
 
-		    drv1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
-		    spic.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
+		do {
+			_WEAK_ASSERT(file_system.read_file(LOGO_FILE_ID,0,logo_len, picbuf), break);
+
+			drv1.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
+			spic.set_allowed_area(0,0,TFT_WIDTH,TFT_HEIGHT);
 
 			spic.copy_to(0,0,-1,-1,0,0,drv1);
-			delete picbuf;
-		} else {
-			draw_pallete(drv1);
-		}
-	} else {
+
+			can_show_logo = true;
+		} while (false);
+
+		delete picbuf;
+
+	} while(false);
+
+	if (!can_show_logo) {
 		draw_pallete(drv1);
 	}
 
@@ -329,10 +343,9 @@ void my_main() {
 		u8 *xml = new u8[schema_len + 0x0f];
 		_WEAK_ASSERT(xml, break);
 
-		u32 read;
-		_WEAK_ASSERT(file_system.read_file(schema_file_id,0,schema_len, xml, read), break);
-		_WEAK_ASSERT(read == schema_len, break);
+		_WEAK_ASSERT(file_system.read_file(schema_file_id,0,schema_len, xml), break);
 
+		xml[schema_len] = 0;
 		gen::meta_registry_t::instance().init((char *)xml);
 		schema_loaded = true;
 
@@ -346,12 +359,13 @@ void my_main() {
     	link_model_updater.init(serializer.get_host_model_interface());
     	serializer.add_implementation(&link_model_updater);
 
-		screen1.init();
-		screen1.dirty = true;
+    	test_screen_t *screen1 = new test_screen_t();
+		screen1->init();
+		screen1->dirty = true;
 
 		modal_overlay_t::instance().w = TFT_WIDTH;
 		modal_overlay_t::instance().h = TFT_HEIGHT;
-		modal_overlay_t::instance().push_modal(&screen1);
+		modal_overlay_t::instance().push_modal(screen1);
 		modal_overlay_t::instance().dirty = true;
 
     }

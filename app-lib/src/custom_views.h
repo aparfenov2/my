@@ -1114,12 +1114,17 @@ class popup_manager_t  {
 private:
 	popup_manager_t() {
 	}
-	static popup_manager_t _instance;
+	static popup_manager_t *_instance;
 public:
 	view_cache_t view_cache;
 public:
+	static void allocate_new() {
+		_instance = new popup_manager_t();
+	}
+
 	static popup_manager_t & instance() {
-		return _instance;
+		_MY_ASSERT(_instance, 0);
+		return *_instance;
 	}
 
 	void popup(myvi::string_t view_id) {

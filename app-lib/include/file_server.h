@@ -43,8 +43,7 @@ public:
 	// data - указатель на массив передаваемых данных
 	// len - длина массива
 	virtual void upload_file(u32 file_id, u32 offset, bool first, u8* data, u32 len) OVERRIDE {
-		u32 written;
-		if (fs->write_file(file_id, offset, len, data, written )) {
+		if (fs->write_file(file_id, offset, len, data )) {
 			host->error(0);
 		} else {
 			host->error(1);
@@ -55,11 +54,10 @@ public:
 	// offset - смещение от начала файла, байт
 	// length - длина, байт
 	virtual void download_file(u32 file_id, u32 offset, u32 length) OVERRIDE {
-		u32 read;
 
 		if (length < _FILE_SERVER_DATABUF_LENGTH) {
-			if (fs->read_file(file_id,offset,length,data_buf, read)) {
-				host->download_response(file_id,offset,false,data_buf,read);
+			if (fs->read_file(file_id,offset,length,data_buf)) {
+				host->download_response(file_id,offset,false,data_buf,length);
 			} else {
 				host->error(1);
 			}

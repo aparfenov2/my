@@ -10,7 +10,6 @@ using namespace hw;
 
 extern "C" u16_t crc16_ccitt_calc_data(u16_t crc, u8_t* data, u16_t data_length);
 
-static u32 last_sector = 0xffff;
 #define CRC_SEED 0xabba
 
 #define FILE_TABLE_MAGIC 0xabba
@@ -59,53 +58,67 @@ static file_rec_t * find_file(u32 id) {
 
 
 
-bool file_system_impl_t::read_file(u32 file_id, u32 offset, u32 length, u8 *buf, u32 &read ) {
+#define _FLASH_BLOCK_SIZE 255
+
+bool file_system_impl_t::read_file(u32 file_id, u32 offset, u32 length, u8 *buf ) {
 
 	file_rec_t * fr = find_file(file_id);
-	read = 0;
-	if (fr) {
-		if (offset + length <= fr->max_len && length <= 255) {
-			u8 buf[255];
-			flash->ReadData2(fr->offset + offset,(u16*)buf, length);
-		} else {
-			return false;
-		}
-	} else {
-		return false;
-	}
-	read = length;
+	if (!fr) return false;
+
+	if (offset + length > fr->max_len) return false;
+
+	u32 remain = length;
+	u32 buf_ofs = 0;
+	do {
+		u32 pkt_len = _MY_MIN(remain,_FLASH_BLOCK_SIZE);
+		remain -= pkt_len;
+
+
+		flash->ReadData2(fr->offset + offset,(u16*)buf + buf_ofs, pkt_len);
+
+
+		offset += _FLASH_BLOCK_SIZE;
+		buf_ofs += _FLASH_BLOCK_SIZE;
+
+
+	} while (remain);
 	return true;
 }
 
 
-bool file_system_impl_t::write_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &written ) {
+
+bool file_system_impl_t::write_file(u32 file_id, u32 offset, u32 len, u8 *data) {
 
 	file_rec_t * fr = find_file(file_id);
-	bool first = offset == 0;
-	written = 0;
+	if (!fr) return false;
 
-	if (fr) {
-		if (first) {
-			last_sector = 0xffff;
-		}
-		u32 ofs = 0;
-		for (u32 addr = offset; ofs < len;) {
-			if (addr >= fr->max_len) {
-				return false;
-			}
-			u32 sector = (fr->offset + addr) >> 16;
-			if (last_sector != sector) {
-				last_sector = sector;
-				flash->SectorErase(fr->offset + addr);
-			}
-			flash->PageProgram2(fr->offset + addr, data[ofs]);
-			addr++;
-			ofs++;
-		}
-	} else {
+	if (offset + len >= fr->max_len) {
 		return false;
 	}
-	written = len;
+
+
+	static u32 last_sector = 0xffff;
+
+	if (!offset) {
+		last_sector = 0xffff;
+	}
+	u32 ofs = 0;
+	// ofs - смещение в data
+	// offset - смещение от начала файла
+	u32 flash_addr = fr->offset + offset;
+
+	for (; ofs < len;) {
+
+		u32 sector = (flash_addr) >> 16;
+
+		if (last_sector != sector) {
+			last_sector = sector;
+			flash->SectorErase(flash_addr);
+		}
+		flash->PageProgram2(flash_addr, data[ofs]);
+		flash_addr++;
+		ofs++;
+	}
 	return true;
 }
 
@@ -173,11 +186,11 @@ bool file_system_impl_t::allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttc
 	_WEAK_ASSERT(ttcache_sz, return false);
 
 	ttcache_dat = new u8[ttcache_sz + 0x0f];
+	_WEAK_ASSERT(ttcache_dat, return false);
 
 	while (!ALIGNED(ttcache_dat)) {
 		ttcache_dat++;
 	}
-	u32 read;
-	_WEAK_ASSERT(this->read_file(TTCACHE_FILE_ID,0,ttcache_sz,ttcache_dat,read), return false);
+	_WEAK_ASSERT(this->read_file(TTCACHE_FILE_ID,0,ttcache_sz,ttcache_dat), return false);
 	return true;
 }
