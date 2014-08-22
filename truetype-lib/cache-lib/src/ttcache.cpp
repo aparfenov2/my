@@ -14,85 +14,14 @@ extern "C" {
 #include FT_FREETYPE_H
 #endif
 
+#include "ttcache.pb.h"
+#ifdef PLATFORM_C28
+#include "pb_decode.h"
+#endif
+
 using namespace myvi;
 //#include <stdio.h>
 ttcache_t globals::ttcache;
-
-#define STREAM_READ_SAFE
-
-#define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
-
-stream_t::stream_t(u8 *_buf, u32 _buf_sz) {
-	_MY_ASSERT(_buf && _buf_sz && ALIGNED(_buf) && ALIGNED(_buf_sz),0);
-	buf = _buf;
-	buf_sz = _buf_sz;
-	ptr = buf;
-	end = buf + _buf_sz;
-}
-
-void stream_t::read(u8 *dst, u32 sz) {
-	_MY_ASSERT((ptr + sz <= end),return);
-	memcpy(dst,ptr,sz);
-	ptr += sz;
-}
-
-u8 stream_t::read_u8() {
-	_MY_ASSERT((ptr + 1 <= end),return 0);
-	u8 ret = *ptr++;
-	return ret;
-}
-
-u32 stream_t::read_u32() {
-	_MY_ASSERT(ALIGNED(ptr) && (ptr + 4 <= end),return 0);
-	u32 ret = *ptr++;
-	ret |= (u32)((u32)(*ptr++) << 8);
-	ret |= (u32)((u32)(*ptr++) << 16);
-	ret |= (u32)((u32)(*ptr++) << 24);
-	return ret;
-}
-
-void stream_t::write_u8(u8 v) {
-	_MY_ASSERT((ptr + 1 <= end),return);
-	*ptr++ = v;
-}
-
-void stream_t::write_u32(u32 v) {
-	_MY_ASSERT(ALIGNED(ptr) && (ptr + 4 <= end),return);
-	*ptr++ = (u8)v;
-	*ptr++ = (u8)(v >> 8);
-	*ptr++ = (u8)(v >> 16);
-	*ptr++ = (u8)(v >> 24);
-}
-
-u8 * stream_t::advance(u32 sz) {
-	_MY_ASSERT(sz && ALIGNED(sz),return 0);
-	_MY_ASSERT(ALIGNED(ptr) && (ptr + sz <= end),return 0);
-	u8 *ret = ptr;
-	ptr += sz;
-	return ret;
-}
-
-void stream_t::write(u8 *src, u32 sz) {
-	_MY_ASSERT(src && sz && ALIGNED(src) && ALIGNED(sz),return);
-	_MY_ASSERT(ALIGNED(ptr) && (ptr + sz <= end),return);
-	memcpy(ptr,src,sz);
-	ptr += sz;
-}
-
-u8 * stream_t::advance_no_check(u32 sz) {
-	_MY_ASSERT(sz>0,return 0);
-	_MY_ASSERT(ptr + sz <= end,return 0);
-	u8 *ret = ptr;
-	ptr += sz;
-	return ret;
-}
-
-void stream_t::write_no_check(u8 *src, u32 sz) {
-	_MY_ASSERT(src && sz,return);
-	_MY_ASSERT(ptr + sz <= end,return);
-	memcpy(ptr,src,sz);
-	ptr += sz;
-}
 
 
 #ifdef TTCACHE_USE_FT
@@ -164,7 +93,6 @@ font_handle_t * ttcache_t::open_face(char * folder, char * _fname, u8 * _mem_fon
 			p = p->next;
 		}
 	}
-	hdl->name = _fname;
 	strncpy(hdl->name2,_fname,FNT_NAME_SIZE);
 
 hdl_lib_init:
@@ -199,7 +127,7 @@ void ttcache_t::set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy) {
 #ifdef TTCACHE_USE_FT
 	FT_Error error;
 #endif
-	_MY_ASSERT(hdl && hdl->face,return);
+	_MY_ASSERT(hdl,return);
 	_MY_ASSERT(!pxx,return);
 #ifdef TTCACHE_USE_FT
 	if (ft_lib_initialied) {
@@ -225,7 +153,7 @@ void ttcache_t::set_char_size_px(font_handle_t *hdl, s32 pxx, s32 pxy) {
 //}
 
 glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t::load_mode_t mode) {
-	_MY_ASSERT(hdl && hdl->face,return 0);
+	_MY_ASSERT(hdl,return 0);
 
 
 	// lookup in cache
@@ -248,7 +176,6 @@ glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t
 		_MY_ASSERT(!error,return 0);
 		if (!gly) {
 			gly = new glyph_t();
-			total_size += sizeof(glyph_t);
 			if (!pp) hdl->root = gly;
 			else pp->next = gly;
 		}
@@ -262,7 +189,6 @@ glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t
 		if (!gly->buf && mode == load_mode_t::LM_RENDER && ((FT_Face)hdl->face)->glyph->bitmap.buffer) {
 
 			gly->buf_sz = BMP_GET_SIZE(gly->bw,gly->bh,8);
-			total_size += gly->buf_sz;
 
 			gly->buf = (u8 *)malloc(gly->buf_sz);
 			memcpy(gly->buf,((FT_Face)hdl->face)->glyph->bitmap.buffer,gly->buf_sz);
@@ -284,7 +210,7 @@ glyph_t * ttcache_t::load_glyph(font_handle_t *hdl, u32 glyph_index, load_mode_t
 
 u32  ttcache_t::get_char_index(font_handle_t *hdl, u32 ucode) {
 
-	_MY_ASSERT(hdl && hdl->face,return 0);
+	_MY_ASSERT(hdl,return 0);
 
 // lookup in cache
 	charmap_pair_t *p = hdl->charmap;
@@ -328,248 +254,323 @@ u32  ttcache_t::get_char_index(font_handle_t *hdl, u32 ucode) {
 
 // ================================= stream IO =================================
 
+
+class charmap_pair_impl_t : public charmap_pair_t {
+public:
+	//charmap_pair_impl_t(charmap_pair_t *src) {
+	//	glyph_index = src->glyph_index, ucode = src->ucode, next = src->next;
+	//}
+
+#ifdef PLATFORM_C28
+	charmap_pair_impl_t(const myvi_proto_charmap_pair_t &src) {
+		glyph_index = src.glyph_index;
+		ucode = src.ucode;
+		next = 0;
+	}
+#else
+	charmap_pair_impl_t(const proto::charmap_pair_t &src) {
+		glyph_index = src.glyph_index();
+		ucode = src.ucode();
+		next = 0;
+	}
+	void make_proto(proto::charmap_pair_t *src) {
+		src->set_glyph_index(glyph_index);
+		src->set_ucode(ucode);
+	}
+#endif
+};
+
+class glyph_impl_t : public glyph_t {
+public:
+#ifdef PLATFORM_C28
+	glyph_impl_t(const myvi_proto_glyph_t &src) {
+		bw = src.bw;
+		bh = src.bh;
+		buf_sz = src.buf_sz;
+//		_MY_ASSERT(src.buf_tag, return);
+		buf = (u8*)src.buf_tag;
+//		memcpy(buf, src.data().data(), buf_sz);
+
+		hadvance = src.hadvance;
+		vadvance = src.vadvance;
+		glyph_index = src.glyph_index;
+		font_height = src.font_height;
+		next = 0;
+		bitmap_top = src.bitmap_top;
+		bitmap_left = src.bitmap_left;
+		mw = src.mw;
+		mh = src.mh;
+
+	}
+#else
+	glyph_impl_t(const proto::glyph_t &src) {
+		bw = src.bw();
+		bh = src.bh();
+
+		buf_sz = src.buf_sz();
+		_MY_ASSERT(buf_sz == src.data().size(),);
+		buf = 0;
+		if (buf_sz) {
+			buf = new u8[buf_sz];
+			memcpy(buf, src.data().data(), buf_sz);
+		}
+
+		hadvance = src.hadvance();
+		vadvance = src.vadvance();
+		glyph_index = src.glyph_index();
+		font_height = src.font_height();
+		next = 0;
+		bitmap_top = src.bitmap_top();
+		bitmap_left = src.bitmap_left();
+		mw = src.mw();
+		mh = src.mh();
+
+	}
+
+	void make_proto(proto::glyph_t *src) {
+
+		src->set_bw(this->bw);
+		src->set_bh(this->bh);
+		src->set_hadvance(this->hadvance);
+		src->set_vadvance(this->vadvance);
+		src->set_glyph_index(this->glyph_index);
+		src->set_font_height(this->font_height);
+
+		src->set_buf_sz(this->buf_sz);
+		src->set_data(this->buf, this->buf_sz);
+		src->set_bitmap_top(this->bitmap_top);
+		src->set_bitmap_left(this->bitmap_left);
+		src->set_mw(this->mw);
+		src->set_mh(this->mh);
+	}
+#endif
+};
+
+#ifdef PLATFORM_C28
+
+
+bool buf_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+
+    myvi_proto_glyph_t *rec  = (myvi_proto_glyph_t *)*arg;
+    rec->buf_tag = 0;
+    if (!rec->buf_sz) return true;
+    _MY_ASSERT(rec->buf_sz == stream->bytes_left, return false);
+    u8 *buf = new u8[rec->buf_sz];
+    rec->buf_tag = (u32)buf;
+
+    bool stat = pb_read(stream, buf, rec->buf_sz);
+    _MY_ASSERT(stat, return false);
+    return stat;
+}
+
+//u8 buf_stub[100];
+
+bool glyph_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+
+	myvi_proto_font_handle_t *hdl = (myvi_proto_font_handle_t *)*arg;
+
+    myvi_proto_glyph_t rec;
+    memset(&rec,0, sizeof(rec));
+    rec.data.arg = &rec;
+    rec.data.funcs.decode = buf_callback;
+
+    if (!pb_decode(stream, myvi_proto_glyph_t_fields, &rec))
+        return false;
+
+//    rec.buf_tag = (uint32_t)&buf_stub;
+
+//    _MY_ASSERT(rec.buf_tag, return false);
+    glyph_impl_t *gi = new glyph_impl_t(rec);
+
+    if (!hdl->first_root_tag) {
+    	hdl->first_root_tag = (uint32_t)gi;
+    }
+    if (hdl->cur_root_tag) {
+    	((glyph_impl_t *)hdl->cur_root_tag)->next =  gi;
+    }
+	hdl->cur_root_tag = (uint32_t)gi;
+
+    return true;
+}
+
+bool charmap_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+
+	myvi_proto_font_handle_t *hdl = (myvi_proto_font_handle_t *)*arg;
+
+    myvi_proto_charmap_pair_t rec;
+    memset(&rec,0, sizeof(rec));
+    if (!pb_decode(stream, myvi_proto_charmap_pair_t_fields, &rec))
+        return false;
+
+    charmap_pair_t *cm = new charmap_pair_impl_t(rec);
+
+    if (!hdl->first_charmap_tag) {
+    	hdl->first_charmap_tag = (uint32_t)cm;
+    }
+    if (hdl->cur_charmap_tag) {
+    	((charmap_pair_t *)hdl->cur_charmap_tag)->next = cm;
+    }
+	hdl->cur_charmap_tag = (uint32_t)cm;
+
+    return true;
+}
+
+#endif
+
+class font_handle_impl_t : public font_handle_t {
+public:
+#ifdef PLATFORM_C28
+	font_handle_impl_t(const myvi_proto_font_handle_t &src) {
+		face = 0;
+		memcpy(name2, src.name.bytes, src.name.size);
+		curr_height = src.curr_height;
+		next = 0;
+
+		_MY_ASSERT(src.first_root_tag, return);
+		root = (glyph_t*) src.first_root_tag;
+		_MY_ASSERT(src.first_charmap_tag, return);
+		charmap = (charmap_pair_t*) src.first_charmap_tag;
+	}
+#else
+
+	font_handle_impl_t(const proto::font_handle_t &src) {
+		face = 0;
+		root = (0);
+		src.name().copy(name2,FNT_NAME_SIZE);
+//		memcpy(name2, src.name().data(), FNT_NAME_SIZE);
+		curr_height = src.curr_height();
+		next = 0;
+		charmap = 0;
+		charmap_pair_t *cm, *pcm = 0;
+
+		for (int i=0; i < src.charmap_size(); i++) {
+
+			cm = new charmap_pair_impl_t(src.charmap(i));
+
+			if (!charmap) {
+				charmap = cm;
+			}
+			if (pcm) {
+				pcm->next = cm;
+			}
+			pcm = cm;
+		}
+
+		glyph_t *g, *pg = 0;
+		for (int i=0; i < src.root_size(); i++) {
+
+			g = new glyph_impl_t(src.root(i));
+
+			if (!root) {
+				root = g;
+			}
+			if (pg) {
+				pg->next = g;
+			}
+			pg = g;
+		}
+
+	}
+
+	void make_proto(proto::font_handle_t *src) {
+		src->set_name(this->name2, FNT_NAME_SIZE);
+		src->set_curr_height(this->curr_height);
+
+		charmap_pair_t *cm = charmap;
+		while (cm) {
+//			charmap_pair_impl_t cmi(cm);
+			((charmap_pair_impl_t*)cm)->make_proto(src->add_charmap());
+			cm = cm->next;
+		}
+		glyph_t *g = root;
+		while (g) {
+//			glyph_impl_t gi(g);
+			((glyph_impl_t*)g)->make_proto(src->add_root());
+			g = g->next;
+		}
+	}
+#endif
+
+};
+
+
+#ifdef PLATFORM_C28
+
+
+void ttcache_t::init(u8 *memdata, u32 data_sz) {
+
+	myvi_proto_ttcache_t rec;
+	memset(&rec,0, sizeof(rec));
+
+	pb_istream_t istream = pb_istream_from_buffer((uint8_t*)memdata, data_sz);
+
+	for (int i=0; i < sizeof(rec.handles) / sizeof(rec.handles[0]); i++) {
+		rec.handles[i].charmap.funcs.decode = charmap_callback;
+		rec.handles[i].charmap.arg = &rec.handles[i];
+		rec.handles[i].root.funcs.decode = glyph_callback;
+		rec.handles[i].root.arg = &rec.handles[i];
+	}
+
+	bool status = pb_decode(&istream, myvi_proto_ttcache_t_fields, &rec);
+	_MY_ASSERT(status, return);
+// read 1st handle
+	font_handle_t *hdl, *phdl = 0;
+
+	for (int i=0; i < rec.handles_count; i++) {
+		if (!(rec.handles[i].first_root_tag)) {
+			break;
+		}
+		hdl = new font_handle_impl_t(rec.handles[i]);
+		if (!handles) {
+			handles = hdl;
+		}
+		if (phdl) {
+			phdl->next = hdl;
+		}
+		phdl = hdl;
+	}
+	
+}
+
+#else
+// Win32 impl
 u32 ttcache_t::save(u8 *buf, u32 buf_sz) {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+	
 	_MY_ASSERT(handles,return 0);
 
-	stream_t stream(buf, buf_sz);
-	hdr.write(stream);
+	proto::ttcache_t rec;
+
 	font_handle_t *hdl = handles;
 	while (hdl) {
-		if (hdl->root) {
-			hdl->write(stream);
-		}
+		proto::font_handle_t *hrec = rec.add_handles();
+		((font_handle_impl_t*)hdl)->make_proto(hrec);
 		hdl = hdl->next;
 	}
-	u32 ret = stream.ptr - stream.buf;
+
+	u32 ret = rec.ByteSize();
 	_MY_ASSERT(ret && ret < buf_sz,return 0);
+	rec.SerializeToArray(buf, buf_sz);
 	return ret;
 }
 
 void ttcache_t::init(u8 *memdata, u32 data_sz) {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-	stream_t stream(memdata, data_sz);
-
-	cache_header_t::read(stream);
-// read 1st handle
+	proto::ttcache_t rec;
+	rec.ParseFromArray(memdata, data_sz);
 	font_handle_t *hdl, *phdl = 0;
-	hdl = font_handle_t::read(stream);
-	handles = hdl;
-// restore hdl chain
-	while(hdl->next) {
+
+	for (int i=0; i < rec.handles_size(); i++) {
+		hdl = new font_handle_impl_t(rec.handles(i));
+		if (!handles) {
+			handles = hdl;
+		}
+		if (phdl) {
+			phdl->next = hdl;
+		}
 		phdl = hdl;
-		hdl = font_handle_t::read(stream);
-		phdl->next = hdl;
 	}
-	u32 sz = stream.ptr - stream.buf;
-	_MY_ASSERT(sz == data_sz,return);
+	
 }
-
-cache_header_t *cache_header_t::read(stream_t &stream) {
-#ifdef STREAM_READ_SAFE
-	cache_header_t *cp = new cache_header_t();
-	//stream.read((u8*)cp,sizeof(*cp));
-	cp->magic = stream.read_u32();
-	cp->obj_size = stream.read_u32();
-#else
-	cache_header_t *cp = (cache_header_t *) stream.advance(sizeof(*cp));
 #endif
-	_MY_ASSERT(cp->magic == CACHE_HDR_MAGIC,return 0);
-#ifndef PLATFORM_C28
-	_MY_ASSERT(cp->obj_size == sizeof(*cp), return 0);
-#endif
-	return cp;
-}
-
-
-void cache_header_t::write(stream_t &stream) {
-	stream.write_u32(this->magic);
-	stream.write_u32(this->obj_size);
-}
-
-
-charmap_pair_t *charmap_pair_t::read(stream_t &stream) {
-#ifdef STREAM_READ_SAFE
-	charmap_pair_t *cp = new charmap_pair_t();
-//	stream.read((u8*)cp,sizeof(*cp));
-	cp->magic = stream.read_u32();
-	cp->obj_size = stream.read_u32();
-	cp->next = (charmap_pair_t*)stream.read_u32();
-	cp->glyph_index = stream.read_u32();
-	cp->ucode = stream.read_u32();
-#else
-	charmap_pair_t *cp = (charmap_pair_t *) stream.advance(sizeof(*cp));
-#endif
-	_MY_ASSERT(cp->magic == CACHE_CMAP_MAGIC,return 0);
-#ifndef PLATFORM_C28
-	_MY_ASSERT(cp->obj_size == sizeof(*cp),return 0);
-#endif
-	return cp;
-}
-
-void charmap_pair_t::write(stream_t &stream) {
-	stream.write_u32(this->magic);
-	stream.write_u32(this->obj_size);
-	stream.write_u32((u32)this->next);
-	stream.write_u32(this->glyph_index);
-	stream.write_u32(this->ucode);
-}
-
-
-void font_handle_t::write(stream_t &stream) {
-	_MY_ASSERT(root,return);
-
-	stream.write_u32(this->magic);
-	stream.write_u32(this->obj_size);
-	stream.write_u32((u32)this->next);
-	stream.write_u32((u32)this->face);
-	stream.write_u32((u32)this->root);
-	stream.write_u32(this->charmap_count);
-	stream.write_u32((u32)this->charmap);
-	stream.write_u32((u32)this->name);
-	stream.write((u8*)this->name2, sizeof(this->name2));
-	stream.write_u32(this->curr_height);
-
-	s32 cp_cnt = 0;
-	charmap_pair_t *cp = charmap;
-	while (cp) {
-		cp->write(stream);
-		cp = cp->next;
-		cp_cnt++;
-	}
-	_MY_ASSERT(cp_cnt == charmap_count,return);
-
-	glyph_t *gp = root;
-	while (gp) {
-		gp->write(stream);
-		gp = gp->next;
-	}
-}
-
-font_handle_t * font_handle_t::read(stream_t &stream) {
-
-#ifdef STREAM_READ_SAFE
-	font_handle_t *_this = new font_handle_t();
-//	stream.read((u8*)_this,sizeof(*_this));
-	_this->magic = stream.read_u32();
-	_this->obj_size = stream.read_u32();
-	_this->next = (font_handle_t *)stream.read_u32();
-	_this->face = (u32 *)stream.read_u32();
-	_this->root = (glyph_t *)stream.read_u32();
-	_this->charmap_count = stream.read_u32();
-	_this->charmap = (charmap_pair_t*)stream.read_u32();
-	_this->name = (char *)stream.read_u32();
-	stream.read((u8 *)_this->name2,sizeof(_this->name2));
-	_this->curr_height = stream.read_u32();
-
-#else
-	font_handle_t *_this = (font_handle_t *) stream.advance(sizeof(*_this));
-#endif
-
-	_MY_ASSERT(_this->magic == CACHE_FNT_MAGIC,return 0);
-#ifndef PLATFORM_C28
-	_MY_ASSERT(_this->obj_size == sizeof(*_this),return 0);
-#endif
-	_this->name = _this->name2;
-// read charmap
-	if (_this->charmap_count) {
-		charmap_pair_t *cp = charmap_pair_t::read(stream);
-		charmap_pair_t *pcp = 0;
-		_this->charmap = cp;
-		s32 cp_cnt = 1;
-		while (cp->next) {
-			pcp = cp;
-			cp = charmap_pair_t::read(stream);
-			pcp->next = cp;
-			cp_cnt++;
-		}
-		_MY_ASSERT(cp_cnt == _this->charmap_count, return 0);
-	}
-// read glyphs
-	glyph_t *pgly = 0, *gly;
-	gly = glyph_t::read(stream);
-	_this->root = gly;
-	while(gly->next) {
-		pgly = gly;
-		gly = glyph_t::read(stream);
-		pgly->next = gly;
-	}
-	return _this;
-}
-
-void glyph_t::write(stream_t &stream) {
-	if (buf && buf_sz) {
-		aligned_sz = buf_sz;
-		for(;!ALIGNED(aligned_sz); aligned_sz++);
-	}
-//	stream.write((u8*)this,sizeof(*this));
-
-	stream.write_u32(this->magic);
-	stream.write_u32(this->obj_size);
-	stream.write_u32(this->glyph_index);
-	stream.write_u32(this->font_height);
-	stream.write_u32((u32)this->next);
-	stream.write_u32(this->bw);
-	stream.write_u32(this->bh);
-	stream.write_u32((u32)this->buf);
-	stream.write_u32(this->buf_sz);
-	stream.write_u32(this->aligned_sz);
-	stream.write_u32(this->bitmap_top);
-	stream.write_u32(this->bitmap_left);
-	stream.write_u32(this->mw);
-	stream.write_u32(this->mh);
-	stream.write_u32(this->hadvance);
-	stream.write_u32(this->vadvance);
-//	_LOG2("w:",this->vadvance);
-
-	if (buf && buf_sz) {
-		stream.write_no_check((u8*)buf,buf_sz);
-		if (aligned_sz - buf_sz) {
-			stream.advance_no_check(aligned_sz - buf_sz);
-		}
-	}
-}
-
-glyph_t* glyph_t::read(stream_t &stream) {
-#ifdef STREAM_READ_SAFE
-	glyph_t *_this = new glyph_t();
-//	stream.read((u8*)_this,sizeof(*_this));
-	_this->magic = stream.read_u32();
-	_this->obj_size = stream.read_u32();
-	_this->glyph_index = stream.read_u32();
-	_this->font_height = stream.read_u32();
-	_this->next = (glyph_t *)stream.read_u32();
-	_this->bw = stream.read_u32();
-	_this->bh = stream.read_u32();
-	_this->buf = (u8 *)stream.read_u32();
-	_this->buf_sz = stream.read_u32();
-	_this->aligned_sz = stream.read_u32();
-	_this->bitmap_top = stream.read_u32();
-	_this->bitmap_left = stream.read_u32();
-	_this->mw = stream.read_u32();
-	_this->mh = stream.read_u32();
-	_this->hadvance = stream.read_u32();
-	_this->vadvance = stream.read_u32();
-//	_LOG2("r:",_this->vadvance);
-
-#else
-	glyph_t *_this = (glyph_t *)stream.advance(sizeof(*_this));
-#endif
-
-//	printf("ptr:%x, mag:%x",_this, _this->magic);
-	_MY_ASSERT(_this->magic == CACHE_GLYPH_MAGIC,return 0);
-#ifndef PLATFORM_C28
-	_MY_ASSERT(_this->obj_size == sizeof(*_this),return 0);
-#endif
-
-	if (_this->buf && _this->buf_sz) {
-		_MY_ASSERT(_this->buf_sz <= _this->aligned_sz, return 0);
-//#ifdef STREAM_READ_SAFE
-//		_this->buf = new u8[_this->aligned_sz];
-//		stream.read(_this->buf,_this->aligned_sz);
-//#else
-//		_this->buf = stream.advance(_this->aligned_sz);
-//#endif
-		_this->buf = stream.advance(_this->aligned_sz);
-	}
-	return _this;
-}

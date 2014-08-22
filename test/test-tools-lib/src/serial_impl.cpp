@@ -20,39 +20,28 @@ static int ShowError (LONG lError, LPCTSTR lptszMessage)
 
 #define SERIAL ((CSerial*)serial)
 
-void serial_interface_impl_t::init(serial_port_t port) {
+bool serial_interface_impl_t::init(serial_port_t port) {
 	serial = new CSerial();
 
 	LONG    lLastError = ERROR_SUCCESS;
 
     // Attempt to open the serial port (COM1)
 	lLastError = SERIAL->Open((LPCTSTR)port.port_name,0,0,false);
-	if (lLastError != ERROR_SUCCESS) {
-		_LOG2(SERIAL->GetLastError(), ("Unable to open COM-port"));
-		return;
-	}
+	_WEAK_ASSERT(lLastError == ERROR_SUCCESS, return false);
 
     // Setup the serial port (9600,N81) using hardware handshaking
 	lLastError = SERIAL->Setup(CSerial::EBaud115200,CSerial::EData8,CSerial::EParNone,CSerial::EStop1);
-	if (lLastError != ERROR_SUCCESS) {
-		_LOG2(SERIAL->GetLastError(), ("Unable to set COM-port setting"));
-		return;
-	}
+	_WEAK_ASSERT(lLastError == ERROR_SUCCESS, return false);
 
 	// Setup handshaking
 	lLastError = SERIAL->SetupHandshaking(CSerial::EHandshakeOff);
-	if (lLastError != ERROR_SUCCESS) {
-		_LOG2(SERIAL->GetLastError(), ("Unable to set COM-port handshaking"));
-		return;
-	}
-
+	_WEAK_ASSERT(lLastError == ERROR_SUCCESS, return false);
+	return true;
 }
 
 void serial_interface_impl_t::send(u8 *data, u32 len)  {
 	LONG  lLastError = SERIAL->Write(data,len);
-	if (lLastError != ERROR_SUCCESS) {
-		_LOG2(SERIAL->GetLastError(), ("Unable to send data"));
-	}
+	_WEAK_ASSERT(lLastError == ERROR_SUCCESS, return);
 }
 
 void serial_interface_impl_t::cycle() {
@@ -60,7 +49,7 @@ void serial_interface_impl_t::cycle() {
 	u32 read;
 	LONG  lLastError = SERIAL->Read(buf, 1024, &read);
 	if (lLastError != ERROR_SUCCESS) {
-		_LOG2(SERIAL->GetLastError(), ("Unable to receive data"));
+		_WEAK_ASSERT(lLastError == ERROR_SUCCESS, return);
 	} else if (read) {
 		receiver->receive(buf, read);
 	}

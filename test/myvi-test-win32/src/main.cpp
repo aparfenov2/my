@@ -177,7 +177,7 @@ class host_debug_intf_impl_t :
 	public link::host_system_interface_t,
 	public link::host_debug_interface_t {
 public:
-	virtual void test_response (u32 _arg8, u32 _arg16, u32 _arg32, double _argd) OVERRIDE {
+	virtual void test_response (u32 _arg8, u32 _arg16, u32 _arg32, float _argd) OVERRIDE {
 	}
 
 	virtual void log_event (const char * msg) OVERRIDE {
@@ -211,7 +211,7 @@ public:
 		}
 	}
 
-	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, double argd) OVERRIDE {
+	virtual void test_request (u32 arg8, u32 arg16, u32 arg32, float argd) OVERRIDE {
 		_MY_ASSERT(host, return);
 		host->test_response(arg8,arg16,arg32,argd);
 	}
@@ -234,10 +234,11 @@ void print_chars(ttype_font_t &fnt, surface_t &s1) {
 	print_chars(fnt,s1,"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	print_chars(fnt,s1,"àáâãäå¸æçèéêëìíîïğñòóôõö÷ùøüûúışÿ");
 	print_chars(fnt,s1,"ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖ×ÙØÜÛÚİŞß");
-	print_chars(fnt,s1,"`1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
+	print_chars(fnt,s1," `1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
 }
 
 
+extern void init_singletones();
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -246,7 +247,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		return -1;
 	}
 	_LOG1("log started");
-
+	init_singletones();
+	
 	_TCHAR* com_port_name = argv[1];
 	bool no_ttf = false;
 	bool host_mode = false;
@@ -274,6 +276,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			infile.close();
 
 			globals::ttcache.init(buf,sz);
+			delete buf;
 			_LOG2("font cache loaded, size: ",sz);
 		}
 

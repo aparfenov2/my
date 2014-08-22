@@ -13,8 +13,8 @@
 namespace app {
 	class file_system_t {
 	public:
-		virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &read ) = 0;
-		virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data, u32 &written ) = 0;
+		virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data ) = 0;
+		virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data ) = 0;
 		virtual bool get_info(u32 file_id, u32 &len, u32 &max_len) = 0;
 		virtual bool set_info(u32 file_id, u32 len) = 0;
 	};

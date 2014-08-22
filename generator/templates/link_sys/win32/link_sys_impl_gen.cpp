@@ -33,11 +33,11 @@ void ${intf.@name}_serializer_t::${mtd.@name} (${common.make_arg_str(intf, mtd)}
 	<#else>
 	proto::${fld.@type} *pkt = intf.mutable_${fld.@name}();
 		<@common.enum_field_args fld mtd;arg_name,type,ctype >
-	pkt->set_${arg_name}(<#rt>
 		<#if type == "bytes">
-			<#lt>(char *)<#rt>
+	pkt->set_${arg_name}(${arg_name}, len);
+		<#else>
+	pkt->set_${arg_name}(${arg_name});
 		</#if>
-	<#lt>${arg_name});
 		</@common.enum_field_args>
 	</#if>
 	sender->send_packet(&intf, sizeof(intf));

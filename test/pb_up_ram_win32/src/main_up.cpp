@@ -208,6 +208,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		updata->set_first(frame_count == 0);
 		updata->set_offset(offset);
 		updata->set_data(font_buf + offset, pkt_len);
+		updata->set_len(pkt_len);
 		u16 crc = crc16_ccitt_calc_data(CRC_SEED,font_buf + offset, pkt_len);
 		updata->set_crc(crc);
 

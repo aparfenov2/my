@@ -163,8 +163,8 @@ const key_t::key_t kbd_map[4][5] = {
 //		A					B				C			D				E
 		{key_t::K_F1,		key_t::K_8,	key_t::K_2,	key_t::K_5,	key_t::K_0},		// 1
 		{key_t::K_F2,		key_t::K_7,	key_t::K_1,	key_t::K_4,	key_t::K_ENTER},	// 2
-		{key_t::K_SAVE,		key_t::K_9,	key_t::K_3,	key_t::K_6,	key_t::K_DOT},		// 3
-		{key_t::K_F3,	(key_t::key_t)0,key_t::K_F4,key_t::K_F5,key_t::K_ESC},		// 4
+		{key_t::K_ENTER,	key_t::K_9,	key_t::K_3,	key_t::K_6,	key_t::K_DOT},		// 3
+		{key_t::K_F3,	(key_t::key_t)0 ,key_t::K_F4,key_t::K_F5,key_t::K_ESC},		// 4
 };
 
 key_t::key_t hw::kbd_get_key() {

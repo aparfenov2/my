@@ -527,12 +527,17 @@ private:
 		return 0;
 	}
 
-	static meta_registry_t _instance;
+	static meta_registry_t *_instance;
 
 public:
 
+	static void allocate_new() {
+		_instance = new meta_registry_t();
+	}
+
 	static meta_registry_t & instance() {
-		return _instance;
+		_MY_ASSERT(_instance, 0);
+		return *_instance;
 	}
 
 	// обязательно вызвать после инициализации кучи

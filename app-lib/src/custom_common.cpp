@@ -7,16 +7,28 @@
 
 using namespace custom;
 
+model_t * model_t::_instance = 0;
+keyboard_filter_chain_t *keyboard_filter_chain_t::_instance = 0;
+popup_manager_t *popup_manager_t::_instance = 0;
+
 view_factory_t view_factory_t::_instance;
-
-static dynamic_model_t dynamic_model;
-model_t * model_t::_instance = &dynamic_model;
-
 converter_factory_t converter_factory_t::_instance;
-keyboard_filter_chain_t keyboard_filter_chain_t::_instance;
-popup_manager_t popup_manager_t::_instance;
 event_bus_t event_bus_t::_instance;
 validator_factory_t validator_factory_t::_instance;
+
+extern void _init_generator_singletones(void);
+extern void _init_myvi_singletones();
+
+void init_singletones() {
+
+	_init_generator_singletones();
+
+	model_t::_instance = new dynamic_model_t();
+	keyboard_filter_chain_t::allocate_new();
+	popup_manager_t::allocate_new();
+
+	_init_myvi_singletones();
+}
 
 
 static myvi::layout_t * build_layout(myvi::string_t layout_id, gen::meta_t * meta) {
@@ -474,8 +486,8 @@ static myvi::ttype_font_t * resolve_font(myvi::string_t font_id) {
 	} else if (font_id == "TTF_BOLD") {
 		return &res.ttf_bold;
 
-	} else if (font_id == "GLY") {
-		return &res.gly;
+	//} else if (font_id == "GLY") {
+	//	return &res.gly;
 	}
 	_MY_ASSERT(0, return  0);
 	return 0;

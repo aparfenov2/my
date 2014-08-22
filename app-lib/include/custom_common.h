@@ -19,12 +19,20 @@ public:
 
 // агрегатор всех фильтров клавиатуры
 class keyboard_filter_chain_t {
-public:
+private:
 	std::vector<keyboard_filter_t *> chain;
-	static keyboard_filter_chain_t _instance;
+	static keyboard_filter_chain_t *_instance;
+private:
+	keyboard_filter_chain_t() {
+	}
 public:
+	static void allocate_new() {
+		_instance = new keyboard_filter_chain_t();
+	}
+
 	static keyboard_filter_chain_t & instance() {
-		return _instance;
+		_MY_ASSERT(_instance, 0);
+		return *_instance;
 	}
 
 	void add_filter(keyboard_filter_t * filter) {
@@ -97,12 +105,17 @@ public:
 	public:
 		splitted_string_t sps;
 		splitted_string_t::iterator_t iter;
+		bool iterator_allocated;
 	public:
 		iterator_t(myvi::string_t spath) {
 			sps = splitted_string_t(spath, '.', false);
-			iter = sps.iterator();
+			iterator_allocated = false;
 		}
 		myvi::string_t next() {
+			if (!iterator_allocated) {
+				iter = sps.iterator();
+				iterator_allocated = true;
+			}
 			return iter.next();
 		}
 
@@ -144,7 +157,8 @@ class volatile_path_t : public meta_path_base_t {
 private:
 	volatile_string_impl_t _path;
 public:
-	volatile_path_t() : super(_path) {
+	volatile_path_t() {
+		this->spath = &_path;
 	}
 
 	myvi::string_t path() const {
@@ -310,11 +324,13 @@ public:
 
 // фабрика дочерних видов. ≈Є задача создать вид и св€зать его с контроллерм
 class view_factory_t {
-public:
+private:
 	static view_factory_t _instance;
-public:
+private:
 	view_factory_t() {
 	}
+public:
+
 
 	static view_factory_t & instance() {
 		return _instance;
@@ -536,6 +552,7 @@ public:
 	static model_t *_instance;
 public:
 	static model_t * instance() {
+		_MY_ASSERT(_instance, return 0);
 		return _instance;
 	}
 	// обновление модели

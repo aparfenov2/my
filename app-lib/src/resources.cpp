@@ -14,7 +14,7 @@ using namespace myvi;
 void resources_t::init() {
 	ttf.init("fonts","ARIALN.TTF", 0,0);
 	ttf_bold.init("fonts","ARIALNB.TTF", 0,0);
-	gly.init("fonts","glyphs.ttf", 0,0);
+//	gly.init("fonts","glyphs.ttf", 0,0);
 }
 
 resources_t res;

@@ -5,7 +5,7 @@
 
 using namespace myvi;
 
-modal_overlay_t modal_overlay_t::_instance;
+modal_overlay_t *modal_overlay_t::_instance = 0;
 
 u32 rasterizer_t::colors[4] = {0x00ff00, 0x0000ff, 0xff0000, 0xff00ff};
 u32 rasterizer_t::deepLevel = 0;
@@ -13,6 +13,9 @@ bool rasterizer_t::debug = false;
 
 focus_manager_t focus_manager_t::_instance;
 
+void _init_myvi_singletones() {
+	modal_overlay_t::allocate_new();
+}
 
 
 
