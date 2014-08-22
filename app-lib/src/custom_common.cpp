@@ -486,8 +486,8 @@ static myvi::ttype_font_t * resolve_font(myvi::string_t font_id) {
 	} else if (font_id == "TTF_BOLD") {
 		return &res.ttf_bold;
 
-	} else if (font_id == "GLY") {
-		return &res.gly;
+	//} else if (font_id == "GLY") {
+	//	return &res.gly;
 	}
 	_MY_ASSERT(0, return  0);
 	return 0;

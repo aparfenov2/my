@@ -234,7 +234,7 @@ void print_chars(ttype_font_t &fnt, surface_t &s1) {
 	print_chars(fnt,s1,"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	print_chars(fnt,s1,"àáâãäå¸æçèéêëìíîïğñòóôõö÷ùøüûúışÿ");
 	print_chars(fnt,s1,"ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖ×ÙØÜÛÚİŞß");
-	print_chars(fnt,s1,"`1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
+	print_chars(fnt,s1," `1234567890-=\\~!@#$%^&*()_+|[]{};':"",./<>?");
 }
 
 
@@ -276,6 +276,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			infile.close();
 
 			globals::ttcache.init(buf,sz);
+			delete buf;
 			_LOG2("font cache loaded, size: ",sz);
 		}
 

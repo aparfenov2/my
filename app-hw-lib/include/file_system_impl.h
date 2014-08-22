@@ -28,7 +28,7 @@ namespace hw {
 			return read_file_table();
 		}
 
-		bool allocate_and_read_font_cache(u8 *&buf, u32 &sz);
+//		bool allocate_and_read_font_cache(u8 *&buf, u32 &sz);
 
 		virtual bool read_file(u32 file_id, u32 offset, u32 len, u8 *data ) OVERRIDE;
 		virtual bool write_file(u32 file_id, u32 offset, u32 len, u8 *data ) OVERRIDE;

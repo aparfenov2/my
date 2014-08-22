@@ -105,12 +105,17 @@ public:
 	public:
 		splitted_string_t sps;
 		splitted_string_t::iterator_t iter;
+		bool iterator_allocated;
 	public:
 		iterator_t(myvi::string_t spath) {
 			sps = splitted_string_t(spath, '.', false);
-			iter = sps.iterator();
+			iterator_allocated = false;
 		}
 		myvi::string_t next() {
+			if (!iterator_allocated) {
+				iter = sps.iterator();
+				iterator_allocated = true;
+			}
 			return iter.next();
 		}
 
@@ -152,7 +157,8 @@ class volatile_path_t : public meta_path_base_t {
 private:
 	volatile_string_impl_t _path;
 public:
-	volatile_path_t() : super(_path) {
+	volatile_path_t() {
+		this->spath = &_path;
 	}
 
 	myvi::string_t path() const {

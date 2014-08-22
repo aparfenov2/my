@@ -316,6 +316,7 @@ void my_main() {
 
 	s32 buf_sz = BMP_GET_SIZE_16(TFT_WIDTH,TFT_HEIGHT);
 	u8 *buf0 = new u8[buf_sz];
+	_MY_ASSERT(buf0, return);
 	surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,buf_sz, buf0);
 
 
@@ -324,13 +325,30 @@ void my_main() {
     serializer.init(&sintf);
 
     logger_impl.init(serializer.get_host_debug_interface());
+
     debug_intf_impl.init(serializer.get_host_debug_interface());
     serializer.add_implementation(&debug_intf_impl);
 
-    u8 *ttcache_dat;
-    u32 ttcache_sz;
+    file_server.init(serializer.get_host_file_interface(), &file_system);
+    serializer.add_implementation(&file_server);
 
-    _WEAK_ASSERT(file_system.allocate_and_read_font_cache(ttcache_dat,ttcache_sz), 0);
+    bool ttcache_loaded = false;
+	do {
+		u32 ttcache_file_id = TTCACHE_FILE_ID;
+		u32 ttcache_len, ttcache_max_len;
+		_WEAK_ASSERT(file_system.get_info(ttcache_file_id, ttcache_len, ttcache_max_len), break);
+		if (!ttcache_len) break;
+
+		u8 *ttcache_dat = new u8[ttcache_len + 0x0f];
+		_WEAK_ASSERT(ttcache_dat, break);
+
+		_WEAK_ASSERT(file_system.read_file(ttcache_file_id,0,ttcache_len, ttcache_dat), break);
+
+		globals::ttcache.init((u8 *)ttcache_dat,ttcache_len);
+		delete ttcache_dat;
+		ttcache_loaded = true;
+
+	} while(false);
 
 
     bool schema_loaded = false;
@@ -351,17 +369,18 @@ void my_main() {
 
 	} while(false);
 
-    if (ttcache_dat && ttcache_sz && schema_loaded) {
-    	globals::ttcache.init((u8 *)ttcache_dat,ttcache_sz);
+    if (ttcache_loaded && schema_loaded) {
+
     	res.init();
 
 
-    	link_model_updater.init(serializer.get_host_model_interface());
-    	serializer.add_implementation(&link_model_updater);
 
     	test_screen_t *screen1 = new test_screen_t();
 		screen1->init();
 		screen1->dirty = true;
+
+    	link_model_updater.init(serializer.get_host_model_interface());
+    	serializer.add_implementation(&link_model_updater);
 
 		modal_overlay_t::instance().w = TFT_WIDTH;
 		modal_overlay_t::instance().h = TFT_HEIGHT;
@@ -370,13 +389,11 @@ void my_main() {
 
     }
 
-    file_server.init(serializer.get_host_file_interface(), &file_system);
-    serializer.add_implementation(&file_server);
 
 	init_pie_table();
 
 	while (1) {
-		if (ttcache_dat && ttcache_sz && schema_loaded) {
+		if (ttcache_loaded && schema_loaded) {
 			draw_scene(s1, drv1);
 		}
 		sintf.cycle();

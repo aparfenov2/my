@@ -177,6 +177,7 @@ bool file_system_impl_t::read_file_table() {
 }
 
 
+/*
 #define ALIGNED(ptr) (!(0x03 & (u32)(ptr)))
 
 bool file_system_impl_t::allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttcache_sz) {
@@ -194,3 +195,4 @@ bool file_system_impl_t::allocate_and_read_font_cache(u8 *&ttcache_dat, u32 &ttc
 	_WEAK_ASSERT(this->read_file(TTCACHE_FILE_ID,0,ttcache_sz,ttcache_dat), return false);
 	return true;
 }
+*/
