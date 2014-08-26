@@ -118,7 +118,7 @@
 <!-- предопределенные (в коде) виды. Для них также создается мета -->
 		<view id="lab" controller="lab" predefined="lab" font="TTF" font_size="FS_30" /> <!-- label -->
 		
-		<view id="tbox" predefined="tbox" controller="tbox" font_size="FS_30" decorator="background,3d" min_width="100"
+		<view id="tbox" predefined="tbox" controller="tbox" font_size="FS_30" decorator="background,3d" min_width="100" max_width="100"
 			default_color="BK_WHITE" selected_color="SELECTED" captured_color="CAPTURED" invalid_color="INVALID" /> <!-- textbox -->
 			
 		<view id="cbox" predefined="cbox" controller="cbox" font_size="FS_30" decorator="background,3d,cbox" 
