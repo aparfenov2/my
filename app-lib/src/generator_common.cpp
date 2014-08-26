@@ -11,9 +11,6 @@ using namespace rapidxml;
 
 meta_registry_t *meta_registry_t::_instance = 0;
 
-void _init_generator_singletones() {
-	meta_registry_t::allocate_new();
-}
 
 template struct internal::lookup_tables<0>;
 

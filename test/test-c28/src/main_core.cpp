@@ -114,8 +114,9 @@ public:
 
 };
 
+rasterizer_t rasterizer;
 
-void draw_scene(surface_t &s1, surface_t &drv1) {
+static void draw_scene(surface_t &s1, surface_t &drv1) {
 
 	gobject_t *gobj = & modal_overlay_t::instance();
 	focus_aware_t * focus_aware = dynamic_cast<focus_aware_t*>(gobj);
@@ -141,7 +142,7 @@ void draw_scene(surface_t &s1, surface_t &drv1) {
 			focus_aware->key_event(key_t::K_LEFT);
 		}
 	}
-	if (rasterizer_t::render(gobj, s1))
+	if (rasterizer.render(gobj, s1))
 		s1.copy_to(0,0,-1,-1,0,0,drv1);
 }
 
@@ -259,7 +260,6 @@ FRAM fram;
 FlashDev flash;
 
 
-extern void init_singletones();
 
 void my_main() {
 
@@ -275,13 +275,34 @@ void my_main() {
 	flash.init(&spi);
 
 
-	init_singletones();
 
 
 	_WEAK_ASSERT(file_system.init(&fram, &flash), 0);
 
-// show logo
+
+    uart.init(&ScibRegs);
+    sintf.init(&uart);
+    serializer.init(&sintf);
+
+
+    file_server.init(serializer.get_host_file_interface(), &file_system);
+    serializer.add_implementation(&file_server);
+
+    logger_impl.init(serializer.get_host_debug_interface());
+
+
+    key_t::key_t key = kbd_get_key();
+    bool file_server_mode_only =  (key == key_t::K_ESC);
+    bool ttcache_loaded = false;
+    bool schema_loaded = false;
 	bool can_show_logo = false;
+
+    if (file_server_mode_only) {
+    	draw_pallete(drv1);
+    	goto main_loop;
+    }
+
+// show logo
 	do {
 		u32 logo_len, logo_max_len;
 		_WEAK_ASSERT(file_system.get_info(LOGO_FILE_ID, logo_len, logo_max_len), break);
@@ -320,19 +341,7 @@ void my_main() {
 	surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,buf_sz, buf0);
 
 
-    uart.init(&ScibRegs);
-    sintf.init(&uart);
-    serializer.init(&sintf);
 
-    logger_impl.init(serializer.get_host_debug_interface());
-
-    debug_intf_impl.init(serializer.get_host_debug_interface());
-    serializer.add_implementation(&debug_intf_impl);
-
-    file_server.init(serializer.get_host_file_interface(), &file_system);
-    serializer.add_implementation(&file_server);
-
-    bool ttcache_loaded = false;
 	do {
 		u32 ttcache_file_id = TTCACHE_FILE_ID;
 		u32 ttcache_len, ttcache_max_len;
@@ -351,7 +360,6 @@ void my_main() {
 	} while(false);
 
 
-    bool schema_loaded = false;
 	do {
 		u32 schema_file_id = SCHEMA_FILE_ID;
 		u32 schema_len, schema_max_len;
@@ -389,6 +397,10 @@ void my_main() {
 
     }
 
+main_loop:
+
+    debug_intf_impl.init(serializer.get_host_debug_interface());
+    serializer.add_implementation(&debug_intf_impl);
 
 	init_pie_table();
 

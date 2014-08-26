@@ -26,12 +26,11 @@ private:
 	keyboard_filter_chain_t() {
 	}
 public:
-	static void allocate_new() {
-		_instance = new keyboard_filter_chain_t();
-	}
 
 	static keyboard_filter_chain_t & instance() {
-		_MY_ASSERT(_instance, 0);
+		if (!_instance) {
+			_instance = new keyboard_filter_chain_t();
+		}
 		return *_instance;
 	}
 
@@ -549,10 +548,19 @@ public:
 
 class model_t : public myvi::publisher_t<model_message_t, _MODEL_MAX_SUBSCRIBERS> {
 public:
+	class factory_t {
+	public:
+		virtual model_t * create_instance() = 0;
+	};
+private:
+	static factory_t *factory;
 	static model_t *_instance;
 public:
 	static model_t * instance() {
-		_MY_ASSERT(_instance, return 0);
+		_MY_ASSERT(factory, return 0);
+		if (!_instance) {
+			_instance = factory->create_instance();
+		}
 		return _instance;
 	}
 	// обновление модели

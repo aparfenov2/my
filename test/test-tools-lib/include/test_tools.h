@@ -23,6 +23,8 @@ public:
 	}
 	bool cycle(myvi::surface_t &s);
 	void create_window(myvi::surface_t &s, const char *title);
+protected:
+	void do_update(myvi::surface_t &s);
 };
 
 

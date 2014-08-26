@@ -1,4 +1,5 @@
 #include <tchar.h>
+#include <Windows.h>
 
 #include "surface.h"
 
@@ -97,12 +98,17 @@ public:
 };
 
 
-class my_test_drawer_t : public test::test_drawer_t {
+
+
+class my_test_drawer_t : 
+	public test::test_drawer_t, 
+	public rasterizer_t::callback_t  {
 public:
 	s32 kx;
 	s32 ky;
 	gobject_t *gobj;
 	bool drawFlag;
+	rasterizer_t rasterizer;
 public:
 	my_test_drawer_t(gobject_t *agobj) {
 		drawFlag = false;
@@ -111,6 +117,7 @@ public:
 		h = TFT_HEIGHT * 2;
 		kx = 2;
 		ky = 2;
+		rasterizer.callback = this;
 		std::cout << "set size to " << w << "x" << h << std::endl;
 	}
 
@@ -162,12 +169,17 @@ public:
 				}
 			}
 		}
-		bool ret = rasterizer_t::render(gobj, s1);
+		bool ret = rasterizer.render(gobj, s1);
 		if (ret) {
 			drawFlag = !drawFlag;
 			s1.putpx(0,0, drawFlag ? 0x00ff00 : 0xff0000);
 		}
 		return ret;
+	}
+
+	virtual void on_update(gobject_t *child, surface_t &dst) OVERRIDE {
+//		this->do_update(dst);
+//		Sleep(100);
 	}
 
 };
@@ -238,7 +250,6 @@ void print_chars(ttype_font_t &fnt, surface_t &s1) {
 }
 
 
-extern void init_singletones();
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -247,7 +258,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		return -1;
 	}
 	_LOG1("log started");
-	init_singletones();
 	
 	_TCHAR* com_port_name = argv[1];
 	bool no_ttf = false;

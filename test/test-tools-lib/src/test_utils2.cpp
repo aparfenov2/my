@@ -8,7 +8,7 @@ using namespace cimg_library;
 using namespace myvi;
 using namespace test;
 
-void draw_img(surface_t &s, CImg<unsigned char> &img) {
+static void draw_img(surface_t &s, CImg<unsigned char> &img) {
 	for (int y = 0; y < s.h; y++) {
 		for (int x = 0; x < s.w; x++) {
 			u32 c = s.getpx(x,y);
@@ -19,7 +19,7 @@ void draw_img(surface_t &s, CImg<unsigned char> &img) {
 	}
 }
 
-key_t::key_t translate_key(CImgDisplay &dsp) {
+static key_t::key_t translate_key(CImgDisplay &dsp) {
 	key_t::key_t key = (key_t::key_t)0;
 	if (dsp.is_keyESC()) key = key_t::K_ESC; 
 	else if (dsp.is_keyARROWLEFT()) key = key_t::K_LEFT; 
@@ -51,13 +51,13 @@ key_t::key_t translate_key(CImgDisplay &dsp) {
 	return key;
 };
 
-key_t::key_t last_key = (key_t::key_t)0;
-mkey_t::mkey_t last_mkey = mkey_t::MK_NONE;
-s32 last_x = -1, last_y = -1;
-time_t last_time = 0;
+static key_t::key_t last_key = (key_t::key_t)0;
+static mkey_t::mkey_t last_mkey = mkey_t::MK_NONE;
+static s32 last_x = -1, last_y = -1;
+static time_t last_time = 0;
 
-CImg<unsigned char> *img = 0;
-CImgDisplay *dsp = 0;
+static CImg<unsigned char> *img = 0;
+static CImgDisplay *dsp = 0;
 
 void test_drawer_t::create_window(surface_t &s, const char *title) {
 	img = new CImg<unsigned char>(s.w,s.h,1,3);
@@ -115,10 +115,14 @@ bool test_drawer_t::cycle(surface_t &s) {
 		update = callback(key, mx, my, mkey);
 
 	if (update) {
-		draw_img(s, *img);
-		img->display(*dsp);
+		do_update(s);
 	}
 	dsp->wait(1);
 	return false;
+}
+
+void test_drawer_t::do_update(surface_t &s) {
+	draw_img(s, *img);
+	img->display(*dsp);
 }
 
