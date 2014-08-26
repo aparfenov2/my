@@ -531,12 +531,11 @@ private:
 
 public:
 
-	static void allocate_new() {
-		_instance = new meta_registry_t();
-	}
 
 	static meta_registry_t & instance() {
-		_MY_ASSERT(_instance, 0);
+		if (!_instance) {
+			_instance = new meta_registry_t();
+		}
 		return *_instance;
 	}
 

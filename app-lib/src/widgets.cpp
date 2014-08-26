@@ -7,16 +7,8 @@ using namespace myvi;
 
 modal_overlay_t *modal_overlay_t::_instance = 0;
 
-u32 rasterizer_t::colors[4] = {0x00ff00, 0x0000ff, 0xff0000, 0xff00ff};
-u32 rasterizer_t::deepLevel = 0;
-bool rasterizer_t::debug = false;
 
 focus_manager_t focus_manager_t::_instance;
-
-void _init_myvi_singletones() {
-	modal_overlay_t::allocate_new();
-}
-
 
 
 void focus_manager_t::key_event(key_t::key_t key, gobject_t *root) {
@@ -90,18 +82,20 @@ void focus_manager_t::select(gobject_t *p) {
 
 
 	if (selected) {
-		_MY_ASSERT(dynamic_cast<focus_client_t*>(selected), return);
+		focus_client_t* focus_client = dynamic_cast<focus_client_t*>(selected);
+		_MY_ASSERT(focus_client, return);
 
-		dynamic_cast<focus_client_t*>(selected)->selected = false;
+		focus_client->selected = false;
 		selected->dirty = true;
 	}
 
 	selected = p;
 
 	if (selected) {
-		_MY_ASSERT(dynamic_cast<focus_client_t*>(selected), return);
+		focus_client_t* focus_client = dynamic_cast<focus_client_t*>(selected);
+		_MY_ASSERT(focus_client, return);
 
-		dynamic_cast<focus_client_t*>(selected)->selected = true;
+		focus_client->selected = true;
 		selected->dirty = true;
 		notify(selected);
 	}
@@ -168,63 +162,55 @@ gobject_t * gobject_t::iterator_visible_deep_t::next() {
 }
 
 
-static void clear_dirty(gobject_t *p) {
-	p->dirty = (false);
-	gobject_t::iterator_visible_t iter = p->iterator_visible();
-	gobject_t *pp = iter.next();
-	while (pp) {
-		clear_dirty(pp);
-		pp = iter.next();
-	}
-}
+bool rasterizer_t::render(gobject_t *p, surface_t &dst, s32 pax, s32 pay, s32 paw, s32 pah) {
 
-bool rasterizer_t::render(gobject_t *p, surface_t &dst, bool force_redreaw, s32 pax, s32 pay, s32 paw, s32 pah) {
-	deepLevel++;
-	_MY_ASSERT(p->visible,return false);
+	_MY_ASSERT(p && p->visible,return false);
+	_MY_ASSERT(pax >= 0 && pay >= 0 && paw >= 0 && pah >= 0 && paw <= dst.w && pah <= dst.h, return false);
+
 	bool ret = false;
 
-	if (p->dirty || force_redreaw) {
-		s32 x1,y1, w1,h1;
-		p->translate(x1,y1);
-		w1 = p->w;
-		h1 = p->h;
-		if (pah >= 0) {
-			if (!surface_t::trim_to(x1,y1,w1,h1, pax,pay,paw,pah)) {
-				return false;
-			};
-		}
-		pax = x1;
-		pay = y1;
-		paw = w1;
-		pah = h1;
+	s32 x1,y1, w1,h1;
+	p->translate(x1,y1);
+	w1 = p->w;
+	h1 = p->h;
+	if (!surface_t::trim_to(x1,y1,w1,h1, pax,pay,paw,pah)) {
+		p->set_dirty_no_parent(false);
+		return false;
+	};
+	pax = x1;
+	pay = y1;
+	paw = w1;
+	pah = h1;
+
+	_MY_ASSERT(pax >= 0 && pay >= 0 && paw >= 0 && pah >= 0 && paw <= dst.w && pah <= dst.h, return false);
+
+	if (p->dirty) {
 		dst.set_allowed_area(pax,pay,paw,pah);
 
 		p->do_render(dst);
 // DEBUG DRAW:
-		if (debug) {
-			dst.ctx.pen_color = colors[deepLevel & 0x03];
-			if (x1 >=0 && y1>=0 && (x1+p->w-1 < dst.w) && (y1+p->h-1 < dst.h)) {
-				dst.rect(x1,y1,p->w,p->h);
-			}
+		if (this->callback) {
+			this->callback->on_update(p, dst);
 		}
 
-		clear_dirty(p);
-		force_redreaw = true;
+		p->set_dirty_no_parent(false);
+
 		ret = true;
-//			return true;
 	} 
 	// только дочерние
 	gobject_t::iterator_visible_t iter = p->iterator_visible();
 	gobject_t *pp = iter.next();
-
+	bool ret2 = ret;
 	while (pp) {
-		bool ret1 = render(pp, dst, force_redreaw, pax, pay, paw, pah);
-		if (!ret && ret1)
-			ret = true;
+		if (ret) {
+			pp->set_dirty_no_parent(true);
+		}
+		bool ret1 = render(pp, dst, pax, pay, paw, pah);
+		if (!ret2 && ret1)
+			ret2 = true;
 		pp = iter.next();
 	}
-	deepLevel--;
-	return ret;
+	return ret2;
 }
 
 

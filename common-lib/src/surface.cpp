@@ -74,17 +74,19 @@ void surface_t::putpx_to(surface_t &dst, s32 ddx,s32 ddy, u32 c) {
 void surface_t::line(s32 x1,s32 y1, s32 len, bool isVertical) {
 	_MY_ASSERT(buf_sz,return);
 	_MY_ASSERT(len > 0,return);
+	s32 tmp = 1;
+
 	if (!isVertical) {
-		if (y1 <0 || y1 >= h) return;
-		if (x1 < 0) {len += x1; x1 = 0;}
-		if (x1+len > w) len = w-x1;
-		for (int x=x1; x<x1+len; x++) {
+		if (!this->trim_to_allowed(x1,y1,len,tmp)) {
+			return;
+		}
+		for (int x=x1; x < x1+len; x++) {
 			this->putpx_to(*this,x,y1,ctx.pen_color);
 		}
 	} else {
-		if (x1 <0 || x1 >= w) return;
-		if (y1 < 0) { len += y1; y1 = 0;}
-		if (y1+len > h) len = h-y1;
+		if (!this->trim_to_allowed(x1,y1,tmp,len)) {
+			return;
+		}
 		for (int y=y1; y<y1+len; y++) {
 			this->putpx_to(*this, x1,y,ctx.pen_color);
 		}
@@ -122,7 +124,7 @@ void surface_t::line(s32 x1,s32 y1, s32 x2,s32 y2) {
 
     int error = deltaX - deltaY;
 
-	if (x2 < 0 || y2 <0 || x2 >= w || y2 >= h) 
+	if (x2 < allowed_x1 || y2 < allowed_y1 || x2 >= allowed_x1  + allowed_w || y2 >= allowed_y1 + allowed_h) 
 		return;
 
     this->putpx_to(*this,x2, y2, ctx.pen_color);
@@ -130,7 +132,7 @@ void surface_t::line(s32 x1,s32 y1, s32 x2,s32 y2) {
 
     while(cnt && (x1 != x2 || y1 != y2)) {
 		_MY_ASSERT(cnt--,break);
-		if (x1 < 0 || y1 <0 || x1 >= w || y1 >= h) 
+		if (x1 < allowed_x1 || y1 < allowed_y1 || x1 >= allowed_x1 + allowed_w || y1 >= allowed_y1 + allowed_h) 
 			break;
 
     	this->putpx_to(*this,x1, y1,ctx.pen_color);

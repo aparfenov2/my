@@ -256,6 +256,10 @@ public:
 			parent->dirty = true;
 		}
 	}
+	void set_dirty_no_parent(bool dirty) {
+		_dirty = dirty;
+	}
+
 	virtual void set_enabled(bool enabled) {
 		_enabled = enabled;
 	}
@@ -433,17 +437,25 @@ public:
 
 class rasterizer_t {
 public:
-	static u32 colors[4];
-	static u32 deepLevel;
-	static bool debug;
+	class callback_t {
+	public:
+		virtual void on_update(gobject_t *child, surface_t &dst) = 0;
+	};
+public:
+	callback_t *callback;
 public:
 
-	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
-	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw = false) {
-		return render(p,dst,force_redreaw,-1,-1,-1,-1);
+	rasterizer_t() {
+		callback = 0;
 	}
 
-	static bool render(gobject_t *p, surface_t &dst, bool force_redreaw, s32 pax, s32 pay, s32 paw, s32 pah);
+
+	// очищаем dirty для обьекта и всех дочерних, т.к. он уже перерисовался
+	bool render(gobject_t *p, surface_t &dst) {
+		return render(p,dst,0,0,dst.w,dst.h);
+	}
+private:
+	bool render(gobject_t *p, surface_t &dst, s32 pax, s32 pay, s32 paw, s32 pah);
 
 };
 namespace font_size_t {
@@ -553,12 +565,10 @@ private:
 	static modal_overlay_t *_instance;
 public:
 
-	static void allocate_new() {
-		_instance = new modal_overlay_t();
-	}
-
 	static modal_overlay_t & instance() {
-		_MY_ASSERT(_instance, 0);
+		if (!_instance) {
+			_instance = new modal_overlay_t();
+		}
 		return *_instance;
 	}
 

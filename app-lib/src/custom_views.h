@@ -146,6 +146,7 @@ private:
 
 class dynamic_model_t : public model_t { 
 
+
 public:
 	typedef std::hash_map<u32, variant_holder_t *> children_map_t;
 	children_map_t children;
@@ -661,7 +662,7 @@ public:
 	}
 
 	virtual void set_dirty(bool dirty) OVERRIDE {
-		super::set_dirty(dirty);
+		super::set_dirty_no_parent(dirty);
 		if (dirty && parent && !decorator) {
 			parent->dirty = true;
 		}
@@ -952,6 +953,13 @@ public:
 		}
 	}
 
+	// used in textbox_t
+	void get_text_size(s32 &aw, s32 &ah, myvi::string_t text) {
+		_MY_ASSERT(ctx.font,return);
+		ctx.font->set_char_size_px(0,ctx.font_size);
+		ctx.font->get_string_size(text, aw, ah);
+	}
+
 	virtual void vget_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
 		_MY_ASSERT(visible,return);
 		_MY_ASSERT(ctx.font,return);
@@ -1118,12 +1126,11 @@ private:
 public:
 	view_cache_t view_cache;
 public:
-	static void allocate_new() {
-		_instance = new popup_manager_t();
-	}
 
 	static popup_manager_t & instance() {
-		_MY_ASSERT(_instance, 0);
+		if (!_instance) {
+			_instance = new popup_manager_t();
+		}
 		return *_instance;
 	}
 
@@ -1315,6 +1322,7 @@ protected:
 		_value=(cvalue);
 		lab.text = _value;
 		caret_pos = _value.length();
+		measure_cursor_poses();
 	}
 
 	myvi::string_t get_value() {
@@ -1342,18 +1350,15 @@ public:
 		add_child(&lab);
 	}
 
-	void measure_cursor_pos() {
+	void measure_cursor_poses() {
 		for (s32 i=1; i <= _value.length(); i++) {
-			lab.text = _value.sub(0,i);
 			s32 lw, lh;
-			lab.get_preferred_size(lw,lh);
+			lab.get_text_size(lw,lh,_value.sub(0,i));
 			cursor_pos[i-1] = lw;
 		}
-		lab.text = _value;
 	}
 
 	virtual void vget_preferred_size(s32 &aw, s32 &ah) OVERRIDE {
-		measure_cursor_pos();
 		lab.get_preferred_size(aw, ah);
 	}
 
@@ -1482,6 +1487,7 @@ public:
 	virtual label_context_t & get_text_context() OVERRIDE {
 		return this->lab.ctx;
 	}
+
 
 };
 
@@ -2192,7 +2198,12 @@ public:
 			}
 			child = iter.next();
 		}
-		this->view->child_request_size_change(selected_child);
+//		this->view->child_request_size_change(selected_child);
+		if (this->view->parent) {
+			if (this->view->parent->initialized) {
+				this->view->parent->do_layout();
+			}
+		}
 		//if (this->view->w && this->view->h) {
 		//	this->view->do_layout();
 		//}

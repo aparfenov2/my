@@ -58,9 +58,9 @@
 		</type>
 		<type id="dsp_onoff_t" name="Откл. дисплея" name_en="Power save" type="enum">
 			<enum id="NO" name="НЕТ" name_en="NO" value="0" />
-			<enum id="a1_MIN" name="1 МИНУТА" name_en="1 Minute" value="0"  />
-			<enum id="a5_MIN" name="5 МИНУТ" name_en="5 Minutes" value="1"  />
-			<enum id="a10_MIN" name="10 МИНУТ" name_en="10 Minutes" value="2"  />
+			<enum id="a1_MIN" name="1 МИНУТА" name_en="1 Minute" value="1"  />
+			<enum id="a5_MIN" name="5 МИНУТ" name_en="5 Minutes" value="2"  />
+			<enum id="a10_MIN" name="10 МИНУТ" name_en="10 Minutes" value="3"  />
 		</type>
 	</types>
 	
@@ -176,27 +176,29 @@
 
 				<view layout="stack" vertical="true"  stretch="last">
 					<view decorator="background" default_color="BK_BLUE" layout="stretch">
-						<view inherited="lab" static_text="xxx" listen="menu_name" font="TTF_BOLD" font_size="FS_8" font_color="FNT_WHITE"  /> 
+						<view inherited="lab" static_text="xxx" listen="menu_name" font="TTF_BOLD" font_size="FS_15" font_color="FNT_WHITE"  /> 
 					</view>
-					<view predefined="scroll_window" >
-	<!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
-						<view layout="stretch" padding="10" controller="window_selector" listen="menu_select" name_event="menu_name" >
-							<view id="main" name="Главное" name_en="Main" layout="center" >
-								<view layout="stack" vertical="false" preferred_item_size="false" bw="140" height="80" >
-									<view layout="center" decorator="background" default_color="BK_BLUE" >
-										<view inherited="btn" static_text="Управление" static_text_en="Control" propagate="static_text" event="menu_select" arg0="control" />
-									</view>
-									<view layout="center" decorator="background" default_color="BK_BLUE">
-										<view inherited="btn" static_text="Калибровка" static_text_en="Calibration" propagate="static_text" event="menu_select" arg0="parameters" />
-									</view>
-									<view layout="center" decorator="background" default_color="BK_BLUE">
-										<view inherited="btn" static_text="Настройки" static_text_en="Settings" propagate="static_text" event="menu_select" arg0="settings" />
+					<view layout="stretch" decorator="background" default_color="BK_GRAY" > <!-- to stop dirty propagation -->
+						<view predefined="scroll_window" >
+		<!-- параметры event, listen, arg0 - посылка сообщения по локальной шине сообщений -->
+							<view layout="stretch" padding="10" controller="window_selector" listen="menu_select" name_event="menu_name" >
+								<view id="main" name="Главное" name_en="Main" layout="center" >
+									<view layout="stack" vertical="false" preferred_item_size="false" bw="140" height="80" >
+										<view layout="center" decorator="background" default_color="BK_BLUE" >
+											<view inherited="btn" static_text="Управление" static_text_en="Control" propagate="static_text" event="menu_select" arg0="control" />
+										</view>
+										<view layout="center" decorator="background" default_color="BK_BLUE">
+											<view inherited="btn" static_text="Калибровка" static_text_en="Calibration" propagate="static_text" event="menu_select" arg0="parameters" />
+										</view>
+										<view layout="center" decorator="background" default_color="BK_BLUE">
+											<view inherited="btn" static_text="Настройки" static_text_en="Settings" propagate="static_text" event="menu_select" arg0="settings" />
+										</view>
 									</view>
 								</view>
+								<view id="control" inherited="menu_page_template" name="Управление" name_en="Control" menu_ref="main" />
+								<view id="parameters" inherited="menu_page_template" name="Калибровка" name_en="Calibration" menu_ref="parameters" />
+								<view id="settings" inherited="menu_page_template" name="Настройки" name_en="Settings" menu_ref="screen"  />
 							</view>
-							<view id="control" inherited="menu_page_template" name="Управление" name_en="Control" menu_ref="main" />
-							<view id="parameters" inherited="menu_page_template" name="Калибровка" name_en="Calibration" menu_ref="parameters" />
-							<view id="settings" inherited="menu_page_template" name="Настройки" name_en="Settings" menu_ref="screen"  />
 						</view>
 					</view>
 				</view>
@@ -258,8 +260,6 @@
 			<parameter_ref id="rsp_span" />
 			<parameter_ref id="mode_ctl" />
 			
-			<parameter_ref id="brightness" />
-			<parameter_ref id="dsp_onoff" />
 		</menu>
 		<menu id="screen">
 			<parameter_ref id="brightness" />

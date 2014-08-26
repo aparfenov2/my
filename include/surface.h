@@ -159,14 +159,12 @@ public:
 	// called from rasterizer_t
 	void set_allowed_area(s32 x1, s32 y1,s32 sw,s32 sh) {
 
-		if (!_trim_to(x1,y1,sw,sh,0,0,w,h)) {
-			allowed_x1 = allowed_y1 = allowed_w = allowed_h = 0;
-		} else {
-			allowed_x1 = x1;
-			allowed_y1 = y1;
-			allowed_w = sw;
-			allowed_h = sh;
-		}
+		_MY_ASSERT(x1 >= 0 && y1 >= 0 && sw >= 0 && sh >= 0 && sw <= w && sh <=  h,return);
+
+		allowed_x1 = x1;
+		allowed_y1 = y1;
+		allowed_w = sw;
+		allowed_h = sh;
 	}
 
 // can be futher optimized
