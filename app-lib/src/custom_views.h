@@ -1312,11 +1312,13 @@ public:
 	bool cursor_visible;
 	bool captured;
 	bool allow_cursor;
+	bool allow_no_capture;
 	u32 cursor_color;
 protected:
 	myvi::string_impl_t<INPUT_MAX_LEN> _value;
 	s32 cursor_pos[INPUT_MAX_LEN];
 	s32 caret_pos;
+	bool just_selected;
 protected:
 	void set_value(myvi::string_t cvalue) {
 		_value=(cvalue);
@@ -1346,6 +1348,8 @@ public:
 		allow_cursor = true;
 		captured = false;
 		cursor_color = 0x000000;
+		allow_no_capture = false;
+		just_selected = false;
 
 		add_child(&lab);
 	}
@@ -1367,6 +1371,13 @@ public:
 		lab.y = 0;
 		lab.w = w; // место для курсора
 		lab.h = h;
+	}
+
+	virtual void set_selected(bool selected) {
+		super::set_selected(selected);
+		if (selected) {
+			just_selected = true;
+		}
 	}
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
@@ -1396,11 +1407,13 @@ public:
 			goto lab_update_input;
 		}
 		// не должны редактироваться пока не перешли в активное состояние
-		if (!captured) {
+		if (!captured && !allow_no_capture) {
 			return;
 		}
-		if (!cursor_visible) {
-			goto lab_update_input;
+
+		if (!captured && just_selected && allow_no_capture) {
+			just_selected = false;
+			value = "";
 		}
 
 		if (key == myvi::key_t::K_LEFT) {
@@ -1455,10 +1468,11 @@ lab_update_input:
 	}
 
 	virtual void render(myvi::surface_t &dst) OVERRIDE {
-		s32 ax, ay;
-		translate(ax,ay);
 		// draw vline
 		if (cursor_visible) {
+			s32 ax, ay;
+			translate(ax,ay);
+
 			dst.ctx.pen_color = cursor_color;
 			s32 acp = 0;
 			_MY_ASSERT(caret_pos <= INPUT_MAX_LEN,return);
@@ -1482,6 +1496,7 @@ class tbox_view_t :
 public:
 	tbox_view_t() {
 		this->allow_cursor = false;
+		this->allow_no_capture = true;
 	}
 
 	virtual label_context_t & get_text_context() OVERRIDE {
