@@ -224,7 +224,7 @@ public:
 class int_converter_t : public converter_t {
 public:
 	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {		
-		std::sprintf((char *)str.c_str(), "%d", value.get_int_value());
+		std::sprintf((char *)str.c_str(), "%ld", value.get_int_value());
 		str.update_length();
 	}
 
