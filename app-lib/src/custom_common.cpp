@@ -532,3 +532,59 @@ myvi::gobject_t * dynamic_view_mixin_t::resolve_path(myvi::string_t _path) {
 	}
 	return 0;
 }
+
+
+
+
+class view_cache_t {
+	typedef std::hash_map<myvi::string_t, myvi::gobject_t *> vmap_t;
+private:
+	vmap_t view_map;
+	static view_cache_t *_instance;
+
+	view_cache_t() {
+	}
+public:
+	static view_cache_t & instance() {
+		if (!_instance) {
+			_instance = new view_cache_t();
+		}
+		return * _instance;
+	}
+
+	myvi::gobject_t * get_view(myvi::string_t view_id, view_build_context_t ctx) {
+		_MY_ASSERT(!view_id.is_empty(), return 0);
+
+		vmap_t::iterator iter = view_map.find(view_id);
+		if(iter != view_map.end()) return iter->second;
+
+		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
+		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view(ctx);
+		view->init();
+		view_map[view_id] = view;
+		return view;
+	}
+};
+
+view_cache_t *view_cache_t::_instance = 0;
+
+void popup_manager_t::popup(myvi::string_t view_id, view_build_context_t ctx) {
+
+	myvi::gobject_t *view = view_cache_t::instance().get_view(view_id, ctx);
+	myvi::modal_overlay_t::instance().push_modal(view);
+
+	view->w = myvi::modal_overlay_t::instance().w;
+	view->h = myvi::modal_overlay_t::instance().h;
+	view->do_layout();
+
+	myvi::focus_manager_t::instance().capture_child(view);
+	myvi::focus_manager_t::instance().select(0);
+
+}
+
+
+void popup_manager_t::popdown() {
+	myvi::gobject_t *view = myvi::modal_overlay_t::instance().pop_modal();
+	myvi::focus_manager_t::instance().release_child(view);
+	myvi::focus_manager_t::instance().select(0);
+}

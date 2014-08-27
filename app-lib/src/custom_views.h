@@ -886,32 +886,6 @@ public:
 };
 
 
-class event_bus_msg_t {
-public:
-	myvi::string_t event_name;
-	variant_t arg0;
-public:
-	event_bus_msg_t(myvi::string_t _event_name, variant_t _arg0) {
-
-		_MY_ASSERT(!_event_name.is_empty(), return);
-		event_name = _event_name;
-		arg0 = _arg0;
-	}
-};
-
-#define _EVENT_BUS_MAX_SUBSCRIBERS 32
-
-class event_bus_t : public myvi::publisher_t<event_bus_msg_t, _EVENT_BUS_MAX_SUBSCRIBERS> {
-private:
-	event_bus_t() {
-	}
-	static event_bus_t _instance;
-public:
-	static event_bus_t & instance() {
-		return _instance;
-	}
-
-};
 
 
 
@@ -973,7 +947,7 @@ public:
 			ctx.font->get_string_size(cs1, aw, ah);
 		}
 		aw += 2 * _TEXT_PADDING;
-		ah += 1 * _TEXT_PADDING;
+		ah += 2 * _TEXT_PADDING;
 	}
 };
 
@@ -1098,68 +1072,6 @@ public:
 
 
 
-class view_cache_t {
-	typedef std::hash_map<myvi::string_t, myvi::gobject_t *> vmap_t;
-public:
-	vmap_t view_map;
-public:
-	myvi::gobject_t * get_view(myvi::string_t view_id, view_build_context_t ctx) {
-		_MY_ASSERT(!view_id.is_empty(), return 0);
-
-		vmap_t::iterator iter = view_map.find(view_id);
-		if(iter != view_map.end()) return iter->second;
-
-		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
-		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view(ctx);
-		view->init();
-		view_map[view_id] = view;
-		return view;
-	}
-};
-
-
-class popup_manager_t  {
-private:
-	popup_manager_t() {
-	}
-	static popup_manager_t *_instance;
-public:
-	view_cache_t view_cache;
-public:
-
-	static popup_manager_t & instance() {
-		if (!_instance) {
-			_instance = new popup_manager_t();
-		}
-		return *_instance;
-	}
-
-	void popup(myvi::string_t view_id) {
-		popup(view_id, view_build_context_t() );
-	}
-
-	void popup(myvi::string_t view_id, view_build_context_t ctx) {
-
-		myvi::gobject_t *view = view_cache.get_view(view_id, ctx);
-		myvi::modal_overlay_t::instance().push_modal(view);
-
-		view->w = myvi::modal_overlay_t::instance().w;
-		view->h = myvi::modal_overlay_t::instance().h;
-		view->do_layout();
-
-		myvi::focus_manager_t::instance().capture_child(view);
-		myvi::focus_manager_t::instance().select(0);
-
-	}
-
-
-	void popdown() {
-		myvi::gobject_t *view = myvi::modal_overlay_t::instance().pop_modal();
-		myvi::focus_manager_t::instance().release_child(view);
-		myvi::focus_manager_t::instance().select(0);
-	}
-
-};
 
 
 class button_clicked_msg_t {
@@ -1691,11 +1603,11 @@ public:
 	label_t lab;
 	myvi::wo_property_t<myvi::iterator_t<combobox_item_t>*,combo_box_t> values;
 	myvi::property_t<combobox_item_t *, combo_box_t> value;
+	bool captured;
 private:
 	combobox_item_t * _value;
 	myvi::string_impl_t<INPUT_MAX_LEN> _str_value;
 	myvi::iterator_t<combobox_item_t> *_values;
-	bool captured;
 	combobox_item_t *sprev;
 	myvi::reverse_iterator_t<combobox_item_t> revit;
 	empty_iterator_t empty_iterator;
@@ -1710,6 +1622,7 @@ private:
 
 	void set_value(combobox_item_t * value) {
 		_value=(value);
+		sprev = value;
 		lab.text = _value->get_string_value();
 	}
 
@@ -1772,8 +1685,10 @@ public:
 			} else {
 				this->release_focus();
 				set_captured(false);
+				notify(_value);
 			}
-			goto lab_update_cbox;
+			dirty = true;
+			return;
 		}
 		if (!captured) {
 			return;
@@ -1917,8 +1832,11 @@ public:
 
 	// обновление от виджета
 	virtual void accept(combobox_item_t * &msg) OVERRIDE {
-		variant_t value(msg->get_int_value());
-		model_t::instance()->update(this->parameter_path.path(), value);
+
+		if (!this->cb->captured) {
+			variant_t value(msg->get_int_value());
+			model_t::instance()->update(this->parameter_path.path(), value);
+		}
 	}
 };
 

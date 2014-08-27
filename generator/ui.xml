@@ -62,6 +62,10 @@
 			<enum id="a5_MIN" name="5 МИНУТ" name_en="5 Minutes" value="2"  />
 			<enum id="a10_MIN" name="10 МИНУТ" name_en="10 Minutes" value="3"  />
 		</type>
+		<type id="lang_t" name="Язык" name_en="Language" type="enum">
+			<enum id="RU" name="Русский" name_en="Russian" value="0"  />
+			<enum id="EN" name="Английский" name_en="English" value="1"  />
+		</type>
 	</types>
 	
 	<parameters>
@@ -88,6 +92,7 @@
 		
 		<parameter id="rf_on" type="on_off_t" initial="1" name="RF"  />
 		<parameter id="mod_off" type="on_off_t" initial="0" name="MOD" />
+		<parameter id="lang" type="lang_t" name="Язык" name_en="Language" initial="0" view="cbox" />
 	</parameters>
 	
 	<colors>
@@ -235,6 +240,19 @@
 				</view>
 			</view>
 		</view>
+
+		<view id="reboot_popup" layout="center">
+			<view  layout="center" padding="5" decorator="background" default_color="BK_BLUE" height="200" >
+				<view  layout="stack" vertical="true"  >
+					<view layout="center">
+						<view  inherited="lab" static_text="Требуется перезагрузка" static_text_en="Going to be rebooted" />
+					</view>
+					<view layout="center">
+						<view  inherited="btn" static_text="Перезагрузить" static_text_en="Reboot" propagate="static_text" event="reboot" arg0="0" close="true" />
+					</view>
+				</view>
+			</view>
+		</view>
 		
 		<view id="menu_item_complex" layout="stack" vertical="false" >
 			<view inherited="btn" text_source="name" propagate="text_source" popup_view="popup_menu" />
@@ -264,6 +282,7 @@
 		<menu id="screen">
 			<parameter_ref id="brightness" />
 			<parameter_ref id="dsp_onoff" />
+			<parameter_ref id="lang" />
 		</menu>
 	</menus>
 </schema>
