@@ -4,6 +4,7 @@
 
 #include "widgets.h"
 #include "generator_common.h"
+#include <math.h>
 
 namespace custom {
 
@@ -417,7 +418,7 @@ public:
 	variant_type_t::variant_type_t type;
 	T sval;
 	s32 ival;
-	double fval;
+	float fval;
 public:
 	variant_tt() {
 		type = variant_type_t::STRING;
@@ -447,7 +448,7 @@ public:
 		set_value(_ival);
 	}
 
-	variant_tt(double _fval) {
+	variant_tt(float _fval) {
 		set_value(_fval);
 	}
 
@@ -461,7 +462,7 @@ public:
 		type = variant_type_t::INT;
 	}
 
-	void set_value(double _fval) {
+	void set_value(float _fval) {
 		fval = _fval;
 		type = variant_type_t::FLOAT;
 	}
@@ -476,10 +477,27 @@ public:
 		return ival;
 	}
 
-	double get_float_value() {
+	float get_float_value() {
 		_MY_ASSERT(type == variant_type_t::FLOAT, return 0);
 		return fval;
 	}
+
+
+
+	float inc_dec(float num, float k, float one) {
+		num = num / k;
+		num = std::floor(num + 0.5);
+		num += one;
+
+		while (k < 0.5) {
+			k = k * 10.0;
+			num = num / 10.0;
+		}
+
+		return num;
+	}
+
+
 
 	void inc (variant_tt & other) {
 		_MY_ASSERT(this->type != variant_type_t::STRING && other.type == this->type, return);
@@ -489,7 +507,7 @@ public:
 			this->set_value(this->get_int_value() + other.get_int_value());
 
 		} else if (this->type == variant_type_t::FLOAT) {
-			this->set_value(this->get_float_value() + other.get_float_value());
+			this->set_value(inc_dec(this->get_float_value(), other.get_float_value(), 1.0));
 		}
 	}
 
@@ -504,7 +522,7 @@ public:
 			this->set_value(this->get_int_value() - other.get_int_value());
 
 		} else if (this->type == variant_type_t::FLOAT) {
-			this->set_value(this->get_float_value() - other.get_float_value());
+			this->set_value(inc_dec(this->get_float_value(), other.get_float_value(), -1.0));
 		}
 	}
 

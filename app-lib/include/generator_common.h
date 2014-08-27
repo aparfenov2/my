@@ -20,7 +20,7 @@ public:
 // ======================================= меты =============================================
 
 #define _NAN 0x8fffffff
-#define _NANF (double)_NAN
+#define _NANF (float)_NAN
 
 /*
 // C++ requirements:
@@ -68,7 +68,7 @@ public:
 	virtual s32 get_int_param(myvi::string_t key) {
 		return _NAN;
 	}
-	virtual double get_float_param(myvi::string_t key) {
+	virtual float get_float_param(myvi::string_t key) {
 		return _NANF;
 	}
 };
@@ -78,7 +78,7 @@ template<typename TSelf, typename TBase>
 class dynamic_meta_t : public TBase {
 	typedef std::hash_map<myvi::string_t, myvi::string_t> smap_t;
 	typedef std::hash_map<myvi::string_t, s32> imap_t;
-	typedef std::hash_map<myvi::string_t, double> fmap_t;
+	typedef std::hash_map<myvi::string_t, float> fmap_t;
 public:
 	smap_t string_param_map;
 	imap_t int_param_map;
@@ -94,7 +94,7 @@ public:
 		return (TSelf *) this;
 	}
 
-	TSelf * set_float_param(myvi::string_t id, double val) {
+	TSelf * set_float_param(myvi::string_t id, float val) {
 		float_param_map[id] = val;
 		return (TSelf *) this;
 	}
@@ -111,7 +111,7 @@ public:
 		return _NAN;
 	}
 
-	virtual double get_float_param(myvi::string_t key) OVERRIDE {
+	virtual float get_float_param(myvi::string_t key) OVERRIDE {
 		fmap_t::iterator iter = float_param_map.find(key);
 		if(iter != float_param_map.end()) return iter->second;
 		return _NANF;
@@ -347,7 +347,7 @@ class dynamic_view_meta_t : public dynamic_composite_meta_t<dynamic_view_meta_t,
 private:
 	typedef std::hash_map<myvi::string_t, myvi::string_t> _str_map;
 	typedef std::hash_map<myvi::string_t, s32> _int_map;
-	typedef std::hash_map<myvi::string_t, double> _float_map;
+	typedef std::hash_map<myvi::string_t, float> _float_map;
 public:
 
 	virtual view_meta_t * get_view_child(s32 i) OVERRIDE {
@@ -407,7 +407,7 @@ public:
 			if (v != (*it).second) return true; // если inherited имеет другое значение
 		}
 		for (_float_map::const_iterator it = this->float_param_map.begin(); it != this->float_param_map.end(); it++) {
-			double v = inherited->get_float_param((*it).first);
+			float v = inherited->get_float_param((*it).first);
 			if (v == _NANF) return true; // если такого значения нет в inherited
 			if (v != (*it).second) return true; // если inherited имеет другое значение
 		}
