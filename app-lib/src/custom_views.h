@@ -243,7 +243,7 @@ public:
 	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {
 
 		char *buf = (char *)str.c_str();
-		s32 len = std::sprintf(buf, "%.6f", value.get_float_value());
+		s32 len = std::sprintf(buf, "%.4f", value.get_float_value());
 
 		while (len > 1 && (buf[len-1] == '0' || buf[len-1] == '.')) {
 			--len;
@@ -254,7 +254,7 @@ public:
 
 	virtual bool from_string(myvi::string_t &str, variant_t &value) OVERRIDE {
 		char *end;
-		double fval = std::strtod(str.c_str(), &end);
+		float fval = std::strtod(str.c_str(), &end);
 		if (!*end) {
 			value.set_value(fval);
 		}
@@ -817,7 +817,7 @@ protected:
 			model_t::instance()->update(ctx.get_parameter_path().path(), value);
 		}
 
-		double initial_float = ctx.get_parameter_meta()->get_float_param("initial");
+		float initial_float = ctx.get_parameter_meta()->get_float_param("initial");
 		if (initial_float != _NANF) {
 			_MY_ASSERT(parameter_type == variant_type_t::FLOAT, return);
 			value.set_value(initial_float);
@@ -2421,7 +2421,7 @@ public:
 
 class menu_meta_layout_t : public myvi::layout_t {
 public:
-	double percent;
+	float percent;
 public:
 	menu_meta_layout_t(gen::meta_t *meta) {
 		percent = 0.6;

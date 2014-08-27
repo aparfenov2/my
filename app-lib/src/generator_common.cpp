@@ -48,7 +48,7 @@ static void emit_set_params(xml_node<> * node, T *dynamic_meta) {
 				dynamic_meta->set_int_param(attr->name(),ival);
 				break;
 			}
-			double fval = std::strtod(attr->value(), &end);
+			float fval = std::strtod(attr->value(), &end);
 			if (!*end) {
 				dynamic_meta->set_float_param(attr->name(),fval);
 				break;
