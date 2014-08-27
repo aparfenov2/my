@@ -596,5 +596,59 @@ public:
 };
 
 
+class popup_manager_t  {
+private:
+	popup_manager_t() {
+	}
+	static popup_manager_t *_instance;
+public:
+
+	static popup_manager_t & instance() {
+		if (!_instance) {
+			_instance = new popup_manager_t();
+		}
+		return *_instance;
+	}
+
+	void popup(myvi::string_t view_id) {
+		popup(view_id, view_build_context_t() );
+	}
+
+	void popup(myvi::string_t view_id, view_build_context_t ctx);
+
+	void popdown() ;
+
+};
+
+
+
+class event_bus_msg_t {
+public:
+	myvi::string_t event_name;
+	variant_t arg0;
+public:
+	event_bus_msg_t(myvi::string_t _event_name, variant_t _arg0) {
+
+		_MY_ASSERT(!_event_name.is_empty(), return);
+		event_name = _event_name;
+		arg0 = _arg0;
+	}
+};
+
+#define _EVENT_BUS_MAX_SUBSCRIBERS 32
+
+class event_bus_t : public myvi::publisher_t<event_bus_msg_t, _EVENT_BUS_MAX_SUBSCRIBERS> {
+private:
+	event_bus_t() {
+	}
+	static event_bus_t _instance;
+public:
+	static event_bus_t & instance() {
+		return _instance;
+	}
+
+};
+
+
 } // ns myvi
 #endif

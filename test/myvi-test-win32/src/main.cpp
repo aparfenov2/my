@@ -250,6 +250,35 @@ void print_chars(ttype_font_t &fnt, surface_t &s1) {
 }
 
 
+class lang_controller_t : public myvi::subscriber_t<custom::model_message_t> {
+public:
+
+	void init() {
+		custom::model_t::instance()->subscribe(this);
+	}
+
+	virtual void accept(custom::model_message_t &msg) OVERRIDE {
+		if (msg.path == "lang") {
+			custom::popup_manager_t::instance().popup("reboot_popup");
+		}
+	}
+};
+
+
+class reboot_controller_t : public myvi::subscriber_t<custom::event_bus_msg_t>  {
+public:
+	void init() {
+		custom::event_bus_t::instance().subscribe(this);
+	}
+
+	virtual void accept(custom::event_bus_msg_t &msg) OVERRIDE {
+		if (msg.event_name == "reboot") {
+			int i = 0;
+		}
+	}
+
+};
+
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -357,8 +386,16 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	modal_overlay_t::instance().h = TFT_HEIGHT;
 	modal_overlay_t::instance().push_modal(&test_screen);
 
+
+	lang_controller_t lang_controller;
+	lang_controller.init();
+
+	reboot_controller_t reboot_controller;
+	reboot_controller.init();
+
 	my_test_drawer_t test_drawer(& modal_overlay_t::instance());
 	test_drawer.create_window(s1, wnd_title);
+
 
 	bool exit = false;
 	while (!exit) {

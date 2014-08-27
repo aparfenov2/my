@@ -29,6 +29,8 @@
 #include "link_model_updater.h"
 #include "file_server.h"
 
+#include "options.h"
+
 
 using namespace myvi;
 using namespace hw;
@@ -242,6 +244,48 @@ public:
 };
 
 
+class lang_controller_t : public myvi::subscriber_t<custom::model_message_t> {
+public:
+	myvi::string_t path;
+public:
+	lang_controller_t() {
+		path = "lang";
+	}
+	void init() {
+		custom::variant_t val;
+
+		u32 lang_id = 0;
+		options_t::instance().get_int_value(OPT_LANG,lang_id);
+		val.set_value((s32)lang_id);
+
+		custom::model_t::instance()->update(path, val);
+		custom::model_t::instance()->subscribe(this);
+	}
+
+	virtual void accept(custom::model_message_t &msg) OVERRIDE {
+		if (msg.path == path) {
+			custom::popup_manager_t::instance().popup("reboot_popup");
+			options_t::instance().set_int_value(OPT_LANG, msg.value.get_int_value());
+		}
+	}
+};
+
+extern "C" void c_int00(void);
+
+class reboot_controller_t : public myvi::subscriber_t<custom::event_bus_msg_t>  {
+public:
+	void init() {
+		custom::event_bus_t::instance().subscribe(this);
+	}
+
+	virtual void accept(custom::event_bus_msg_t &msg) OVERRIDE {
+		if (msg.event_name == "reboot") {
+			c_int00();
+		}
+	}
+
+};
+
 
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
@@ -258,8 +302,8 @@ ssd1963drv_t drv1;
 Spi spi;
 FRAM fram;
 FlashDev flash;
-
-
+lang_controller_t lang_controller;
+reboot_controller_t reboot_controller;
 
 void my_main() {
 
@@ -274,7 +318,7 @@ void my_main() {
 	fram.init(&spi);
 	flash.init(&spi);
 
-
+	options_t::instance().init(&fram);
 
 
 	_WEAK_ASSERT(file_system.init(&fram, &flash), 0);
@@ -361,7 +405,9 @@ void my_main() {
 
 
 	do {
-		u32 schema_file_id = SCHEMA_FILE_ID;
+		u32 lang_id = 0;
+		options_t::instance().get_int_value(OPT_LANG,lang_id);
+		u32 schema_file_id = lang_id ? SCHEMA_EN_FILE_ID : SCHEMA_FILE_ID;
 		u32 schema_len, schema_max_len;
 		_WEAK_ASSERT(file_system.get_info(schema_file_id, schema_len, schema_max_len), break);
 		if (!schema_len) break;
@@ -395,6 +441,8 @@ void my_main() {
 		modal_overlay_t::instance().push_modal(screen1);
 		modal_overlay_t::instance().dirty = true;
 
+		lang_controller.init();
+		reboot_controller.init();
     }
 
 main_loop:
