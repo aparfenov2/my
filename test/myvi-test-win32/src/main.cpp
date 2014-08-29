@@ -393,6 +393,16 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	reboot_controller_t reboot_controller;
 	reboot_controller.init();
 
+	myvi::string_t schema_ver_path = "version.schema_ver";
+	custom::variant_t v;
+	v.set_value((s32)1234);
+	custom::model_t::instance()->try_register_path(schema_ver_path, v, custom::variant_type_t::INT);
+
+	//myvi::string_t dme_ch_path = "dme.ch";
+	//v.set_value((s32)12);
+	//custom::model_t::instance()->try_register_path(dme_ch_path, v, custom::variant_type_t::INT);
+
+
 	my_test_drawer_t test_drawer(& modal_overlay_t::instance());
 	test_drawer.create_window(s1, wnd_title);
 
