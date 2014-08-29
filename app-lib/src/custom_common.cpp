@@ -105,6 +105,9 @@ static myvi::gobject_t * build_predefined_view(custom::view_build_context_t &ctx
 	} else if (view_id == "lab") {
 		view = new custom::lab_view_t();
 
+	} else if (view_id == "lab_focusable") {
+		view = new custom::focusable_lab_view_t();
+
 	} else if (view_id == "scroll_window") {
 		view = new custom::scroll_window_view_t();
 
@@ -537,7 +540,7 @@ myvi::gobject_t * dynamic_view_mixin_t::resolve_path(myvi::string_t _path) {
 
 
 class view_cache_t {
-	typedef std::hash_map<myvi::string_t, myvi::gobject_t *> vmap_t;
+	typedef std::hash_map<u32, myvi::gobject_t *> vmap_t;
 private:
 	vmap_t view_map;
 	static view_cache_t *_instance;
@@ -552,25 +555,25 @@ public:
 		return * _instance;
 	}
 
-	myvi::gobject_t * get_view(myvi::string_t view_id, view_build_context_t ctx) {
+	myvi::gobject_t * get_view(myvi::string_t view_id, view_build_context_t ctx, u32 instance_hash) {
 		_MY_ASSERT(!view_id.is_empty(), return 0);
-
-		vmap_t::iterator iter = view_map.find(view_id);
+		u32 hash = 37 * view_id.hash() + instance_hash;
+		vmap_t::iterator iter = view_map.find(hash);
 		if(iter != view_map.end()) return iter->second;
 
 		gen::view_meta_t *view_meta = gen::meta_registry_t::instance().find_view_meta(view_id);
 		myvi::gobject_t *view = view_meta_ex_t(view_meta).build_view(ctx);
 		view->init();
-		view_map[view_id] = view;
+		view_map[hash] = view;
 		return view;
 	}
 };
 
 view_cache_t *view_cache_t::_instance = 0;
 
-void popup_manager_t::popup(myvi::string_t view_id, view_build_context_t ctx) {
+void popup_manager_t::popup(myvi::string_t view_id, view_build_context_t ctx, u32 instance_hash) {
 
-	myvi::gobject_t *view = view_cache_t::instance().get_view(view_id, ctx);
+	myvi::gobject_t *view = view_cache_t::instance().get_view(view_id, ctx, instance_hash);
 	myvi::modal_overlay_t::instance().push_modal(view);
 
 	view->w = myvi::modal_overlay_t::instance().w;

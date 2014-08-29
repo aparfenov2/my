@@ -251,7 +251,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			exported_flash_interface->post_sec_data(i,pkt_len, remain, buf + offset);
 
 			std::cout << "\r" << remain << "                      ";
-			offset += _SER_MAX_CHART_LEN;
+			offset += pkt_len;
 
 			frame_count++;
 	// wait ACK

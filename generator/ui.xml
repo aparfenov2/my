@@ -66,6 +66,12 @@
 			<enum id="RU" name="Русский" name_en="Russian" value="0"  />
 			<enum id="EN" name="Английский" name_en="English" value="1"  />
 		</type>
+		<type id="version_t" name="Информация о версии" name_en="Version info" type="complex">
+			<parameter id="disp_fw_ver" name="Версия ПО дисп." name_en="Disp. fw ver" type="u32" view="param_value_label" />
+			<parameter id="host_fw_ver" name="Версия ПО хоста" name_en="Host fw ver" type="u32" view="param_value_label" />
+			<parameter id="schema_ver" name="Версия схемы UI" name_en="UI schema ver" type="u32" view="param_value_label" />
+			<parameter id="fonts_ver" name="Версия шрифтов" name_en="Fonts ver" type="u32" view="param_value_label" />
+		</type>
 	</types>
 	
 	<parameters>
@@ -93,6 +99,7 @@
 		<parameter id="rf_on" type="on_off_t" initial="1" name="RF"  />
 		<parameter id="mod_off" type="on_off_t" initial="0" name="MOD" />
 		<parameter id="lang" type="lang_t" name="Язык" name_en="Language" initial="0" view="cbox" />
+		<parameter id="version" type="version_t" name="Информация о версии" name_en="Version info" />
 	</parameters>
 	
 	<colors>
@@ -144,6 +151,8 @@
 			<view inherited="tbox" />
 			<view inherited="lab" text_source="label" /> <!-- взять значение label из аттрибута label, а не name -->
 		</view>
+		<view id="param_value_label" inherited="lab" predefined="lab_focusable" dynamic_source="parameter_value"  />
+		
 		
 		<view id="status_label" layout="center" propagate="parameter_path" >
 			<view layout="stretch" padding="2" propagate="parameter_path" decorator="background,box" default_color="BK_WHITE" box_color="BLACK">
@@ -227,7 +236,7 @@
 			<view layout="stretch" padding="5" decorator="background, 3d" default_color="BK_GRAY" d3_inversed="true" width="400" height="200" >
 				<view  layout="stack" vertical="true" stretch="1" >
 					<view decorator="background" default_color="BK_BLUE" layout="stretch">
-						<view inherited="lab" static_text="xxx" listen="popup_menu_name" font="TTF_BOLD" font_size="FS_8" font_color="FNT_WHITE"  /> 
+						<view inherited="lab" static_text="xxx" listen="popup_menu_name" font="TTF_BOLD" font_size="FS_15" font_color="FNT_WHITE"  /> 
 					</view>
 					<view predefined="scroll_window" >
 						<view layout="stretch" padding="10" >
@@ -258,7 +267,7 @@
 			<view inherited="btn" text_source="name" propagate="text_source" popup_view="popup_menu" />
 		</view>
 		<view id="menu_item" layout="menu_item" ratio="0.5">
-			<view inherited="lab" text_source="name" /> <!-- взять параметр "name" из меты параметра -->
+			<view inherited="lab" font_size="FS_20" text_source="name" /> <!-- взять параметр "name" из меты параметра -->
 			<!-- элемент меню вставляется дочерним видом (реализация зависит от контроллера меню) -->
 		</view>
 	</views>
@@ -283,6 +292,7 @@
 			<parameter_ref id="brightness" />
 			<parameter_ref id="dsp_onoff" />
 			<parameter_ref id="lang" />
+			<parameter_ref id="version" />
 		</menu>
 	</menus>
 </schema>

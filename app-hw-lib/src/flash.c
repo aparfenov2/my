@@ -59,7 +59,22 @@ void flash_it(section_t *first) {
    VersionHex = Flash_APIVersionHex();
    _MY_ASSERT(VersionHex == 0x0210, return);
 
-   Status = Flash_Erase(SECTOR_F28335,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORA,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORB,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORC,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORD,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORE,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORF,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORG,&FlashStatus);
+   allow_pixel = 1;
+   Status = Flash_Erase(SECTORH,&FlashStatus);
 
    if (Status == STATUS_SUCCESS) {
 	   section_t *sec = first;

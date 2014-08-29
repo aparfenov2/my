@@ -325,12 +325,10 @@ void stack_layout_t::layout(gobject_t *parent) {
 
 	while (child) {
 
-		if (!layout_item(parent,child,px,py)) {
-			truncate_last(parent,child,px,py);
-			break;
-		}
 
 		if (stretch >= 0 && (stretch >= 0xff && child_num >= children_total-1 || child_num == stretch)) {
+
+			layout_item(parent,child,px,py);
 			// определим размеры оставшихся
 			gobject_t::iterator_visible_t iter1 = iter;
 			s32 remained_w = 0, remined_h = 0;
@@ -354,8 +352,11 @@ void stack_layout_t::layout(gobject_t *parent) {
 				px += child->w;
 				_MY_ASSERT(child->w > 0, return);
 			}
-		}
 
+		} else 	if (!layout_item(parent,child,px,py)) {
+			truncate_last(parent,child,px,py);
+			break;
+		}
 
 		child = iter.next();
 		child_num++;

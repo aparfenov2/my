@@ -586,7 +586,7 @@ public:
 	// ожидает правильного типа значения до вызова !
 	virtual void read(myvi::string_t parameter_path, variant_t &value) = 0;
 
-	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) = 0;
+	virtual bool try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) = 0;
 
 	void read(myvi::string_t parameter_path, variant_t &value, variant_type_t::variant_type_t expected_type)  {
 		read(parameter_path, value);
@@ -611,10 +611,10 @@ public:
 	}
 
 	void popup(myvi::string_t view_id) {
-		popup(view_id, view_build_context_t() );
+		popup(view_id, view_build_context_t(), 0 );
 	}
 
-	void popup(myvi::string_t view_id, view_build_context_t ctx);
+	void popup(myvi::string_t view_id, view_build_context_t ctx, u32 instance_hash);
 
 	void popdown() ;
 

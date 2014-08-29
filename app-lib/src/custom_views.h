@@ -159,6 +159,7 @@ public:
 		return 0;
 	}
 
+
 	virtual void update(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
 		variant_holder_t *holder = get_holder(parameter_path);
 		_MY_ASSERT(holder, return);
@@ -174,18 +175,19 @@ public:
 		value = holder->get_value();
 	}
 
-	virtual void try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) OVERRIDE  {
+	virtual bool try_register_path(myvi::string_t parameter_path, variant_t &initial_value, variant_type_t::variant_type_t expected_type) OVERRIDE  {
 
 		variant_holder_t *holder = get_holder(parameter_path);
 		if (holder) {
-			_MY_ASSERT(holder->type == expected_type, return);
-			return;
+			_MY_ASSERT(holder->type == expected_type, return false);
+			return false;
 		}
 
-		_MY_ASSERT(initial_value.type == expected_type, return);
+		_MY_ASSERT(initial_value.type == expected_type, return false);
 
 		holder = get_or_make_holder(parameter_path, expected_type);
 		holder->assign(initial_value);
+		return true;
 	}
 
 private:
@@ -272,7 +274,7 @@ public:
 	float_converter_t float_converter;
 
 public:
-	static converter_factory_t instance() {
+	static converter_factory_t & instance() {
 		return _instance;
 	}
 
@@ -855,8 +857,9 @@ protected:
 		variant_t value;
 		this->parameter_type = parameter_meta_ex_t(ctx.get_parameter_meta()).match_value_type();
 		value.type = parameter_type;
-		model_t::instance()->try_register_path(ctx.get_parameter_path().path(), value, parameter_type);
-		set_initial(ctx, value);
+		if (model_t::instance()->try_register_path(ctx.get_parameter_path().path(), value, parameter_type)) {
+			set_initial(ctx, value);
+		}
 
 	}
 
@@ -968,6 +971,10 @@ public:
 		return ctx;
 	}
 
+};
+
+class focusable_lab_view_t : public lab_view_t, public myvi::focus_client_t {
+public:
 };
 
 
@@ -1177,7 +1184,8 @@ public:
 			} else {
 				view_build_context_t ctx;
 				ctx.set_type_meta(this->type_meta);
-				popup_manager_t::instance().popup(this->popup_view_id, ctx);
+				ctx.set_parameter_path(this->parameter_path);
+				popup_manager_t::instance().popup(this->popup_view_id, ctx, this->parameter_path.path().hash());
 			}
 		} 
 
@@ -1872,8 +1880,12 @@ public:
 			child_ctx.set_view_meta(template_meta);
 			child_ctx.set_parameter_meta(child_meta);
 
-			volatile_path_t parameter_path; 
-			parameter_path.add_absolute(child_meta->get_id());
+			volatile_path_t parameter_path = ctx.get_parameter_path(); 
+			if (parameter_path.path().is_empty()) {
+				parameter_path.add_absolute(child_meta->get_id());
+			} else {
+				parameter_path.add_relative(child_meta->get_id());
+			}
 			child_ctx.set_parameter_path(parameter_path);
 
 			gen::type_meta_t *type_meta = child_meta->get_type_meta();
@@ -1977,6 +1989,8 @@ public:
 			event_bus_msg_t msg(name_event_name, variant_t(type_meta->get_name()));
 			event_bus_t::instance().notify(msg);
 		}
+
+		_MY_ASSERT(!ctx.get_parameter_path().path().is_empty(), return);
 
 		menu_iterator_t iter(this);
 		helper.build_menu(ctx, iter );

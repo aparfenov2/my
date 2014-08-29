@@ -255,6 +255,35 @@ public:
 
 };
 
+#define CRC_SEED 0xabba
+extern "C" u16 crc16_ccitt_calc_data(u16 crc, u8* data, u16 data_length);
+
+static void update_versions(u32 ttcache_len, u8 *ttcache_dat, u32 schema_len, u8 *xml) {
+
+	myvi::string_t schema_ver_path = "version.schema_ver";
+	myvi::string_t fonts_ver_path = "version.fonts_ver";
+	myvi::string_t disp_fw_ver_path = "version.disp_fw_ver";
+
+	u16 schema_crc = crc16_ccitt_calc_data(CRC_SEED, xml, schema_len );
+	u16 fonts_crc = crc16_ccitt_calc_data(CRC_SEED, ttcache_dat, ttcache_len );
+	u32 remain = 0x3ff80;
+	u8 *flash_ptr = (u8 *)0x300000;
+	u16 disp_fw_ver = CRC_SEED;
+	while (remain) {
+		u32 pkt_len = _MY_MIN(remain, 0xffff);
+		remain -= pkt_len;
+		disp_fw_ver = crc16_ccitt_calc_data(disp_fw_ver, flash_ptr, (u16)pkt_len );
+		flash_ptr += pkt_len;
+	}
+
+	custom::variant_t v;
+	v.set_value((s32)schema_crc);
+	custom::model_t::instance()->try_register_path(schema_ver_path, v, custom::variant_type_t::INT);
+	v.set_value((s32)fonts_crc);
+	custom::model_t::instance()->try_register_path(fonts_ver_path, v, custom::variant_type_t::INT);
+	v.set_value((s32)disp_fw_ver);
+	custom::model_t::instance()->try_register_path(disp_fw_ver_path, v, custom::variant_type_t::INT);
+}
 
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
@@ -357,14 +386,16 @@ void my_main() {
 	surface_16bpp_t s1(TFT_WIDTH,TFT_HEIGHT,buf_sz, buf0);
 
 
+	u32 ttcache_len = 0;
+	u8 *ttcache_dat = 0;
 
 	do {
 		u32 ttcache_file_id = TTCACHE_FILE_ID;
-		u32 ttcache_len, ttcache_max_len;
+		u32 ttcache_max_len;
 		_WEAK_ASSERT(file_system.get_info(ttcache_file_id, ttcache_len, ttcache_max_len), break);
 		if (!ttcache_len) break;
 
-		u8 *ttcache_dat = new u8[ttcache_len + 0x0f];
+		ttcache_dat = new u8[ttcache_len + 0x0f];
 		_WEAK_ASSERT(ttcache_dat, break);
 
 		_WEAK_ASSERT(file_system.read_file(ttcache_file_id,0,ttcache_len, ttcache_dat), break);
@@ -376,15 +407,18 @@ void my_main() {
 	} while(false);
 
 
+	u32 schema_len = 0;
+	u8 *xml = 0;
+
 	do {
 		u32 lang_id = 0;
 		options_t::instance().get_int_value(OPT_LANG,lang_id);
 		u32 schema_file_id = lang_id ? SCHEMA_EN_FILE_ID : SCHEMA_FILE_ID;
-		u32 schema_len, schema_max_len;
+		u32 schema_max_len;
 		_WEAK_ASSERT(file_system.get_info(schema_file_id, schema_len, schema_max_len), break);
 		if (!schema_len) break;
 
-		u8 *xml = new u8[schema_len + 0x0f];
+		xml = new u8[schema_len + 0x0f];
 		_WEAK_ASSERT(xml, break);
 
 		_WEAK_ASSERT(file_system.read_file(schema_file_id,0,schema_len, xml), break);
@@ -415,6 +449,7 @@ void my_main() {
 
 		lang_controller.init();
 		reboot_controller.init();
+		update_versions(ttcache_len, ttcache_dat, schema_len, xml);
     }
 
 main_loop:
@@ -424,7 +459,7 @@ main_loop:
 
 	init_pie_table();
 
-	while (1) {
+	while (2) {
 		if (ttcache_loaded && schema_loaded) {
 			draw_scene(s1, drv1);
 		}
