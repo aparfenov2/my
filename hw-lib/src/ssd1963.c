@@ -87,6 +87,7 @@ void SSD1963_Init(void) {
 //=============================================================================
 //
 //=============================================================================
+#pragma CODE_SECTION (SSD1963_SetArea, "ramfuncs")
 void SSD1963_SetArea(u16 sx, u16 ex, u16 sy, u16 ey) {
 	SSD1963_WriteCommand(SSD1963_SET_COLUMN_ADDRESS);
 	SSD1963_WriteData((sx >> 8) & 0xFF);
@@ -101,7 +102,7 @@ void SSD1963_SetArea(u16 sx, u16 ex, u16 sy, u16 ey) {
 	SSD1963_WriteData((ey >> 0) & 0xFF);
 }
 
-
+#pragma CODE_SECTION (SSD1963_WriteColor, "ramfuncs")
 void SSD1963_WriteColor(u32 color) {
 	u8 r = ((color >> 16) & 0xff) >> 3;
 	u8 g = ((color >> 8) & 0xff) >> 2;

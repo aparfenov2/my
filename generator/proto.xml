@@ -49,6 +49,19 @@
 		<message name="log_event_t">
 			<field name="msg" type="string" required="true" />
 		</message>
+
+		<message name="section_definition_t">
+			<field name="key" type="uint32" required="true"/>		
+			<field name="len" type="uint32" required="true"/>		
+			<field name="flash_addr" type="uint32" required="true"/>		
+			<field name="crc" type="uint32" required="true"/>		
+		</message>
+		<message name="section_data_t">
+			<field name="key" type="uint32" required="true"/>		
+			<field name="len" type="uint32" required="true"/>		
+			<field name="remain" type="uint32" required="true"/>		
+			<field name="data" type="bytes" required="true"/>
+		</message>
 		
 
 		<message name="host_interface_t">
@@ -61,6 +74,10 @@
 
 			<field name="test_response" type="test_message_t" />
 			<field name="log_event" type="log_event_t" />
+
+			<field name="define_section_ack" type="uint32" />
+			<field name="post_sec_data_ack" type="uint32" />
+			<field name="transfer_complete_accepted" type="uint32" />
 		</message>
 
 		<message name="exported_interface_t">
@@ -74,6 +91,11 @@
 			
 			<field name="key_event" type="uint32" />
 			<field name="test_request" type="test_message_t" />
+			
+			<field name="define_section" type="section_definition_t" />
+			<field name="post_sec_data" type="section_data_t" />
+			<field name="transfer_complete" type="uint32" />
+			
 		</message>
 	</messages>
 	
@@ -102,6 +124,11 @@
 			<method name="test_response" /> 
 			<method name="log_event" /> 
 		</interface>
+		<interface name="host_flash_interface_t" message="host_interface_t" opposite_interface="exported_flash_interface_t" >
+			<method name="define_section_ack" /> 
+			<method name="post_sec_data_ack" /> 
+			<method name="transfer_complete_accepted" /> 
+		</interface>
 
 
 		
@@ -127,6 +154,12 @@
 		<interface name="exported_debug_interface_t"  message="exported_interface_t" opposite_interface="host_debug_interface_t"  >
 			<method name="key_event" /> 
 			<method name="test_request" /> 
+		</interface>
+
+		<interface name="exported_flash_interface_t"  message="exported_interface_t" opposite_interface="host_flash_interface_t"  >
+			<method name="define_section" /> 
+			<method name="post_sec_data" /> 
+			<method name="transfer_complete" /> 
 		</interface>
 		
 	</interfaces>

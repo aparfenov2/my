@@ -30,7 +30,8 @@
 #include "file_server.h"
 
 #include "options.h"
-
+#include "serial_intf_impl.h"
+#include "flash_intf_impl.h"
 
 using namespace myvi;
 using namespace hw;
@@ -150,38 +151,6 @@ static void draw_scene(surface_t &s1, surface_t &drv1) {
 
 
 
-class serial_interface_impl_t : public link::serial_interface_t {
-public:
-	link::serial_data_receiver_t *receiver;
-	uart_drv_t *uart;
-public:
-	serial_interface_impl_t() {
-		receiver = 0;
-		uart = 0;
-	}
-
-	void init(uart_drv_t *_uart) {
-		uart = _uart;
-	}
-
-	virtual void send(u8 *data, u32 len) OVERRIDE {
-		while(len--) {
-			uart->write(*data++);
-		}
-	}
-
-	virtual void subscribe(link::serial_data_receiver_t *areceiver) OVERRIDE {
-		receiver = areceiver;
-	}
-
-	void cycle() {
-		if (!uart->is_empty()) {
-
-			u8 byte = uart->read();
-			receiver->receive(&byte, 1);
-		}
-	}
-};
 
 void draw_pallete(surface_t &drv1) {
 	// draw pallete
@@ -304,6 +273,7 @@ FRAM fram;
 FlashDev flash;
 lang_controller_t lang_controller;
 reboot_controller_t reboot_controller;
+flash_intf_impl_t flash_intf_impl;
 
 void my_main() {
 
@@ -342,6 +312,8 @@ void my_main() {
 	bool can_show_logo = false;
 
     if (file_server_mode_only) {
+    	flash_intf_impl.init(serializer.get_host_flash_interface());
+    	serializer.add_implementation(&flash_intf_impl);
     	draw_pallete(drv1);
     	goto main_loop;
     }

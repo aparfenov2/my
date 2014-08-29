@@ -27,44 +27,13 @@
 #include "file_map.h"
 #include "file_system_impl.h"
 
+#include "serial_intf_impl.h"
+#include "flash_intf_impl.h"
+
 using namespace myvi;
 using namespace link;
 using namespace hw;
 
-
-
-class serial_interface_impl_t : public serial_interface_t {
-public:
-	serial_data_receiver_t *receiver;
-	uart_drv_t *uart;
-public:
-	serial_interface_impl_t() {
-		receiver = 0;
-		uart = 0;
-	}
-
-	void init(uart_drv_t *_uart) {
-		uart = _uart;
-	}
-
-	virtual void send(u8 *data, u32 len) OVERRIDE {
-		while(len--) {
-			uart->write(*data++);
-		}
-	}
-
-	virtual void subscribe(serial_data_receiver_t *areceiver) OVERRIDE {
-		receiver = areceiver;
-	}
-
-	void cycle() {
-		if (!uart->is_empty()) {
-
-			u8 byte = uart->read();
-			receiver->receive(&byte, 1);
-		}
-	}
-};
 
 
 class debug_intf_impl_t :
@@ -90,6 +59,13 @@ public:
 	}
 };
 
+extern "C" {
+	void SSD1963_ClearScreen(u32 color);
+	void SSD1963_Reset(void);
+	void SSD1963_Init(void);
+	void SSD1963_InitHW();
+}
+
 
 Spi spi;
 FRAM fram;
@@ -101,6 +77,7 @@ link::serializer_t serializer;
 app::file_server_t file_server;
 file_system_impl_t file_system;
 debug_intf_impl_t debug_intf_impl;
+flash_intf_impl_t flash_intf_impl;
 
 
 int main(void)
@@ -108,6 +85,12 @@ int main(void)
     InitSysCtrl();
 
     init_zone7();
+    SSD1963_InitHW();
+
+	SSD1963_Reset();
+	SSD1963_Init();
+
+	SSD1963_ClearScreen(0x0000FF);
 
     spi.Init();
 	fram.init(&spi);
@@ -126,6 +109,9 @@ int main(void)
 
     debug_intf_impl.init(serializer.get_host_debug_interface());
     serializer.add_implementation(&debug_intf_impl);
+
+	flash_intf_impl.init(serializer.get_host_flash_interface());
+	serializer.add_implementation(&flash_intf_impl);
 
 	init_pie_table();
 	while(1) {
