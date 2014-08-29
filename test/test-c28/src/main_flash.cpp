@@ -15,11 +15,12 @@
 #include "assert_impl.h"
 
 
-
 extern COPY_TABLE bootTimeTable;
 void MemCopy(Uint16 *SourceAddr, Uint16* SourceEndAddr, Uint16* DestAddr);
 void my_main();
 extern "C" void SSD1963_InitHW();
+
+
 
 int main(void)
 {	

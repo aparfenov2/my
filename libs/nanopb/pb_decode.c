@@ -1006,14 +1006,7 @@ bool pb_decode_svarint(pb_istream_t *stream, int64_t *dest)
 }
 
 #ifdef PLATFORM_C28
-	// массив в структуру, sz - длина массива, шт
-	s32 pack(const u8 *data, s32 sz, void *dst) {
-		s32 sw=0;
-		for (; sw < sz; sw++) {
-			__byte((int *)dst,sw) = data[sw];
-		}
-		return sz/2;
-	}
+u32 pack(const u8 *data, u32 sz, void *dst);
 #endif
 
 

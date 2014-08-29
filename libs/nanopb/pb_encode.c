@@ -423,18 +423,7 @@ bool checkreturn pb_encode_svarint(pb_ostream_t *stream, int64_t value)
 }
 
 #ifdef PLATFORM_C28
-	// структура в массив, sz - длина структуры, sizeof()
-	s32 unpack(const void *data, s32 sz, u8 *dst) {
-		s32 dw=0;
-		s32 sw=0;
-		for (; sw < sz; sw++) {
-			dst[dw] = __byte((int *)data,dw);
-			dw++;
-			dst[dw] = __byte((int *)data,dw);
-			dw++;
-		}
-		return dw;
-	}
+u32 unpack(const void *data, u32 sz, u8 *dst);
 #endif
 
 

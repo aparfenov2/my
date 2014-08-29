@@ -23,7 +23,6 @@
 
 
 
-
 void SSD1963_InitHW() {
 
 	port_a_t dat_a;
@@ -63,7 +62,7 @@ void SSD1963_InitHW() {
 	GpioDataRegs.GPBDAT.all = dat_b.all;
 }
 
-
+#pragma CODE_SECTION (SSD1963_WriteCommand, "ramfuncs")
 void SSD1963_WriteCommand(unsigned int commandToWrite) {
 
 	port_a_t dat_a;
@@ -87,6 +86,7 @@ void SSD1963_WriteCommand(unsigned int commandToWrite) {
 
 }
 
+#pragma CODE_SECTION (SSD1963_WriteData, "ramfuncs")
 void SSD1963_WriteData(unsigned int dataToWrite) {
 
 	port_a_t dat_a;
