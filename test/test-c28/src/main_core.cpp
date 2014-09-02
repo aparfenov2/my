@@ -285,6 +285,15 @@ static void update_versions(u32 ttcache_len, u8 *ttcache_dat, u32 schema_len, u8
 	custom::model_t::instance()->try_register_path(disp_fw_ver_path, v, custom::variant_type_t::INT);
 }
 
+// перехват всех сообщений с кейпада и отправка на удаленный хост
+class key_filter_impl_t : public custom::keyboard_filter_t {
+public:
+	virtual bool process_key(myvi::key_t::key_t key) OVERRIDE {
+		_LOG2("vcode: ",key);
+		return false;
+	}
+};
+
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
 extern resources_t res;
@@ -303,6 +312,7 @@ FlashDev flash;
 lang_controller_t lang_controller;
 reboot_controller_t reboot_controller;
 flash_intf_impl_t flash_intf_impl;
+key_filter_impl_t key_filter_impl;
 
 void my_main() {
 
@@ -433,7 +443,7 @@ void my_main() {
 
     	res.init();
 
-
+    	custom::keyboard_filter_chain_t::instance().add_filter(&key_filter_impl);
 
     	test_screen_t *screen1 = new test_screen_t();
 		screen1->init();

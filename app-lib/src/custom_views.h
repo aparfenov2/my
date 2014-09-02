@@ -2228,9 +2228,13 @@ public:
 				this->view->parent->do_layout();
 			}
 		}
-		//if (this->view->w && this->view->h) {
-		//	this->view->do_layout();
-		//}
+
+		// установим фокус на первый элемент в selected_child;
+		myvi::gobject_t::iterator_selectable_deep_t iter0 = selected_child->iterator_selectable_deep();
+		myvi::gobject_t *p = iter0.next();
+		if (p) {
+			myvi::focus_manager_t::instance().select(p);
+		}
 		update_name(selected_child);
 
 		this->view->dirty = true;
