@@ -65,6 +65,9 @@ public:
 
 class variant_holder_t : public variant_tt<volatile_string_impl_t> {
 public:
+	variant_holder_t () {
+	}
+
 	variant_holder_t (variant_type_t::variant_type_t expected_type) {
 		this->type = expected_type;
 	}
@@ -1208,6 +1211,7 @@ public:
 class textbox_msg_t {
 public:
 	enum state_t {
+		BEGIN,
 		EDIT, // значенеие еще редактируется
 		COMPLETE // пользователь нажал Enter и мы вышли из режима редактирования
 	} state;
@@ -1245,6 +1249,7 @@ protected:
 		lab.text = _value;
 		caret_pos = _value.length();
 		measure_cursor_poses();
+		this->just_selected = true;
 	}
 
 	myvi::string_t get_value() {
@@ -1293,35 +1298,29 @@ public:
 		lab.h = h;
 	}
 
-	virtual void set_selected(bool selected) {
-		super::set_selected(selected);
-		if (selected) {
-			just_selected = true;
-		}
-	}
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
 
 		s32 cur_len = _value.length();
 
-		if (key == myvi::key_t::K_ENTER) {
+		if (key == myvi::key_t::K_ENTER || key == myvi::key_t::K_ESC) {
 			_MY_ASSERT(parent,return);
-			if (!captured) {
+			if (!captured && key == myvi::key_t::K_ENTER) {
 				this->capture_focus();
 				set_captured(true);
 				if (allow_cursor) {
 					this->cursor_visible = true;
 				}
-			} else {
+				this->just_selected = true;
+				textbox_msg_t msg(key, textbox_msg_t::BEGIN, _value);
+				notify(msg);
+
+			} else if (captured && (key == myvi::key_t::K_ENTER || key == myvi::key_t::K_ESC)) {
 				this->release_focus();
 				set_captured(false);
 				this->cursor_visible = false;
 				textbox_msg_t msg(key, textbox_msg_t::COMPLETE, _value);
 				notify(msg);
-			}
-
-			if (decorator) {
-				decorator->set_valid(this, true);
 			}
 
 			goto lab_update_input;
@@ -1331,10 +1330,6 @@ public:
 			return;
 		}
 
-		if (!captured && just_selected && allow_no_capture) {
-			just_selected = false;
-			value = "";
-		}
 
 		if (key == myvi::key_t::K_LEFT) {
 			if (caret_pos) caret_pos--;
@@ -1367,6 +1362,11 @@ public:
 			if (key == myvi::key_t::K_F1) ch = '+';
 			if (key == myvi::key_t::K_F2) ch = '-';
 			if (ch) {
+				if (this->just_selected) {
+					this->just_selected = false;
+					_value = "";
+					caret_pos = 0;
+				}
 				_value.insert_at(caret_pos, ch);
 				caret_pos++;
 				goto lab_update_input;
@@ -1416,7 +1416,7 @@ class tbox_view_t :
 public:
 	tbox_view_t() {
 		this->allow_cursor = false;
-		this->allow_no_capture = true;
+		this->allow_no_capture = false;
 	}
 
 	virtual label_context_t & get_text_context() OVERRIDE {
@@ -1500,11 +1500,14 @@ public:
 	volatile_string_impl_t string_value;
 	variant_t increment;
 	validator_t *validator;
+	bool self_update; // dont update model change
+	variant_holder_t last_value;
 public:
 
 	tbox_controller_t() {
 		tb = 0;
 		validator = 0;
+		self_update = false;
 	}
 
 
@@ -1512,7 +1515,7 @@ public:
 // 0. Регистрирует поле в модели , если его ещё там нет
 		super::init(ctx);
 		register_in_model(ctx);
-
+		last_value.type = this->parameter_type;
 		increment = meta_ex_t(ctx.get_parameter_meta()).get_variant_param("increment");
 		validator = validator_factory_t::instance().try_build_validator(ctx.get_parameter_meta());
 // 1. Заполняет поле начальным значением из модели
@@ -1541,7 +1544,10 @@ public:
 			return;
 		}
 		_MY_ASSERT(msg.value.type == this->parameter_type, return);
-		update(msg.value);
+
+		if (!self_update) {
+			update(msg.value);
+		}
 	}
 
 	void update(variant_t & value) {
@@ -1553,38 +1559,109 @@ public:
 
 	// обновление от виджета
 	virtual void accept(textbox_msg_t &msg) OVERRIDE {
-		if (!msg.value.is_empty()) {
 
-			converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
 
-			variant_t value;
-			bool ret = conv->from_string(msg.value, value);
-			if (ret) {
-				if (!increment.is_empty()) {
-					variant_t tmp = value;
-					if (msg.key == myvi::key_t::K_LEFT || msg.key == myvi::key_t::K_DOWN) {
-						tmp.dec(increment);
+		if (msg.state == textbox_msg_t::BEGIN) {
+			variant_t tmp;
+			model_t::instance()->read(this->parameter_path.path(), tmp, this->parameter_type);
+			if (validator) {
+				_WEAK_ASSERT(validator->validate(tmp), return);
+			}
+			this->last_value.assign(tmp);
 
-					} else if (msg.key == myvi::key_t::K_RIGHT || msg.key == myvi::key_t::K_UP) {
-						tmp.inc(increment);
+
+
+		} else if (msg.state == textbox_msg_t::EDIT) {
+
+			do {
+				variant_t value;
+
+				do {
+					do {
+						converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
+						if (msg.value.is_empty()) break;
+						if (!conv->from_string(msg.value, value)) break;
+
+						if (validator) {
+							if (!validator->validate(value)) break;
+						}
+						if (tb->decorator) {
+							tb->decorator->set_valid(tb, true);
+						}
+						goto nxt0;
+					} while (false);
+
+					if (tb->decorator) {
+						tb->decorator->set_valid(tb, false);
 					}
+				} while (false);
+				nxt0:
+
+				bool was_incremented = false;
+
+				if (!increment.is_empty()) {
+					if (msg.key == myvi::key_t::K_LEFT || msg.key == myvi::key_t::K_DOWN) {
+						value.dec(increment);
+						was_incremented = true;
+					} else if (msg.key == myvi::key_t::K_RIGHT || msg.key == myvi::key_t::K_UP) {
+						value.inc(increment);
+						was_incremented = true;
+					}
+				}
+
+				if (was_incremented) {
+					update(value);
+
+					// проверим ещё раз
 					if (validator) {
-						bool valid = validator->validate(tmp);
+						bool valid = validator->validate(value);
 						if (tb->decorator) {
 							tb->decorator->set_valid(tb, valid);
 						}
-						if (valid) {
-							value = tmp;
-						}
-					} else {
-						value = tmp;
+						if (!valid) break;
 					}
-					update(value);
 				}
 
+				this->self_update = true;
 				model_t::instance()->update(this->parameter_path.path(), value);
+				this->self_update = false;
+
+			} while (false);
+
+
+
+
+		}  else if (msg.state == textbox_msg_t::COMPLETE) {
+
+			variant_t value;
+			do {
+				do {
+					if (msg.key == myvi::key_t::K_ESC) break;
+
+					converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
+					if (msg.value.is_empty()) break;
+					if (!conv->from_string(msg.value, value)) break;
+
+					if (validator) {
+						if (!validator->validate(value)) break;
+					}
+					goto nxt;
+				} while (false);
+
+				value = last_value.get_value();
+			} while (false);
+			nxt:
+
+			update(value);
+			if (tb->decorator) {
+				tb->decorator->set_valid(tb, true);
 			}
+
+			this->self_update = true;
+			model_t::instance()->update(this->parameter_path.path(), value);
+			this->self_update = false;
 		}
+
 	}
 
 
