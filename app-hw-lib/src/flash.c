@@ -43,12 +43,23 @@ static void MyCallbackFunction(void) {
 void flash_it(section_t *first) {
 
 	FLASH_ST FlashStatus;
+	s32 w = 0, h = 0;
 
 	SSD1963_ClearScreen(0x000000);
 	allow_pixel = 1;
 
 	SSD1963_SetArea(0, TFT_WIDTH - 1, 0, TFT_HEIGHT - 1);
 	SSD1963_WriteCommand(SSD1963_WRITE_MEMORY_START);
+
+	// будем выводить точки начиная с координаты 50;50
+	for (w = 0; w < TFT_WIDTH; w++) {
+		for (h = 0; h < 50; h++) {
+			SSD1963_WriteColor(0x000000);
+		}
+	}
+	for (w = 0; w < 50; w++) {
+		SSD1963_WriteColor(0x000000);
+	}
 
 	Flash_CPUScaleFactor = SCALE_FACTOR;
 	Flash_CallbackPtr = &MyCallbackFunction;
