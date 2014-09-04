@@ -24,6 +24,10 @@ void kbd_init();
 void enc_init();
 s16  enc_reset_counter();
 myvi::key_t::key_t kbd_get_key();
+
+// состояние светодиода : 0 - выкл, 1 - красный, 2 - зеленый
+void led_init(void);
+void set_led_state(u8 state);
 //void init_pll(unsigned int val);
 //void dsbl_dog(void);
 //void init_perif_clock(void);

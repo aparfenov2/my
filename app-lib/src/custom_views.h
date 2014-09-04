@@ -1237,6 +1237,7 @@ public:
 	bool captured;
 	bool allow_cursor;
 	bool allow_no_capture;
+	bool read_only;
 	u32 cursor_color;
 protected:
 	myvi::string_impl_t<INPUT_MAX_LEN> _value;
@@ -1275,6 +1276,7 @@ public:
 		cursor_color = 0x000000;
 		allow_no_capture = false;
 		just_selected = false;
+		read_only = false;
 
 		add_child(&lab);
 	}
@@ -1300,6 +1302,10 @@ public:
 
 
 	virtual void key_event(myvi::key_t::key_t key) OVERRIDE {
+
+		if (this->read_only) {
+			return;
+		}
 
 		s32 cur_len = _value.length();
 
@@ -1423,7 +1429,12 @@ public:
 		return this->lab.ctx;
 	}
 
-
+	virtual void init(view_build_context_t ctx) OVERRIDE {
+		super::init(ctx);
+		if (!ctx.get_view_meta()->get_string_param("read_only").is_empty()) {
+			this->read_only = ctx.get_view_meta()->get_string_param("read_only") == "true";
+		}
+	}
 };
 
 class validator_t {

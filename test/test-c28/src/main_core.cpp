@@ -316,7 +316,7 @@ key_filter_impl_t key_filter_impl;
 
 void my_main() {
 
-
+	led_init();
 
     spi.Init();
 	kbd_init();
@@ -326,6 +326,8 @@ void my_main() {
 
 	fram.init(&spi);
 	flash.init(&spi);
+
+	set_led_state(1);
 
 	options_t::instance().init(&fram);
 
@@ -460,6 +462,8 @@ void my_main() {
 		lang_controller.init();
 		reboot_controller.init();
 		update_versions(ttcache_len, ttcache_dat, schema_len, xml);
+
+		set_led_state(2);
     }
 
 main_loop:

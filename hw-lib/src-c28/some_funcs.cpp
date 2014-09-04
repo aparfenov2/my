@@ -26,6 +26,32 @@ using namespace myvi;
 
 // В данном файле находится весь мусор из main
 
+void hw::led_init(void) {
+    EALLOW;
+	GpioCtrlRegs.GPADIR.bit.GPIO12 = 1; // VD2
+	GpioCtrlRegs.GPADIR.bit.GPIO13 = 1; // VD1
+    EDIS;
+    set_led_state(0);
+}
+
+void hw::set_led_state(u8 state) {
+	if (state == 0) {
+		GpioDataRegs.GPADAT.bit.GPIO12 = 0; // VD2
+		GpioDataRegs.GPADAT.bit.GPIO13 = 0; // VD1
+
+	} else if (state == 1) { // желтый
+		GpioDataRegs.GPADAT.bit.GPIO12 = 0; // VD2
+		for (s32 i=0; i<1000; i++);
+		GpioDataRegs.GPADAT.bit.GPIO13 = 1; // VD1
+
+	} else { // зеленый
+		GpioDataRegs.GPADAT.bit.GPIO12 = 1; // VD2
+		for (s32 i=0; i<1000; i++);
+		GpioDataRegs.GPADAT.bit.GPIO13 = 0; // VD1
+
+	}
+}
+
 s16 enc_counter = 0;
 
 void hw::enc_init() {
@@ -119,17 +145,10 @@ void hw::init_pie_table() {
 
 static void kbd_set_rows(u8 msk) {
 
-//    EALLOW;
-//	GpioCtrlRegs.GPADIR.bit.GPIO6 = msk & 0x01; // KEYB_1
-//	GpioCtrlRegs.GPADIR.bit.GPIO3 = msk & 0x02; // KEYB_2
-//	GpioCtrlRegs.GPADIR.bit.GPIO8 = msk & 0x04; // KEYB_3
-//	GpioCtrlRegs.GPADIR.bit.GPIO2 = msk & 0x08; // KEYB_4
-//    EDIS;
-
-	GpioDataRegs.GPADAT.bit.GPIO6 = (msk & 0x01)?1:0; // KEYB_1
-	GpioDataRegs.GPADAT.bit.GPIO3 = (msk & 0x02)?1:0; // KEYB_2
-	GpioDataRegs.GPADAT.bit.GPIO8 = (msk & 0x04)?1:0; // KEYB_3
-	GpioDataRegs.GPADAT.bit.GPIO2 = (msk & 0x08)?1:0; // KEYB_4
+	GpioDataRegs.GPADAT.bit.GPIO6 = (msk & 0x01)?0:1; // KEYB_1
+	GpioDataRegs.GPADAT.bit.GPIO3 = (msk & 0x02)?0:1; // KEYB_2
+	GpioDataRegs.GPADAT.bit.GPIO8 = (msk & 0x04)?0:1; // KEYB_3
+	GpioDataRegs.GPADAT.bit.GPIO2 = (msk & 0x08)?0:1; // KEYB_4
 
 }
 
@@ -148,15 +167,21 @@ void hw::kbd_init() {
 	GpioCtrlRegs.GPADIR.bit.GPIO0 = 0; // KEYB_C
 	GpioCtrlRegs.GPADIR.bit.GPIO1 = 0; // KEYB_D
 	GpioCtrlRegs.GPADIR.bit.GPIO10 = 0; // KEYB_E
+// подтянем колонки к VCC
+	GpioCtrlRegs.GPBPUD.bit.GPIO36 = 0;
+	GpioCtrlRegs.GPAPUD.bit.GPIO4 = 0;
+	GpioCtrlRegs.GPAPUD.bit.GPIO0 = 0;
+	GpioCtrlRegs.GPAPUD.bit.GPIO1 = 0;
+	GpioCtrlRegs.GPAPUD.bit.GPIO10 = 0;
     EDIS;
 }
 
 s8 kbd_get_cols() {
-	if (GpioDataRegs.GPBDAT.bit.GPIO36) return 0;
-	if (GpioDataRegs.GPADAT.bit.GPIO4) return 1;
-	if (GpioDataRegs.GPADAT.bit.GPIO0) return 2;
-	if (GpioDataRegs.GPADAT.bit.GPIO1) return 3;
-	if (GpioDataRegs.GPADAT.bit.GPIO10) return 4;
+	if (GpioDataRegs.GPBDAT.bit.GPIO36 == 0) return 0;
+	if (GpioDataRegs.GPADAT.bit.GPIO4 == 0) return 1;
+	if (GpioDataRegs.GPADAT.bit.GPIO0 == 0) return 2;
+	if (GpioDataRegs.GPADAT.bit.GPIO1 == 0) return 3;
+	if (GpioDataRegs.GPADAT.bit.GPIO10 == 0) return 4;
 	return -1;
 }
 const key_t::key_t kbd_map[4][5] = {

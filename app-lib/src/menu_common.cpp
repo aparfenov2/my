@@ -65,6 +65,10 @@ void scrollable_window_t::render(surface_t &dst) {
 			bar_height = this->h - bar_y;
 		}
 
+		if (bar_height <= 0) {
+			return;
+		}
+
 		s32 ax,ay;
 		translate(ax,ay);
 

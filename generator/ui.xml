@@ -23,48 +23,62 @@
 		<type id="u32" type="base" />
 		<type id="s32" type="base" />
 		
-		<type id="dme_sfx_t" name="Суффикс DME" name_en="DME suffix" type="enum">
-			<enum id="X" name="X" value="0" />
-			<enum id="Y" name="Y" value="1" />
-		</type>
 		
-		<!-- Использование полей параметра комплексного типа полностью определяется контроллером -->
-		<!-- поэтому здесь для полей вид не указан -->
-		<type id="dme_t" name="Параметры DME" name_en="DME parameters" type="complex">
-			<parameter id="ch" name="Канал DME" name_en="DME channel" type="u8" validator="range" initial="127" lo="-127" hi="128" increment="1" view="tbox" />
-			<parameter id="sfx" name="Суффикс DME" name_en="DME suffix" type="dme_sfx_t" initial="0" view="cbox" />
-		</type>
-		<type id="measure_ctl_t" name="Измерение" name_en="Measurement" type="enum">
-			<enum id="START" name="Старт" name_en="Start" value="0" />
-			<enum id="STOP" name="Стоп" name_en="Stop" value="1" />
-		</type>
-		<type id="on_off_t" name="xxx" type="enum">
+
+		<type id="on_off_t" type="enum">
 			<enum id="ON" name="Вкл." name_en="ON" value="0"  />
 			<enum id="OFF" name="Выкл." name_en="OFF" value="1"  />
 		</type>
-		<type id="output_mode_t" name="Выход" name_en="Output mode" type="enum">
-			<enum id="ANT" name="Антенна" name_en="Antenna" value="0"  />
-			<enum id="ATTEN" name="Аттен." name_en="Attenuator" value="1"  />
-			<enum id="CALIB" name="Калибр." name_en="Calibration" value="2"  />
+		<type id="StartMeasure" type="enum">
+			<enum id="Start" name="Старт" name_en="Start" value="0" />
+			<enum id="Stop" name="Стоп" name_en="Stop" value="1" />
 		</type>
-		<type id="start_ctl_t" name="Запуск" name_en="Start control" type="enum">
-			<enum id="HIP" name="ХИП" name_en="HIP" value="0" />
-			<enum id="CALIB" name="Пачка" name_en="Packet" value="1"  />
-			<enum id="EXT" name="Внеш" name_en="Ext." value="2" />
+		<type id="ChSuffix" type="enum">
+			<enum id="X" name="X" value="0" />
+			<enum id="Y" name="Y" value="1" />
 		</type>
-		<type id="mode_ctl_t" name="Режим" name_en="Mode" type="enum">
-			<enum id="REQESTER" name="Запросчик" name_en="Requester" value="0"  />
-			<enum id="RESPONDER" name="Ответчик" name_en="Responder" value="1"  />
+		<type id="PulseShape" type="enum">
+			<enum id="Gauss" name="Гаусовый" name_en="Gauss" value="0" />
+			<enum id="Square" name="Прямоуг." name_en="Square" value="1" />
 		</type>
-		<type id="dsp_onoff_t" name="Откл. дисплея" name_en="Power save" type="enum">
-			<enum id="NO" name="НЕТ" name_en="NO" value="0" />
-			<enum id="a1_MIN" name="1 МИНУТА" name_en="1 Minute" value="1"  />
-			<enum id="a5_MIN" name="5 МИНУТ" name_en="5 Minutes" value="2"  />
-			<enum id="a10_MIN" name="10 МИНУТ" name_en="10 Minutes" value="3"  />
+		<type id="BaseFunction" type="enum">
+			<enum id="Interrogator" name="Запросчик" name_en="Interrogator" value="0"  />
+			<enum id="Transponder" name="Приемоответчик" name_en="Transponder" value="1"  />
 		</type>
-		<type id="lang_t" name="Язык" name_en="Language" type="enum">
+		<type id="GeneratorOutput" type="enum">
+			<enum id="Antenna" name="Антенна" name_en="Antenna" value="0"  />
+			<enum id="Attenuator" name="Аттенюатор" name_en="Attenuator" value="1"  />
+		</type>
+		<type id="ScreenOff" type="enum">
+			<enum id="OneMin" name="1мин" name_en="OneMin" value="0" />
+			<enum id="TwoMin" name="2мин" name_en="TwoMin" value="1" />
+			<enum id="FiveMin" name="5мин" name_en="FiveMin" value="2" />
+			<enum id="HalfHour" name="30мин" name_en="HalfHour" value="3" />
+			<enum id="Never" name="Никогда" name_en="Never" value="4" />
+		</type>
+		<type id="TriggerSource" type="enum">
+			<enum  id="Squitter" name="ХИП" name_en="Squitter" value="0" />
+			<enum  id="Pulse" name="Пачка" name_en="Pulse" value="1"  />
+			<enum  id="External" name="Внеш" name_en="External" value="2" />
+		</type>
+		<type id="lang_t" type="enum">
 			<enum id="RU" name="Русский" name_en="Russian" value="0"  />
 			<enum id="EN" name="Английский" name_en="English" value="1"  />
+		</type>
+		
+		<type id="dme_t" name="Канал DME" name_en="DME Channel" type="complex">
+			<parameter id="ChNumber" name="Канал" name_en="Channel" type="u8" validator="range" lo="1" hi="126" initial="64" increment="1" view="tbox" />
+			<parameter id="ChSuffix"  name="Суффикс" name_en="Suffix" type="ChSuffix" initial="0" view="cbox" />
+		</type>
+		<type id="co_t" name="СО" name_en="Id" type="complex">
+			<parameter id="DotLength" label="мкс" label_en="us" name="Длина точки" name_en="Dot Length" type="float" validator="range" lo="0.0" hi="100.0" initial="12.0" increment="0.1" view="tbox_label" />
+			<parameter id="PauseLength" label="мкс" label_en="us" name="Длина пробела" name_en="Pause Length" type="float" validator="range" lo="0.0" hi="100.0" initial="12.0" increment="0.1" view="tbox_label" />
+			<parameter id="InsrertPulses"  name="Выравнивающий импульс" name_en="Compensation Pulse" type="on_off_t" initial="0" view="cbox" />
+			<parameter id="Period" label="c" label_en="s" name="Период СО" name_en="ID Period" type="s32" validator="range" lo="10" hi="100" initial="40" increment="1" view="tbox_label" />
+		</type>
+		<type id="display_t" name="Дисплей" name_en="Display" type="complex">
+			<parameter id="ScreenBrightness" label="%" label_en="%" name="Яркость" name_en="Brightness" type="u32" validator="range" lo="0" hi="100" initial="100" increment="10" view="tbox_label" />
+			<parameter id="ScreenOff"  name="Отключение дисплея" name_en="Screen Off" type="ScreenOff" initial="4" view="cbox" />
 		</type>
 		<type id="version_t" name="Информация о версии" name_en="Version info" type="complex">
 			<parameter id="disp_fw_ver" name="Версия ПО дисп." name_en="Disp. fw ver" type="u32" view="param_value_label" />
@@ -72,34 +86,47 @@
 			<parameter id="schema_ver" name="Версия схемы UI" name_en="UI schema ver" type="u32" view="param_value_label" />
 			<parameter id="fonts_ver" name="Версия шрифтов" name_en="Fonts ver" type="u32" view="param_value_label" />
 		</type>
+		
 	</types>
 	
 	<parameters>
-<!-- Главное -->
-		<parameter id="dme" type="dme_t"  name="Параметры DME" name_en="DME Parameters" />
-		<parameter id="measure_ctl" type="measure_ctl_t"  name="Измерение" name_en="Measurement" initial="0" view="cbox" />
-		<parameter id="output_mode" type="output_mode_t"  name="Выход" name_en="Output mode" initial="0" view="cbox" />
-		<parameter id="out_level" type="float" increment="0.1" validator="range" lo="-70.0" hi="70.0" initial="69.3"  name="Уровень" name_en="Level" label="dBm" view="tbox_label" />
-		<parameter id="start_ctl" type="start_ctl_t"  name="Запуск" name_en="Start control" initial="0" view="cbox" />
+		<parameter id="RfStatus" type="on_off_t" initial="1" name="RF"  />
+		<parameter id="SelfTest" type="on_off_t" initial="0" name="TST" />
+	
+		<parameter id="DmeFrequency" label="МГц" label_en="MHz" type="float" validator="range" lo="900.0" hi="1500.0" initial="1080.0" increment="1.0" view="tbox_label" />
+		<parameter id="RfLevel" label="дБВт" label_en="dBW" type="s32" validator="range" lo="-130" hi="33" initial="0" increment="1"  view="tbox_label" />
 		
-<!-- Параметры -->	
-		<parameter id="req_period" type="u32" name="Период запросов" name_en="Request period" initial="1300" increment="1" label="пар\с" label_en="pairs\sec" view="tbox_label" />
-		<parameter id="req_freq" type="float" name="Частота запроса" name_en="Request freq." initial="1050.20" increment="0.1" label="Мгц" label_en="MHz" view="tbox_label" />
-		<parameter id="req_span" type="float" name="Кодовый интервал запроса" name_en="Request span" initial="12.0" increment="0.1" label="мкс" label_en="mcs" view="tbox_label" />
-		<parameter id="rsp_span" type="float" name="Кодовый интервал ответа" name_en="Response span" initial="12.0" increment="0.1" label="мкс" label_en="mcs" view="tbox_label" />
-		<parameter id="mode_ctl" type="mode_ctl_t"  name="Режим" name_en="Mode" initial="0"  view="cbox" />
+		<parameter id="StartMeasure" type="StartMeasure"  name="Измерение" name_en="Measurement" initial="0" view="cbox" />
 		
-<!-- Экран -->	
-		<parameter id="brightness" type="u8" name="Яркость" name_en="Brightness" initial="100" increment="10" label="%" view="tbox_label" />
-		<parameter id="dsp_onoff" type="dsp_onoff_t" name="Отключение дисплея" name_en="Power save" initial="0" view="cbox" />
-<!-- Test -->	
-		<parameter id="header_freq" type="float" initial="1.001" increment="0.001" label="ГГц" label_en="GHz" view="tbox_label" />
-		<parameter id="header_level" type="float" initial="13.00" increment="0.1" label="dBm" view="tbox_label" />
+		<parameter id="Distance" label="м" label_en="m" name="Дальность" name_en="Distance" type="s32" validator="range" lo="-5000" hi="5000" initial="0" view="param_value_label" />
+		<parameter id="Efficiency" label="%" label_en="%" name="Эффективность" name_en="Efficiency" type="s32" validator="range" lo="0" hi="100" initial="0" increment="1" view="param_value_label" />
+		<parameter id="IdCode" name="Код СО" name_en="Code ID" type="string"  view="param_value_label" />
 		
-		<parameter id="rf_on" type="on_off_t" initial="1" name="RF"  />
-		<parameter id="mod_off" type="on_off_t" initial="0" name="MOD" />
-		<parameter id="lang" type="lang_t" name="Язык" name_en="Language" initial="0" view="cbox" />
-		<parameter id="version" type="version_t" name="Информация о версии" name_en="Version info" />
+		<parameter id="PulseRf" label="дБВт" label_en="dbW" name="Уровень ВЧ" name_en="RF Level" type="s32" initial="0" increment="1" view="param_value_label" />
+		<parameter id="PulseWidth" label="мкс" label_en="us" name="Длительность импульса" name_en="Pulse width" type="float" validator="range" lo="2.5" hi="5.0" initial="3.5" increment="0.1" view="param_value_label" />
+		<parameter id="PulseRise" label="мкс" label_en="us" name="Фронт инпульса" name_en="Pulse Rise" type="float" validator="range" lo="1.5" hi="3.5" initial="2.5" increment="0.1" view="param_value_label" />
+		<parameter id="PulseFall" label="мкс" label_en="us" name="Спад импульса" name_en="Pulse Fall" type="float" validator="range" lo="1.5" hi="3.5" initial="2.5" increment="0.1" view="param_value_label" />
+		<parameter id="SpanReply" label="мкс" label_en="us" name="Интервал ответа" name_en="Span Reply" type="float" validator="range" lo="11.0" hi="13.0" initial="12.0" increment="0.1" view="param_value_label" />
+		<parameter id="PairPowerDiff" label="дБ" label_en="dB" name="Разность в паре" name_en="Diffirence in Pair" type="float" validator="range" lo="-1.0" hi="1.0" initial="0.0" view="param_value_label" />
+
+		<parameter id="DmeChannel" name="Канал DME" name_en="DME Channel" type="dme_t" />
+		
+		<parameter id="PulseShape"  name="Форма" name_en="Shape" type="PulseShape" initial="0" view="cbox" />
+		<parameter id="RequestSpan" label="мкс" label_en="us" name="Интервал запроса" name_en="Span Request" type="float" validator="range" lo="0.0" hi="100.0" initial="12.0" increment="0.1" view="tbox_label" />
+		<parameter id="TriggerFrequency" label="Гц" label_en="Hz" name="Число запросов" name_en="Request Count" type="u32" validator="range" lo="0" hi="5000" initial="50" increment="1" view="tbox_label" />
+		<parameter id="TriggerSource"  name="Запуск" name_en="Trigger" type="TriggerSource" initial="1" view="cbox" />
+
+		<parameter id="Id" name="СО" name_en="Id" type="co_t" />
+		
+		<parameter id="BaseFunction"  name="Режим ГСПН-2" name_en="DME Analyser Mode" type="BaseFunction" initial="0" view="cbox" />
+		<parameter id="GeneratorOutput"  name="Выход" name_en="Output" type="GeneratorOutput" initial="1" view="cbox" />
+		
+		<parameter id="Display" name="Дисплей" name_en="Display" type="display_t" />
+		
+		<parameter id="Calibration"  name="Калибровка" name_en="Calibration" type="s32" view="calib_btn" />
+		<parameter id="lang" name="Язык" name_en="Language" type="lang_t" initial="0" view="cbox" />
+		<parameter id="version" name="Версия ПО" name_en="SW Version" type="version_t" />
+		
 	</parameters>
 	
 	<colors>
@@ -140,7 +167,6 @@
 			decorator="background,3d" d3_inversed="true"  default_color="BK_WHITE" selected_color="SELECTED" > <!-- button \-->
 			<view inherited="lab" font_size="FS_20" />
 		</view>
-		
 <!-- textbox + combobox -->		
 		<view id="tbox_cbox" layout="stack" vertical="false" > 
 			<view inherited="tbox" />
@@ -163,13 +189,9 @@
 			</view>
 		</view>
 
+		<view id="calib_btn" inherited="btn" static_text="Выполнить" static_text_en="Go" propagate="static_text" />
 
 <!-- генерируемые виды -->
-		<view id="dme" layout="stack" vertical="false" > 
-			<view inherited="tbox" parameter_path=".ch" /> <!-- относительный путь внутри параметра dme -->
-			<view inherited="cbox" parameter_path=".sfx" />
-		</view>
-
 		
 		<view id="default_composite_template" layout="stack" vertical="true" />
 <!-- propagate - передать параметр непосредственным детям-->
@@ -177,13 +199,13 @@
 		<view id="root" layout="stretch" padding="5" decorator="background" default_color="BK_GRAY">
 			<view layout="stack" vertical="true"  stretch="last" >
 				<view layout="stack" vertical="false" stretch="last" >
-					<view layout="stretch" controller="parameter_view" parameter_path="header_freq"/> 
-					<view layout="stretch" controller="parameter_view" parameter_path="header_level"/> 
+					<view layout="stretch" controller="parameter_view" parameter_path="DmeFrequency"/> 
+					<view layout="stretch" controller="parameter_view" parameter_path="RfLevel"/> 
 
 					<view layout="right_bottom" vertical="false">
 						<view layout="stack" vertical="false">
-							<view inherited="status_label" parameter_path="rf_on" propagate="parameter_path" />
-							<view inherited="status_label" parameter_path="mod_off" propagate="parameter_path" />
+							<view inherited="status_label" parameter_path="RfStatus" propagate="parameter_path" />
+							<view inherited="status_label" parameter_path="SelfTest" propagate="parameter_path" />
 						</view>
 					</view>
 				</view>
@@ -209,9 +231,9 @@
 										</view>
 									</view>
 								</view>
-								<view id="control" inherited="menu_page_template" name="Управление" name_en="Control" menu_ref="main" />
+								<view id="control" inherited="menu_page_template" name="Управление" name_en="Control" menu_ref="control" />
 								<view id="parameters" inherited="menu_page_template" name="Калибровка" name_en="Calibration" menu_ref="parameters" />
-								<view id="settings" inherited="menu_page_template" name="Настройки" name_en="Settings" menu_ref="screen"  />
+								<view id="settings" inherited="menu_page_template" name="Настройки" name_en="Settings" menu_ref="settings"  />
 							</view>
 						</view>
 					</view>
@@ -273,24 +295,31 @@
 	</views>
 	
 	<menus>
-		<menu id="main">
-			<parameter_ref id="measure_ctl" />
-			<parameter_ref id="dme" />
-			<parameter_ref id="output_mode" />
-			<parameter_ref id="out_level" />
-			<parameter_ref id="start_ctl" />
+		<menu id="control">
+			<parameter_ref id="StartMeasure" />
+			<parameter_ref id="DmeChannel" />
+			<parameter_ref id="PulseShape" />
+			<parameter_ref id="RequestSpan" />
+			<parameter_ref id="TriggerFrequency" />
+			<parameter_ref id="TriggerSource" />
+			<parameter_ref id="Id" />
+			<parameter_ref id="BaseFunction" />
+			<parameter_ref id="GeneratorOutput" />
 		</menu>
 		<menu id="parameters">
-			<parameter_ref id="req_period" />
-			<parameter_ref id="req_freq" />
-			<parameter_ref id="req_span" />
-			<parameter_ref id="rsp_span" />
-			<parameter_ref id="mode_ctl" />
-			
+			<parameter_ref id="Distance" />
+			<parameter_ref id="Efficiency" />
+			<parameter_ref id="IdCode" />
+			<parameter_ref id="PulseRf" />
+			<parameter_ref id="PulseWidth" />
+			<parameter_ref id="PulseRise" />
+			<parameter_ref id="PulseFall" />
+			<parameter_ref id="SpanReply" />
+			<parameter_ref id="PairPowerDiff" />
+			<parameter_ref id="Calibration" />
 		</menu>
-		<menu id="screen">
-			<parameter_ref id="brightness" />
-			<parameter_ref id="dsp_onoff" />
+		<menu id="settings">
+			<parameter_ref id="Display" />
 			<parameter_ref id="lang" />
 			<parameter_ref id="version" />
 		</menu>
