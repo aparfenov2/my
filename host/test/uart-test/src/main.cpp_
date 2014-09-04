@@ -1,0 +1,28 @@
+/*
+ * main.cpp
+ *
+ *  Created on: 03.09.2014
+ *      Author: user
+ */
+
+#include "system.h"
+#include "uart_drv.h"
+
+using namespace hw;
+
+uart_drv_t uart_2;
+
+int main(void) {
+	uart_2.init((void *)UART_2_BASE, UART_2_IRQ_INTERRUPT_CONTROLLER_ID, UART_2_IRQ, 512, 64);
+
+	u8 buf[256];
+	do {
+		u32 read = uart_2.read(buf, 256);
+		if (read) {
+			uart_2.write(buf, read);
+		} else {
+			buf[0] = 0x55;
+			uart_2.write(buf, 1);
+		}
+	} while(true);
+}
