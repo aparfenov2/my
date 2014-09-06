@@ -6,15 +6,13 @@ option java_outer_classname = "MyviProtos";
 
 <#list proto.proto.messages.message as msg>
 message ${msg.@name} {
-	<#assign key = 1>
 	<#list msg.field as fld>
 		<#if fld.@required?has_content && fld.@required == "true">
 			<#lt>	required<#rt>
 		<#else>
 			<#lt>	optional<#rt>
 		</#if>
-		<#lt>	${fld.@type}	${fld.@name}	 = ${key};
-		<#assign key = key + 1>
+		<#lt>	${fld.@type}	${fld.@name}	 = ${fld.@code};
 	</#list>
 }
 

@@ -294,6 +294,24 @@ public:
 	}
 };
 
+class event_broadcaster_t : public myvi::subscriber_t<custom::event_bus_msg_t> {
+public:
+	link::host_event_interface_t *hmi;
+public:
+	event_broadcaster_t() {
+		hmi = 0;
+	}
+
+	void init(link::host_event_interface_t *_hmi) {
+		hmi = _hmi;
+		custom::event_bus_t::instance().subscribe(this);
+	}
+
+	virtual void accept(custom::event_bus_msg_t &msg) {
+		hmi->slave_event(msg.event_name.c_str());
+	}
+};
+
 logger_impl_t logger_impl;
 logger_t *logger_t::instance = &logger_impl;
 extern resources_t res;
@@ -313,6 +331,7 @@ lang_controller_t lang_controller;
 reboot_controller_t reboot_controller;
 flash_intf_impl_t flash_intf_impl;
 key_filter_impl_t key_filter_impl;
+event_broadcaster_t event_broadcaster;
 
 void my_main() {
 
@@ -461,6 +480,8 @@ void my_main() {
 
 		lang_controller.init();
 		reboot_controller.init();
+		event_broadcaster.init(serializer.get_host_event_interface());
+
 		update_versions(ttcache_len, ttcache_dat, schema_len, xml);
 
 		set_led_state(2);

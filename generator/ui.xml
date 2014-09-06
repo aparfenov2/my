@@ -189,7 +189,7 @@
 			</view>
 		</view>
 
-		<view id="calib_btn" inherited="btn" static_text="Выполнить" static_text_en="Go" propagate="static_text" />
+		<view id="calib_btn" inherited="btn" static_text="Выполнить" static_text_en="Go" propagate="static_text" event="calibrate" arg0="0" />
 
 <!-- генерируемые виды -->
 		

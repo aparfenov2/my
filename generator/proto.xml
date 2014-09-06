@@ -1,100 +1,106 @@
 <proto>
 	<messages>
 		<message name="read_model_data_request_t">
-			<field name="path" type="string" required="true"  />
+			<field code="1" name="path" type="string" required="true"  />
 		</message>
 		<message name="read_model_data_response_t">
-			<field name="path" type="string" required="true"  />
-			<field name="string_value" type="string"  />
-			<field name="int_value" type="int32" />
-			<field name="float_value" type="float"/>
-			<field name="code" type="uint32" required="true"/>
+			<field code="1" name="path" type="string" required="true"  />
+			<field code="2" name="string_value" type="string"  />
+			<field code="3" name="int_value" type="int32" />
+			<field code="4" name="float_value" type="float"/>
+			<field code="5" name="code" type="uint32" required="true"/>
 		</message>
 		<message name="write_model_data_request_t">
-			<field name="path" type="string" required="true" />
-			<field name="string_value" type="string" />
-			<field name="int_value" type="int32" />
-			<field name="float_value" type="float"/>
+			<field code="1" name="path" type="string" required="true" />
+			<field code="2" name="string_value" type="string" />
+			<field code="3" name="int_value" type="int32" />
+			<field code="4" name="float_value" type="float"/>
 		</message>
 		<message name="write_model_data_ack_t">
-			<field name="code" type="uint32" required="true"/>
+			<field code="1" name="code" type="uint32" required="true"/>
+		</message>
+		<message name="event_t">
+			<field code="1" name="name" type="string" required="true"/>
+			<field code="2" name="arg0" type="int32" />
 		</message>
 		
 		<message name="file_data_t">
-			<field name="file_id" type="uint32" required="true"/>
-			<field name="offset" type="uint32" required="true"/>
-			<field name="crc" type="uint32" />
-			<field name="first" type="bool" required="true"/>
-			<field name="data" type="bytes" required="true" />
-			<field name="len" type="uint32" required="true" />
+			<field code="1" name="file_id" type="uint32" required="true"/>
+			<field code="2" name="offset" type="uint32" required="true"/>
+			<field code="3" name="crc" type="uint32" />
+			<field code="4" name="first" type="bool" required="true"/>
+			<field code="5" name="data" type="bytes" required="true" />
+			<field code="6" name="len" type="uint32" required="true" />
 		</message>
 		<message name="download_request_t">
-			<field name="file_id" type="uint32" required="true"/>
-			<field name="offset" type="uint32" required="true"/>
-			<field name="length" type="uint32" required="true"/>
+			<field code="1" name="file_id" type="uint32" required="true"/>
+			<field code="2" name="offset" type="uint32" required="true"/>
+			<field code="3" name="length" type="uint32" required="true"/>
 		</message>
 		<message name="file_info_t">
-			<field name="file_id" type="uint32" required="true"/>
-			<field name="cur_len" type="uint32" required="true"/>
-			<field name="max_len" type="uint32" />
-			<field name="crc" type="uint32" />
+			<field code="1" name="file_id" type="uint32" required="true"/>
+			<field code="2" name="cur_len" type="uint32" required="true"/>
+			<field code="3" name="max_len" type="uint32" />
+			<field code="4" name="crc" type="uint32" />
 		</message>
 		
 		<message name="test_message_t">
-			<field name="arg8" type="uint32" required="true"/>
-			<field name="arg16" type="uint32" required="true"/>
-			<field name="arg32" type="uint32" required="true"/>
-			<field name="argd" type="float" required="true"/>
+			<field code="1" name="arg8" type="uint32" required="true"/>
+			<field code="2" name="arg16" type="uint32" required="true"/>
+			<field code="3" name="arg32" type="uint32" required="true"/>
+			<field code="4" name="argd" type="float" required="true"/>
 		</message>
 		<message name="log_event_t">
-			<field name="msg" type="string" required="true" />
+			<field code="1" name="msg" type="string" required="true" />
 		</message>
 
 		<message name="section_definition_t">
-			<field name="key" type="uint32" required="true"/>		
-			<field name="len" type="uint32" required="true"/>		
-			<field name="flash_addr" type="uint32" required="true"/>		
-			<field name="crc" type="uint32" required="true"/>		
+			<field code="1" name="key" type="uint32" required="true"/>		
+			<field code="2" name="len" type="uint32" required="true"/>		
+			<field code="3" name="flash_addr" type="uint32" required="true"/>		
+			<field code="4" name="crc" type="uint32" required="true"/>		
 		</message>
 		<message name="section_data_t">
-			<field name="key" type="uint32" required="true"/>		
-			<field name="len" type="uint32" required="true"/>		
-			<field name="remain" type="uint32" required="true"/>		
-			<field name="data" type="bytes" required="true"/>
+			<field code="1" name="key" type="uint32" required="true"/>		
+			<field code="2" name="len" type="uint32" required="true"/>		
+			<field code="3" name="remain" type="uint32" required="true"/>		
+			<field code="4" name="data" type="bytes" required="true"/>
 		</message>
 		
 
 		<message name="host_interface_t">
-			<field name="read_model_data_response" type="read_model_data_response_t" />
-			<field name="write_model_data_ack" type="write_model_data_ack_t" />
+			<field code="1" name="read_model_data_response" type="read_model_data_response_t" />
+			<field code="2" name="write_model_data_ack" type="write_model_data_ack_t" />
+			<field code="11" name="slave_event" type="event_t" />
 			
-			<field name="download_response" type="file_data_t" />
-			<field name="file_info_response" type="file_info_t" />
-			<field name="error" type="uint32" />
+			<field code="3" name="download_response" type="file_data_t" />
+			<field code="4" name="file_info_response" type="file_info_t" />
+			<field code="5" name="error" type="uint32" />
 
-			<field name="test_response" type="test_message_t" />
-			<field name="log_event" type="log_event_t" />
+			<field code="6" name="test_response" type="test_message_t" />
+			<field code="7" name="log_event" type="log_event_t" />
 
-			<field name="define_section_ack" type="uint32" />
-			<field name="post_sec_data_ack" type="uint32" />
-			<field name="transfer_complete_accepted" type="uint32" />
+			<field code="8" name="define_section_ack" type="uint32" />
+			<field code="9" name="post_sec_data_ack" type="uint32" />
+			<field code="10" name="transfer_complete_accepted" type="uint32" />
 		</message>
 
 		<message name="exported_interface_t">
-			<field name="read_model_data" type="read_model_data_request_t" />
-			<field name="write_model_data" type="write_model_data_request_t" />
+			<field code="1" name="read_model_data" type="read_model_data_request_t" />
+			<field code="2" name="write_model_data" type="write_model_data_request_t" />
+			<field code="12" name="host_event" type="event_t" />
 
-			<field name="upload_file" type="file_data_t" />
-			<field name="download_file" type="download_request_t" />
-			<field name="update_file_info" type="file_info_t" />
-			<field name="read_file_info" type="uint32" />
+			<field code="3" name="upload_file" type="file_data_t" />
+			<field code="4" name="download_file" type="download_request_t" />
+			<field code="5" name="update_file_info" type="file_info_t" />
+			<field code="6" name="read_file_info" type="uint32" />
 			
-			<field name="key_event" type="uint32" />
-			<field name="test_request" type="test_message_t" />
+			<field code="7" name="key_event" type="uint32" />
+			<field code="8" name="test_request" type="test_message_t" />
 			
-			<field name="define_section" type="section_definition_t" />
-			<field name="post_sec_data" type="section_data_t" />
-			<field name="transfer_complete" type="uint32" />
+			<field code="9" name="define_section" type="section_definition_t" />
+			<field code="10" name="post_sec_data" type="section_data_t" />
+			<field code="11" name="transfer_complete" type="uint32" />
 			
 		</message>
 	</messages>
@@ -112,6 +118,12 @@
 				<opt_arg name="float_value"/>
 			</method>
 			<method name="write_model_data_ack" /> 
+		</interface>
+		<interface name="host_event_interface_t" message="host_interface_t" opposite_interface="exported_event_interface_t">
+			<method name="slave_event" />
+			<method name="slave_event" >
+				<opt_arg name="arg0"/>
+			</method>
 		</interface>
 		<interface name="host_file_interface_t" message="host_interface_t" opposite_interface="exported_file_interface_t" >
 			<method name="download_response" /> 
@@ -143,6 +155,12 @@
 			</method>
 			<method name="write_model_data" > 
 				<opt_arg name="float_value"/>
+			</method>
+		</interface>
+		<interface name="exported_event_interface_t" message="exported_interface_t" opposite_interface="host_event_interface_t"  >
+			<method name="host_event" /> 
+			<method name="host_event" >
+				<opt_arg name="arg0"/>
 			</method>
 		</interface>
 		<interface name="exported_file_interface_t" message="exported_interface_t" opposite_interface="host_file_interface_t"   >

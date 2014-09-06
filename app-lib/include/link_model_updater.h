@@ -21,7 +21,7 @@ namespace custom {
 class link_model_updater_t : 
 	public link::exported_system_interface_t, 
 	public link::exported_model_interface_t, 
-	public myvi::subscriber_t<custom::model_message_t>  {
+	public myvi::subscriber_t<custom::model_message_t> {
 public:
 	link::host_model_interface_t *host2;
 	bool allowed_respond;
@@ -90,7 +90,7 @@ public:
 };
 
 
-// оповещает по сети об изменениях модели
+// оповещает по сети об изменениях модели на стороне хоста (только для Windows-эмулятора)
 class link_model_repeater_t : 
 	public link::host_system_interface_t,
 	public link::host_model_interface_t, 
@@ -158,8 +158,9 @@ public:
 	virtual void write_model_data_ack(u32 code) OVERRIDE {
 	}
 
-
 };
+
+
 
 } // ns
 
