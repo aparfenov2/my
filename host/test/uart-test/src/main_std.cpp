@@ -7,9 +7,19 @@
 
 #include "system.h"
 #include <stdio.h>
+#include <sys/alt_irq.h>
 
 
 int main(void) {
+
+//	asm("trap");
+
+	int pie = alt_irq_enabled();
+	int uie = alt_ic_irq_enabled(UART_0_IRQ_INTERRUPT_CONTROLLER_ID, UART_0_IRQ);
+
+	if (!pie || !uie) {
+		while(1);
+	}
 
 	FILE* fp;
 	char* msg = "hello world";

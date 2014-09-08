@@ -7,6 +7,8 @@
 
 #include "types.h"
 
+#ifdef PLATFORM_C28
+
 u32 pack(const u8 *data, u32 sz, void *dst) {
 	u32 sw=0;
 	int *dsti = dst;
@@ -28,3 +30,4 @@ u32 unpack(const void *data, u32 sz, u8 *dst) {
 	}
 	return dw;
 }
+#endif

@@ -50,7 +50,7 @@
 
 /* _____LOCAL VARIABLES______________________________________________________ */
 static u8_t   hdlc_rx_frame[HDLC_MRU];
-static u8_t   hdlc_rx_frame_index;
+static u16_t   hdlc_rx_frame_index;
 static u16_t  hdlc_rx_frame_fcs;
 //static bool_t hdlc_rx_char_esc;
 static u8_t hdlc_rx_char_esc;

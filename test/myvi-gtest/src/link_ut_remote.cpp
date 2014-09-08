@@ -31,7 +31,7 @@ public:
 
 //#define TEST(a,b) void a##b()
 TEST(LinkTest, Remote) {
-	test::serial_port_t port(L"COM8");
+	test::serial_port_t port(L"COM7");
 	test::serial_interface_impl_t sintf;
 	sintf.init(port);
 

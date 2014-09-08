@@ -177,7 +177,10 @@
 			<view inherited="tbox" />
 			<view inherited="lab" text_source="label" /> <!-- взять значение label из аттрибута label, а не name -->
 		</view>
-		<view id="param_value_label" inherited="lab" predefined="lab_focusable" dynamic_source="parameter_value"  />
+		<view id="param_value_label" layout="stack" vertical="false" >
+			<view inherited="lab" predefined="lab_focusable" dynamic_source="parameter_value" />
+			<view inherited="lab" text_source="label" /> <!-- взять значение label из аттрибута label, а не name -->
+		</view>
 		
 		
 		<view id="status_label" layout="center" propagate="parameter_path" >
