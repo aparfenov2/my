@@ -90,7 +90,7 @@
 	</types>
 	
 	<parameters>
-		<parameter id="RfStatus" type="on_off_t" initial="1" name="RF"  />
+		<parameter id="RfStatus" type="on_off_t" initial="0" name="RF"  />
 		<parameter id="SelfTest" type="on_off_t" initial="0" name="TST" />
 	
 		<parameter id="DmeFrequency" label="МГц" label_en="MHz" type="float" validator="range" lo="900.0" hi="1500.0" initial="1080.0" increment="1.0" view="tbox_label" />

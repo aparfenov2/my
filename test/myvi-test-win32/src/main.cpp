@@ -328,12 +328,14 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	test::serial_interface_impl_t sintf;
 	sintf.init(port);
 
+	link::serializer_t *serializer = 0;
+
 	char *wnd_title = "<title>";
 	if (!host_mode) {
 		_LOG1("link_mode: slave");
 		wnd_title = "myvi: slave";
 		// локальная роль
-		link::serializer_t *serializer = new link::serializer_t();
+		serializer = new link::serializer_t();
 		serializer->init(&sintf);
 
 		// прием удаленной клавиатуры и тестовое замыкание
@@ -405,7 +407,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	my_test_drawer_t test_drawer(& modal_overlay_t::instance());
 	test_drawer.create_window(s1, wnd_title);
-
+	if (!host_mode && serializer) {
+		serializer->get_host_event_interface()->slave_event("init_complete");
+	}
 
 	bool exit = false;
 	while (!exit) {

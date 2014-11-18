@@ -164,8 +164,12 @@ public:
 
 
 	virtual void update(myvi::string_t parameter_path, variant_t &value) OVERRIDE {
+		// get_or_make_holder - чтобы можно было инициализировать еще не зарегистрированные параметры
 		variant_holder_t *holder = get_holder(parameter_path);
-		_MY_ASSERT(holder, return);
+		if (!holder) {
+			holder = get_or_make_holder(parameter_path, value.type);
+			_MY_ASSERT(holder, return);
+		}
 		holder->assign(value);
 		model_message_t msg(parameter_path, value);
 		notify(msg);

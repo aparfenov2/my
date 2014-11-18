@@ -574,18 +574,31 @@ public:
 
 	void push_modal(gobject_t *modal) {
 
+		_MY_ASSERT(modal && modal->visible, return);
+
+		if (!children.empty()) {
+			gobject_t *prev = children.back();
+			prev->visible = false;
+		}
+
 		add_child(modal);
 		modal->dirty = true;
 	}
 
 	gobject_t * pop_modal() {
 
+		_MY_ASSERT(!children.empty(), return 0);
+
 		gobject_t *modal = children.back();
+		modal->parent = 0;
 		children.pop_back();
 
-//		_MY_ASSERT(modal == popped,return);
-		modal->parent = 0;
-		children.front()->dirty = true;
+		_MY_ASSERT(!children.empty(), return modal);
+		gobject_t *last = children.back();
+
+		_MY_ASSERT(!last->visible, return modal);
+		last->visible = true;
+		last->dirty = true;
 		return modal;
 	}
 

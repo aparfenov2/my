@@ -492,6 +492,8 @@ main_loop:
     debug_intf_impl.init(serializer.get_host_debug_interface());
     serializer.add_implementation(&debug_intf_impl);
 
+    serializer.get_host_event_interface()->slave_event("init_complete");
+
 	init_pie_table();
 
 	while (2) {

@@ -6,7 +6,7 @@
 		<@utils.emit_parameter parameter ; path, type, typedef>
 			<#if expected_types?seq_contains(typedef.@id) || (typedef.@type == 'enum' && expected_types?seq_contains('enum'))>
 				<#local dot_path = path?replace('_','.')>
-		if (strcmp(path,"${dot_path}")) host->${path}_changed((${type})value);
+		if (strcmp(path,"${dot_path}") == 0) host->${path}_changed((${type})value);
 			</#if>
 		</@utils.emit_parameter>
 	</#list>		
@@ -22,6 +22,7 @@
 
 #include "exported_app.h"
 #include "exported_sys.h"
+#include "string.h"
 
 namespace link {
 
@@ -58,13 +59,6 @@ public:
 	// ответ на запись данных в модель
 	virtual void write_model_data_ack(u32 code) OVERRIDE {
 	}
-
-private:
-
-    bool strcmp(const char* s1, const char* s2) {
-        while(*s1 && (*s1++ == *s2++));
-        return *s1 == *s2;
-    }
 
 };
 
