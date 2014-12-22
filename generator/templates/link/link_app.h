@@ -21,7 +21,7 @@
 #define _LINK_APP_H
 
 #include "exported_app.h"
-#include "exported_sys.h"
+#include "exported_sys_link.h"
 #include "string.h"
 
 namespace link {

@@ -8,7 +8,7 @@
 #ifndef FILE_SERVER_H_
 #define FILE_SERVER_H_
 
-#include "exported_sys.h"
+#include "exported_sys_link.h"
 #include "file_system.h"
 
 #define _FILE_SERVER_DATABUF_LENGTH 512

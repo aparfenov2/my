@@ -7,20 +7,20 @@
  *      Author: gordeev
  */
 
-#ifndef SERIALIZER_H_
-#define SERIALIZER_H_
+#ifndef SERIALIZER_H_${proto.proto.options.@namespace}
+#define SERIALIZER_H_${proto.proto.options.@namespace}
 
 #include "link.h"
-#include "exported_sys.h"
+#include "exported_sys_${proto.proto.options.@namespace}.h"
 #include "link_sys_impl_common.h"
-#include "link_sys_impl_gen.h"
+#include "link_sys_impl_gen_${proto.proto.options.@namespace}.h"
 
-namespace link {
+namespace ${proto.proto.options.@namespace} {
 
 <#macro emit_ser_class class_name intf_name impl_name>
 class ${class_name} :
-	public packet_sender_t,
-	public _internal_frame_receiver_t {
+	public link::packet_sender_t,
+	public link::_internal_frame_receiver_t {
 
 public:
 <#list proto.proto.interfaces.interface as intf>
@@ -28,7 +28,7 @@ public:
 	${intf.@name}_serializer_t ${intf.@name}_serializer;
 	</#if>
 </#list>
-	framer_t framer;
+	link::framer_t framer;
 public:
 
 	void add_implementation(${impl_name} *impl) {
@@ -44,7 +44,7 @@ public:
 </#list>
 	}
 
-	void init(serial_interface_t *asintf ) {
+	void init(link::serial_interface_t *asintf ) {
 		framer.init(asintf, this);
 <#list proto.proto.interfaces.interface as intf>
 	<#if intf.@name?substring(0,intf_name?length) == intf_name>

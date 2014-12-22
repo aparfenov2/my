@@ -67,7 +67,7 @@
 		</type>
 		
 		<type id="dme_t" name="Канал DME" name_en="DME Channel" type="complex">
-			<parameter id="ChNumber" name="Канал" name_en="Channel" type="u8" validator="range" lo="1" hi="126" initial="64" increment="1" view="tbox" />
+			<parameter id="ChNumber" name="Канал" name_en="Channel" type="u8" validator="range" lo="1" hi="126" initial="56" increment="1" view="tbox" />
 			<parameter id="ChSuffix"  name="Суффикс" name_en="Suffix" type="ChSuffix" initial="0" view="cbox" />
 		</type>
 		<type id="co_t" name="СО" name_en="Id" type="complex">
@@ -93,19 +93,18 @@
 		<parameter id="RfStatus" type="on_off_t" initial="0" name="RF"  />
 		<parameter id="SelfTest" type="on_off_t" initial="0" name="TST" />
 	
-		<parameter id="DmeFrequency" label="МГц" label_en="MHz" type="float" validator="range" lo="900.0" hi="1500.0" initial="1080.0" increment="1.0" view="tbox_label" />
-		<parameter id="RfLevel" label="дБВт" label_en="dBW" type="s32" validator="range" lo="-130" hi="33" initial="0" increment="1"  view="tbox_label" />
+		<parameter id="DmeFrequency" label="МГц" label_en="MHz" type="float" validator="range" lo="1025.0" hi="1150.0" initial="1080.0" increment="1.0" view="tbox_label" />
+		<parameter id="RfLevel" label="дБВт" label_en="dBW" type="s32" validator="range" lo="-130" hi="10" initial="0" increment="1"  view="tbox_label" />
 		
 		<parameter id="StartMeasure" type="StartMeasure"  name="Измерение" name_en="Measurement" initial="0" view="cbox" />
 		
-		<parameter id="Distance" label="м" label_en="m" name="Дальность" name_en="Distance" type="s32" validator="range" lo="-5000" hi="5000" initial="0" view="param_value_label" />
+		<parameter id="ReceiveFrequency" label="МГц" label_en="MHz" name="Частота приема" name_en="Receive Frequency" type="float" initial="1080.0"  view="param_value_label" />
+		<parameter id="Distance" label="м" label_en="m" name="Задержка отв." name_en="Reply Delay" type="float" validator="range"  initial="0.0" view="param_value_label" />
+		<parameter id="DistanceT" label="мкс" label_en="us" name="Задержка отв." name_en="Reply Delay" type="float" validator="range"  initial="0.0" view="param_value_label" />
 		<parameter id="Efficiency" label="%" label_en="%" name="Эффективность" name_en="Efficiency" type="s32" validator="range" lo="0" hi="100" initial="0" increment="1" view="param_value_label" />
 		<parameter id="IdCode" name="Код СО" name_en="Code ID" type="string"  view="param_value_label" />
 		
 		<parameter id="PulseRf" label="дБВт" label_en="dbW" name="Уровень ВЧ" name_en="RF Level" type="s32" initial="0" increment="1" view="param_value_label" />
-		<parameter id="PulseWidth" label="мкс" label_en="us" name="Длительность импульса" name_en="Pulse width" type="float" validator="range" lo="2.5" hi="5.0" initial="3.5" increment="0.1" view="param_value_label" />
-		<parameter id="PulseRise" label="мкс" label_en="us" name="Фронт инпульса" name_en="Pulse Rise" type="float" validator="range" lo="1.5" hi="3.5" initial="2.5" increment="0.1" view="param_value_label" />
-		<parameter id="PulseFall" label="мкс" label_en="us" name="Спад импульса" name_en="Pulse Fall" type="float" validator="range" lo="1.5" hi="3.5" initial="2.5" increment="0.1" view="param_value_label" />
 		<parameter id="SpanReply" label="мкс" label_en="us" name="Интервал ответа" name_en="Span Reply" type="float" validator="range" lo="11.0" hi="13.0" initial="12.0" increment="0.1" view="param_value_label" />
 		<parameter id="PairPowerDiff" label="дБ" label_en="dB" name="Разность в паре" name_en="Diffirence in Pair" type="float" validator="range" lo="-1.0" hi="1.0" initial="0.0" view="param_value_label" />
 
@@ -126,6 +125,8 @@
 		<parameter id="Calibration"  name="Калибровка" name_en="Calibration" type="s32" view="calib_btn" />
 		<parameter id="lang" name="Язык" name_en="Language" type="lang_t" initial="0" view="cbox" />
 		<parameter id="version" name="Версия ПО" name_en="SW Version" type="version_t" />
+		<parameter id="TestBit" type="on_off_t"  name="Режим отладки" name_en="Debug Mode" initial="1" view="cbox" />
+		
 		
 	</parameters>
 	
@@ -310,13 +311,12 @@
 			<parameter_ref id="GeneratorOutput" />
 		</menu>
 		<menu id="parameters">
+<!--			<parameter_ref id="ReceiveFrequency" /> -->
 			<parameter_ref id="Distance" />
+			<parameter_ref id="DistanceT" />
 			<parameter_ref id="Efficiency" />
 			<parameter_ref id="IdCode" />
 			<parameter_ref id="PulseRf" />
-			<parameter_ref id="PulseWidth" />
-			<parameter_ref id="PulseRise" />
-			<parameter_ref id="PulseFall" />
 			<parameter_ref id="SpanReply" />
 			<parameter_ref id="PairPowerDiff" />
 			<parameter_ref id="Calibration" />
@@ -325,6 +325,7 @@
 			<parameter_ref id="Display" />
 			<parameter_ref id="lang" />
 			<parameter_ref id="version" />
+			<parameter_ref id="TestBit" />			
 		</menu>
 	</menus>
 </schema>

@@ -38,7 +38,7 @@
 	<#list intf.method as mtd>
 		<#local fld = common.match_field(intf_msg, mtd.@name)>
 void ${intf.@name}_serializer_t::${mtd.@name} (${common.make_arg_str(intf, mtd)}) {
-	link_proto_${intf.@message} intf;
+	${proto.proto.options.@namespace}_proto_${intf.@message} intf;
 	memset(&intf, 0, sizeof(intf));
 	<#if !(fld.@required?has_content && fld.@required == "true")>
 		<#lt>	intf.has_${fld.@name} = true;
@@ -64,10 +64,10 @@ void ${intf.@name}_serializer_t::${mtd.@name} (${common.make_arg_str(intf, mtd)}
 // expect ${opposite_intf.@message} message instance
 void ${intf.@name}_serializer_t::receive_packet(void *packet, u32 sizeof_packet) {
 
-	_MY_ASSERT(sizeof_packet == sizeof(link_proto_${opposite_intf.@message}), return);
+	_MY_ASSERT(sizeof_packet == sizeof(${proto.proto.options.@namespace}_proto_${opposite_intf.@message}), return);
 	if (!this->exported) return;
 
-	link_proto_${opposite_intf.@message} *ei = (link_proto_${opposite_intf.@message} *)packet;
+	${proto.proto.options.@namespace}_proto_${opposite_intf.@message} *ei = (${proto.proto.options.@namespace}_proto_${opposite_intf.@message} *)packet;
 	<#list opposite_intf.method as mtd>
 	if (ei->has_${mtd.@name}) {
 		<#local has_opts = has_opt_args(mtd)>
@@ -102,11 +102,11 @@ void ${intf.@name}_serializer_t::receive_packet(void *packet, u32 sizeof_packet)
 * АВТОМАТИЧЕСКИ СГЕНЕРИРОВАННЫЙ ФАЙЛ !
 */
 
-#include "link_sys_impl_gen.h"
+#include "link_sys_impl_gen_${proto.proto.options.@namespace}.h"
 #include "assert_impl.h"
 #include "myvi.pb.h"
 
-using namespace link;
+using namespace ${proto.proto.options.@namespace};
 
 <#list proto.proto.interfaces.interface as intf>
 	<@emit_classimpl intf />

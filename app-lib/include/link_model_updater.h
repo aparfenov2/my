@@ -10,7 +10,7 @@
 #ifndef _EXPORTED_SYS_MODEL_IMPL_H
 #define _EXPORTED_SYS_MODEL_IMPL_H
 
-#include "exported_sys.h"
+#include "exported_sys_link.h"
 #include "custom_common.h"
 
 namespace custom {

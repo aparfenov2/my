@@ -1,4 +1,5 @@
 <proto>
+	<options namespace="link" />
 	<messages>
 		<message name="read_model_data_request_t">
 			<field code="1" name="path" type="string" required="true"  />

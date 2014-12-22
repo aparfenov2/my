@@ -8,7 +8,7 @@
 #ifndef FLASH_INTF_IMPL_H_
 #define FLASH_INTF_IMPL_H_
 
-#include "exported_sys.h"
+#include "exported_sys_link.h"
 
 namespace hw {
 

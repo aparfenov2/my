@@ -23,7 +23,7 @@
 #include "disp_def.h"
 
 #include "custom_common.h"
-#include "link_sys_impl.h"
+#include "link_sys_impl_link.h"
 #include "link_model_updater.h"
 #include "file_server.h"
 
@@ -168,6 +168,12 @@ public:
 					focus_aware->key_event((key_t::key_t)key);
 				}
 			}
+
+			if (key == myvi::key_t::K_F5) {
+				custom::event_bus_msg_t msg("f5_pressed", custom::variant_t((s32)0));
+				custom::event_bus_t::instance().notify(msg);
+			}
+
 		}
 		bool ret = rasterizer.render(gobj, s1);
 		if (ret) {
@@ -279,6 +285,24 @@ public:
 
 };
 
+class event_broadcaster_t : public myvi::subscriber_t<custom::event_bus_msg_t> {
+public:
+	link::host_event_interface_t *hmi;
+public:
+	event_broadcaster_t() {
+		hmi = 0;
+	}
+
+	void init(link::host_event_interface_t *_hmi) {
+		hmi = _hmi;
+		custom::event_bus_t::instance().subscribe(this);
+	}
+
+	virtual void accept(custom::event_bus_msg_t &msg) {
+		hmi->slave_event(msg.event_name.c_str());
+	}
+};
+
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
@@ -354,6 +378,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		file_system->init("files");
 		file_server->init(serializer->get_host_file_interface(), file_system);
 		serializer->add_implementation(file_server);
+
+		event_broadcaster_t *eb = new event_broadcaster_t();
+		eb->init(serializer->get_host_event_interface());
 
 	} else {
 		_LOG1("link_mode: host");

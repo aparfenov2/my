@@ -25,7 +25,7 @@
 
 #include "custom_common.h"
 
-#include "link_sys_impl.h"
+#include "link_sys_impl_link.h"
 #include "link_model_updater.h"
 #include "file_server.h"
 
@@ -290,6 +290,11 @@ class key_filter_impl_t : public custom::keyboard_filter_t {
 public:
 	virtual bool process_key(myvi::key_t::key_t key) OVERRIDE {
 		_LOG2("vcode: ",key);
+		if (key == myvi::key_t::K_F5) {
+			custom::event_bus_msg_t msg("f5_pressed", custom::variant_t((s32)0));
+			custom::event_bus_t::instance().notify(msg);
+			return true;
+		}
 		return false;
 	}
 };
@@ -492,9 +497,10 @@ main_loop:
     debug_intf_impl.init(serializer.get_host_debug_interface());
     serializer.add_implementation(&debug_intf_impl);
 
+	init_pie_table();
+
     serializer.get_host_event_interface()->slave_event("init_complete");
 
-	init_pie_table();
 
 	while (2) {
 		if (ttcache_loaded && schema_loaded) {

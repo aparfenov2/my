@@ -61,6 +61,11 @@ public:
         return data[inx];
     }
 
+    T* get(s32 inx) {
+		_MY_ASSERT(inx < count,return 0);
+        return & data[inx];
+    }
+
     bool  is_empty() const {
         return count == 0;
     }

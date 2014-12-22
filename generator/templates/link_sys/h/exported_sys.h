@@ -14,13 +14,13 @@ public:
 * АВТОМАТИЧЕСКИ СГЕНЕРИРОВАННЫЙ ФАЙЛ !
 */
 
-#ifndef _MESSAGES_SYS_H
-#define _MESSAGES_SYS_H
+#ifndef _MESSAGES_SYS_H_${proto.proto.options.@namespace}
+#define _MESSAGES_SYS_H_${proto.proto.options.@namespace}
 
 
 #include "types.h"
 
-namespace link {
+namespace ${proto.proto.options.@namespace} {
 
 <#list proto.proto.interfaces.interface as intf>
 	<@emit_interace intf />

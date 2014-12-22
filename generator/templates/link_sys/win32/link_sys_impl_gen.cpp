@@ -88,11 +88,11 @@ void ${intf.@name}_serializer_t::receive_packet(void *packet, u32 sizeof_packet)
 * АВТОМАТИЧЕСКИ СГЕНЕРИРОВАННЫЙ ФАЙЛ !
 */
 
-#include "link_sys_impl_gen.h"
+#include "link_sys_impl_gen_${proto.proto.options.@namespace}.h"
 #include "assert_impl.h"
 #include "myvi.pb.h"
 
-using namespace link;
+using namespace ${proto.proto.options.@namespace};
 
 <#list proto.proto.interfaces.interface as intf>
 	<@emit_classimpl intf />

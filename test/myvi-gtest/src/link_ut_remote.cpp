@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "link_sys_impl.h"
+#include "link_sys_impl_link.h"
 #include "exported_stub.h"
 #include "basic.h"
 #include "test_tools.h"

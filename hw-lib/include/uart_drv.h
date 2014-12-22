@@ -13,7 +13,7 @@
 #include "DSP2833x_device.h"
 #include "DSP2833x_Sci.h"
 
-#define UART_BUFF_SIZE 512
+#define UART_BUFF_SIZE 1024
 
 namespace hw {
 

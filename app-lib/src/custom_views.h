@@ -252,7 +252,7 @@ public:
 	virtual void to_string(variant_t &value, volatile_string_impl_t &str) OVERRIDE {
 
 		char *buf = (char *)str.c_str();
-		s32 len = std::sprintf(buf, "%.4f", value.get_float_value());
+		s32 len = std::sprintf(buf, "%.2f", value.get_float_value());
 
 		while (len > 1 && (buf[len-1] == '0' || buf[len-1] == '.')) {
 			--len;
@@ -910,6 +910,11 @@ public:
 private:
 	void set_text(myvi::string_t text) {
 		_text = text;
+
+		if (this->initialized && parent) {
+			parent->child_request_size_change(this);
+		}
+
 		dirty = true;
 	}
 public:
@@ -1019,6 +1024,7 @@ public:
 			gen::enum_meta_t * enum_item = type_meta->get_enum_by_value(value.get_int_value());
 			lab->text = enum_item->get_string_value();
 		}
+
 	}
 
 	virtual void init(view_build_context_t ctx) OVERRIDE {
@@ -1590,7 +1596,7 @@ public:
 
 			do {
 				variant_t value;
-
+				bool valid = false;
 				do {
 					do {
 						converter_t *conv = converter_factory_t::instance().for_type(this->parameter_type);
@@ -1603,6 +1609,7 @@ public:
 						if (tb->decorator) {
 							tb->decorator->set_valid(tb, true);
 						}
+						valid = true;
 						goto nxt0;
 					} while (false);
 
@@ -1629,13 +1636,16 @@ public:
 
 					// проверим ещё раз
 					if (validator) {
-						bool valid = validator->validate(value);
+						bool valid2 = validator->validate(value);
 						if (tb->decorator) {
-							tb->decorator->set_valid(tb, valid);
+							tb->decorator->set_valid(tb, valid2);
 						}
-						if (!valid) break;
+						if (!valid2) break;
+						valid = true;
 					}
 				}
+
+				if (!valid) break;
 
 				this->self_update = true;
 				model_t::instance()->update(this->parameter_path.path(), value);
